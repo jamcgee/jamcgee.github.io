@@ -76,10 +76,11 @@
           </div>
         </xsl:otherwise>
       </xsl:choose>
-      <div class="content">
-        <xsl:apply-templates select="*[count(@class)=0 or @class!='banner']"/>
-      </div>
-      <div class="copyright">Copyright © 2014 Jonathan McGee</div>
+      <xsl:if test="*[count(@class)=0 or @class!='banner']">
+        <div class="content">
+          <xsl:apply-templates select="*[count(@class)=0 or @class!='banner']"/>
+        </div>
+      </xsl:if>
       <div class="hidden">Send spam to <a href="mailto:spamtrap@etherealwake.com">spamtrap@etherealwake.com</a></div>
     </xsl:copy>
   </xsl:template>
