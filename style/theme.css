@@ -3,6 +3,8 @@ body {
   font-family: Cambria, Georgia, Times, serif;
   font-size: 18px;
   line-height: 1.5em;
+  background: white;
+  color: black;
 }
 
 .navbar {
@@ -143,6 +145,14 @@ body {
   margin: 0 0 1em 0;
 }
 
+.hResume .content li {
+  margin: 0 0 0.5em 0;
+}
+
+.hResume .content cite {
+  font-style: normal;
+}
+
 .hResume #skills li {
   display: inline;
 }
@@ -151,10 +161,6 @@ body {
   content: ", ";
 }
 
-.hResume .content li {
-  margin: 0 0 0.5em 0;
-}
-
-.hResume .content cite {
-  font-style: normal;
+.hResume #publications .conference {
+  color: #666;
 }
