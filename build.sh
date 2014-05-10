@@ -30,7 +30,7 @@ for i in `find . -name \*.css`; do
   outfile="${OUTPUT}/${basename}"
   if [ ! -f "${outfile}" -o "$i" -nt "${outfile}" ]; then
     echo "Minifying ${basename}..."
-    ${CSSTIDY} "$i" "${outfile}" --template=highest
+    ${INSTALL} "$i" "${outfile}"
   else
     echo "Skipping ${basename}."
   fi

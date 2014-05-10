@@ -26,6 +26,7 @@
       <meta charset="utf-8"/>
       <xsl:apply-templates select="node()"/>
       <link rel="stylesheet" href="/style/theme.css"/>
+      <meta name="viewport" content="width=device-width, user-scalable=no"/>
     </xsl:copy>
   </xsl:template>
 
