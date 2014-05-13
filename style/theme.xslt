@@ -24,6 +24,7 @@
     <xsl:copy>
       <xsl:apply-templates select="@*"/>
       <meta charset="utf-8"/>
+      <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
       <xsl:apply-templates select="node()"/>
       <link rel="stylesheet" href="/style/theme.css"/>
       <meta name="viewport" content="width=device-width, user-scalable=no"/>
