@@ -37,7 +37,7 @@ for i in `find . -name \*.css`; do
 done
 
 # Copy Remaining files
-for i in `find . -name \*.jpg`; do
+for i in `find . -name \*.jpg -or -name \*.html`; do
   basename=`echo $i | sed -E 's/^\\.+//'`
   outfile="${OUTPUT}/${basename}"
   if [ ! -f "${outfile}" -o "$i" -nt "${outfile}" ]; then
