@@ -1,13 +1,10 @@
 #!/bin/sh
 XSLTPROC=/usr/local/bin/xsltproc
 CSSTIDY=/usr/local/bin/csstidy
-INSTALL=/usr/bin/install
+INSTALL=/bin/cp
 STYLESHEET=style/theme.xslt
 OUTPUT=/var/www/html
 INPUT=`pwd`
-
-# Set a proper umask to ensure www can read the output
-umask 022
 
 # Build HTML files
 for i in `find . -name \*.xhtml`; do
