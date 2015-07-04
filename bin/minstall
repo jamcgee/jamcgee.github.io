@@ -1,0 +1,86 @@
+#!/bin/sh
+# minstall - Minimal installation script
+#
+# This replaces 'install' for two reasons:
+# - Permissions are not to be modified such that the ACLs will inherit
+#   properly.
+# - If the existing file is equivalent, it will not be touched so that the
+#   inode (used for E-Tag generation) is unchanged
+#
+# Parameters:
+# -d    Create directories (uses mkdir without chown/chmod)
+# -z    Compress files (uses gzip for Content-Encoding)
+
+usage() {
+cat >&2 <<__EOF__
+Usage: `basename $0` [-zv] file1 file2
+       `basename $0` [-zv] file1 ... fileN directory
+       `basename $0` -d [-v] directory
+__EOF__
+}
+
+install() {
+    # Verify the original file is present and newer than the destination
+    if [ ! -f "$1" ]; then
+        echo "`basename $0`: $1: no such file or directory" >&2
+        return 1
+    elif [ -d "$2" ]; then
+        echo "`basename $0`: $2: is a directory" >&2
+        return 1
+    elif [ "$1" -nt "$2" -o ! -e "$2" ]; then
+        cp $VERBOSE "$1" "$2" || return $?
+    fi
+    # Handle gzip separately in case the file is fresh but the gzip isn't
+    if [ -n "$COMPRESS" -a \( ! -e "$2.gz" -o "$1" -nt "$2.gz" \) ]; then
+        gzip -9fk $VERBOSE "$2"
+    fi
+}
+
+MKDIR=
+COMPRESS=
+VERBOSE=
+
+while getopts dhvz opt; do
+    case $opt in
+    d) MKDIR=YES ;;
+    h) usage; exit 0 ;;
+    v) VERBOSE=-v ;;
+    z) COMPRESS=YES ;;
+    *) usage; exit 1 ;;
+    esac
+done
+shift $((OPTIND-1))
+
+if [ -n "$MKDIR" ]; then
+    # Directory creation mode
+    if [ $# -lt 1 ]; then
+        usage
+        exit 1
+    fi
+    # Just use mkdir since it won't attempt to change permissions
+    mkdir -p $VERBOSE -- "$@"
+else
+    # File installation mode
+    eval DEST="\${$#}"
+    if [ $# -lt 2 -o -z "$DEST" ]; then
+        usage
+        exit 1
+    fi
+    if [ -d "$DEST" ]; then
+        # Destination is a directory
+        RESULT=0
+        while [ $# -gt 1 ]; do
+            install "$1" "$DEST/`basename $1`" || RESULT=1
+            shift
+        done
+        exit $RESULT
+    else
+        # Destination is a file
+        if [ $# -ne 2 ]; then
+            echo "`basename $0`: target directory '$DEST' does not exist" >&2
+            usage
+            exit 1
+        fi
+        install "$1" "$2"
+    fi
+fi
