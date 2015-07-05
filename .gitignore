@@ -1,5 +1,2 @@
 # Ignore editor debres
 *.swp
-# Ignore generated files
-content/*.html
-style/*-min.*

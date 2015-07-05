@@ -10,7 +10,7 @@
       omit-xml-declaration="yes"
       doctype-system="about:legacy-compat"
       media-type="application/xhtml+xml" />
-  <xsl:strip-space elements="*"/>
+  <xsl:strip-space elements="xhtml:*"/>
   <xsl:preserve-space elements="xhtml:pre"/>
 
   <!-- Copy Nodes Verbatim by default -->

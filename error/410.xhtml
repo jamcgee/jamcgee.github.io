@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>Gone</title>
+ </head>
+ <body class="error">
+  <div class="banner">
+    <h1>Error</h1>
+    <p>HTTP/1.1 410 Gone</p>
+  </div>
+  <p>Sorry, but the page you requested, <code><script type="text/x-ssi">echo var="full_uri"</script></code>, has been removed and is no longer available.</p>
+  <script type="text/x-ssi">if expr="$invalid_referer = 1"</script>
+    <p>Apparently, this is a broken link on the page you just came from.  We have been notified and will attempt to contact the owner of that page and let them know about it.</p>
+  <script type="text/x-ssi">elif expr="$http_referer"</script>
+    <p>Apparently, we have a broken link on our page. We have been notified and will correct the problem shortly. No further action is required on your part.</p>
+  <script type="text/x-ssi">else</script>
+    <p>It looks like this was the result of nn old address or an out-of-date bookmark in your web browser.</p>
+  <script type="text/x-ssi">endif</script>
+ </body>
+</html>
