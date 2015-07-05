@@ -48,7 +48,7 @@ body {
   .banner {
     text-align: center;
   }
- 
+
   .banner p {
     font-style: italic;
     margin: 0;
@@ -74,6 +74,18 @@ body {
 }
 
 @media screen {
+  .webroot .banner {
+    background: url(/images/metro.jpg) #444 50% 10% no-repeat;
+  }
+
+  .hResume .banner {
+    background: url(/images/scotchbrite.jpg) #032 50% 25% no-repeat;
+  }
+
+  .error .banner {
+    background: url(/images/redsand.jpg) #944 50% 25% no-repeat;
+  }
+
   .banner {
     background: url(/images/metro.jpg) #444 50% 25% no-repeat;
     color: white;
@@ -133,7 +145,7 @@ body {
 
 @media screen and (min-width: 400px) and (min-height: 600px) {
   .webroot .banner {
-    padding: 100px 0.5em 50px;
+    padding: 150px 0.5em 100px;
   }
 }
 
