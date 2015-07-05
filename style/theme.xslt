@@ -12,7 +12,6 @@
       media-type="application/xhtml+xml" />
   <xsl:strip-space elements="*"/>
   <xsl:preserve-space elements="xhtml:pre"/>
-  <xsl:param name="documentUri"/>
 
   <!-- Copy Nodes Verbatim by default -->
   <xsl:template match="@*|node()">
@@ -36,13 +35,14 @@
     <xsl:param name="href"/>
     <xsl:param name="text"/>
     <xsl:param name="exact" select="false()"/>
+    <xsl:variable name="base" select="/xhtml:html/xhtml:head/xhtml:base/@href"/>
     <li><a>
       <xsl:attribute name="href"><xsl:value-of select="$href"/></xsl:attribute>
       <xsl:choose>
-        <xsl:when test="$documentUri=$exact">
+        <xsl:when test="$exact and $base=$href">
           <xsl:attribute name="class">active</xsl:attribute>
         </xsl:when>
-        <xsl:when test="not($exact) and starts-with($documentUri, $href)">
+        <xsl:when test="not($exact) and starts-with($base, $href)">
           <xsl:attribute name="class">active</xsl:attribute>
         </xsl:when>
       </xsl:choose>
@@ -58,7 +58,7 @@
         <xsl:call-template name="navlink">
           <xsl:with-param name="href" select="'/'"/>
           <xsl:with-param name="text" select="'Home'"/>
-          <xsl:with-param name="exact" select="'/index.xhtml'"/>
+          <xsl:with-param name="exact" select="true()"/>
         </xsl:call-template>
         <xsl:call-template name="navlink">
           <xsl:with-param name="href" select="'/resume/'"/>
@@ -84,5 +84,10 @@
       </xsl:if>
       <div class="hidden">Send spam to <a href="mailto:spamtrap@etherealwake.com">spamtrap@etherealwake.com</a></div>
     </xsl:copy>
+  </xsl:template>
+
+  <!-- Look for SSI scripting blocks -->
+  <xsl:template match="xhtml:script[@type='text/x-ssi']">
+    <xsl:comment># <xsl:value-of select="."/></xsl:comment>
   </xsl:template>
 </xsl:stylesheet>

@@ -15,18 +15,16 @@ install: all
 	${INSTALL} -d ${HTMLDIR}/resume ${HTMLDIR}/style ${HTMLDIR}/images
 	${INSTALL} -z content/index.html ${HTMLDIR}/index.html
 	${INSTALL} -z content/resume.html ${HTMLDIR}/resume/index.html
-	${INSTALL} data/BingSiteAuth.xml data/google*.html ${HTMLDIR}/
-	${INSTALL} images/*.jpg ${HTMLDIR}/images/
+	${INSTALL}    data/BingSiteAuth.xml data/google*.html ${HTMLDIR}/
+	${INSTALL}    images/*.jpg ${HTMLDIR}/images/
 	${INSTALL} -z style/theme-min.css ${HTMLDIR}/style/theme.css
 
 
-content/index.html: content/index.xhtml style/theme.xslt
-	${XSLTPROC} --stringparam "documentUri" "/index.xhtml" \
-		-o $@ style/theme.xslt content/index.xhtml
+.SUFFIXES: .html .xhtml
 
-content/resume.html: content/resume.xhtml style/theme.xslt
-	${XSLTPROC} --stringparam "documentUri" "/resume/index.xhtml" \
-		-o $@ style/theme.xslt content/resume.xhtml
+.xhtml.html: style/theme.xslt
+	${XSLTPROC} -o $@ style/theme.xslt $<
+
 
 style/theme-min.css: style/theme.css
 	${CSSTIDY} -o $@ style/theme.css
