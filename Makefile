@@ -1,4 +1,4 @@
-HTMLDIR?=/var/www/html
+HTMLDIR?=/var/www/test
 CSSTIDY=yuicompressor
 XSLTPROC=xsltproc
 INSTALL=bin/minstall -v
