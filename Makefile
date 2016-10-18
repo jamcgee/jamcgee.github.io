@@ -1,5 +1,5 @@
 HTMLDIR?=/var/www/test
-CSSTIDY=yuicompressor
+CSSTIDY=bin/css-compress
 XSLTPROC=xsltproc
 INSTALL=bin/minstall -v
 
@@ -9,8 +9,10 @@ INSTALL=bin/minstall -v
 all: content/index.html content/resume.html style/theme-min.css \
 	error/401.html error/403.html error/404.html error/410.html error/50x.html
 
+bin/css-compress: bin/css-compress.c
+
 clean:
-	rm -f content/*.html error/*.html style/*-min.*
+	rm -f ${CSSTIDY} content/*.html error/*.html style/*-min.*
 
 install: all
 	${INSTALL} -d ${HTMLDIR}/resume ${HTMLDIR}/style ${HTMLDIR}/images \
@@ -29,5 +31,5 @@ install: all
 	${XSLTPROC} -o $@ style/theme.xslt $<
 
 
-style/theme-min.css: style/theme.css
-	${CSSTIDY} -o $@ style/theme.css
+style/theme-min.css: style/theme.css ${CSSTIDY}
+	${CSSTIDY} < style/theme.css > $@
