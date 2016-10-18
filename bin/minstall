@@ -13,68 +13,70 @@
 
 usage() {
 cat >&2 <<__EOF__
-Usage: `basename $0` [-zv] file1 file2
-       `basename $0` [-zv] file1 ... fileN directory
-       `basename $0` -d [-v] directory
+Usage: $(basename $0) [-zv] file1 file2
+       $(basename $0) [-zv] file1 ... fileN directory
+       $(basename $0) -d [-v] directory
 __EOF__
+  exit 1
 }
 
 install() {
   # Don't update the file if nothing has changed (keep timestamp)
   if ! diff -q "$1" "$2" > /dev/null 2>&1; then
-    /usr/bin/install -C -m 664 $VERBOSE "$1" "$2" || return $?
-  fi
-  # Create or destroy the .gz file as appropriate
-  if [ -n "$COMPRESS" ]; then
-    gzip -9fk $VERBOSE "$2"
+    cp -- "$1" "$2" || return $?
+    # Create or destroy the .gz file as appropriate
+    if ${COMPRESS}; then
+      gzip -9fk ${VERBOSE} "$2"
+    else
+      rm -f "$2".gz
+    fi
+  elif ${COMPRESS}; then
+    # Create .gz file if it is missing
+    if [ ! -f "$2".gz ]; then
+      gzip -9fk ${VERBOSE} "$2"
+    fi
   else
+    # Delete .gz file if it is not to exist
     rm -f "$2".gz
   fi
 }
 
-MKDIR=
-COMPRESS=
+MKDIR=false
+COMPRESS=false
 VERBOSE=
 umask 002
 
-while getopts dhvz opt; do
-  case $opt in
-  d) MKDIR=YES ;;
-  h) usage; exit 0 ;;
+while getopts dhvz OPT; do
+  case ${OPT} in
+  d) MKDIR=true ;;
   v) VERBOSE=-v ;;
-  z) COMPRESS=YES ;;
-  *) usage; exit 1 ;;
+  z) COMPRESS=true ;;
+  *) usage ;;
   esac
 done
 shift $((OPTIND-1))
 
-if [ -n "$MKDIR" ]; then
+if ${MKDIR}; then
   # Directory creation mode
-  if [ $# -lt 1 ]; then
-    usage
-    exit 1
-  fi
+  [ $# -gt 0 ] || usage
   # Just use mkdir since it won't attempt to change permissions
-  mkdir -p $VERBOSE -- "$@"
+  mkdir -p ${VERBOSE} -- "$@"
 else
   # File installation mode
   eval DEST="\${$#}"
-  if [ $# -lt 2 -o -z "$DEST" ]; then
-    usage
-    exit 1
-  fi
-  if [ -d "$DEST" ]; then
+  [ $# -gt 1 -a -n "${DEST}" ] || usage
+  if [ -d "${DEST}" ]; then
     # Destination is a directory
     RESULT=0
     while [ $# -gt 1 ]; do
-      install "$1" "$DEST/`basename $1`" || RESULT=1
+      install "$1" "${DEST}/$(basename $1)" || RESULT=1
       shift
     done
-    exit $RESULT
+    exit ${RESULT}
   else
     # Destination is a file
     if [ $# -ne 2 ]; then
-      echo "`basename $0`: target directory '$DEST' does not exist" >&2
+      echo "$(basename $0): target directory '${DEST}' does not exist" >&2
       usage
       exit 1
     fi
