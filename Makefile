@@ -19,7 +19,8 @@ install: all
 		${HTMLDIR}/error
 	${INSTALL} -z content/index.html ${HTMLDIR}/index.html
 	${INSTALL} -z content/resume.html ${HTMLDIR}/resume/index.html
-	${INSTALL}    data/BingSiteAuth.xml data/google*.html ${HTMLDIR}/
+	${INSTALL}    data/BingSiteAuth.xml data/google*.html data/robots.txt \
+		${HTMLDIR}/
 	${INSTALL}    error/*.html ${HTMLDIR}/error
 	${INSTALL}    images/*.jpg ${HTMLDIR}/images
 	${INSTALL} -z style/theme-min.css ${HTMLDIR}/style/theme.css

@@ -23,7 +23,7 @@ __EOF__
 install() {
   # Don't update the file if nothing has changed (keep timestamp)
   if ! diff -q "$1" "$2" > /dev/null 2>&1; then
-    cp -- "$1" "$2" || return $?
+    cp ${VERBOSE} -- "$1" "$2" || return $?
     # Create or destroy the .gz file as appropriate
     if ${COMPRESS}; then
       gzip -9fk ${VERBOSE} "$2"
