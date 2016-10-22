@@ -78,7 +78,7 @@ body {
     background: url(/images/metro.jpg) #444 50% 10% no-repeat;
   }
 
-  .hResume .banner {
+  .resume .banner {
     background: url(/images/scotchbrite.jpg) #032 50% 25% no-repeat;
   }
 
@@ -159,24 +159,24 @@ body {
   display: none;
 }
 
-.hResume .content p {
+.resume .content p {
   margin: 0 0 1em 0;
 }
 
-.hResume .content h2 {
+.resume .content h2 {
   font-size: 24px;
   margin: 0.5em 0;
   color: #486;
 }
 
 @media (min-width : 600px) {
-  .hResume .content {
+  .resume .content {
     position: relative;
     padding: 18px 18px 0 150px;
     max-width: 856px;
   }
 
-  .hResume .content h2 {
+  .resume .content h2 {
     font-size: 1em;
     position: absolute;
     padding: 0 10px;
@@ -188,47 +188,47 @@ body {
   }
 }
 
-.hResume .content h3 {
+.resume .content h3 {
   font-size: 1em;
   margin: 1em 0 0 0;
   padding: 0;
 }
 
-.hResume .content h4 {
+.resume .content h4 {
   font-size: 0.8em;
   margin: 0;
   padding: 0;
   color: #444;
 }
 
-.hResume .content ul {
+.resume .content ul {
   list-style: none;
   padding: 0;
   margin: 0 0 1em 0;
 }
 
-.hResume .content ol {
+.resume .content ol {
   list-style: none;
   padding: 0;
   margin: 0 0 1em 0;
 }
 
-.hResume .content li {
+.resume .content li {
   margin: 0 0 0.5em 0;
 }
 
-.hResume .content cite {
+.resume .content cite {
   font-style: normal;
 }
 
-.hResume #skills li {
+.resume #skills li {
   display: inline;
 }
 
-.hResume #skills li + li:before {
+.resume #skills li + li:before {
   content: ", ";
 }
 
-.hResume #publications .conference {
+.resume #publications .conference {
   color: #666;
 }
