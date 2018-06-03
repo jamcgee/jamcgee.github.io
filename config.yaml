@@ -1,0 +1,17 @@
+baseURL: https://etherealwake.com/
+languageCode: en-us
+title: Ethereal Wake
+theme: etherealwake
+
+author:
+  name: Jonathan McGee
+  email: broken.source@etherealwake.com
+copyright: Copyright © 2014-2018 Jonathan McGee.  All Rights Reserved.
+
+menu:
+  main:
+  - name: Home
+    url: /
+  - identifier: resume
+    name: Resume
+    url: /resume/

@@ -1,0 +1,265 @@
+body {
+  margin: 0;
+  font-family: Cambria, Georgia, Times, serif;
+  font-size: 18px;
+  line-height: 1.5em;
+  background: white;
+  color: black;
+}
+
+nav {
+  text-align: center;
+  background: black;
+  color: darkgrey;
+  margin: 0;
+  padding: 10px;
+}
+
+nav ul {
+  margin: 0;
+  padding: 0;
+}
+
+nav, header, main, footer {
+  display: block;
+}
+
+@media print {
+  nav {
+    display: none;
+  }
+}
+
+nav li {
+  display: inline;
+}
+
+nav li + li:before {
+  content: " | ";
+}
+
+nav a {
+  text-transform: uppercase;
+  text-decoration: none;
+  padding: 10px 20px;
+  color: darkgrey;
+}
+
+nav a:hover {
+  text-shadow: 0 0 3px lightgrey;
+}
+
+nav a.active {
+  color: white;
+}
+
+@media print {
+  body > header {
+    text-align: center;
+  }
+
+  body > header p {
+    font-style: italic;
+    margin: 0;
+    padding: 0;
+  }
+
+  body > header h1 {
+    font-size: 56px;
+    font-weight: normal;
+    line-height: 1em;
+    margin: 0;
+    padding: 0;
+  }
+
+  body > header .links {
+    font-style: normal;
+  }
+
+  a {
+    text-decoration: none;
+    color: inherit;
+  }
+}
+
+@media screen {
+  body.root > header {
+    background: url(/images/metro.jpg) #444 50% 10% no-repeat;
+  }
+
+  body.resume > header {
+    background: url(/images/scotchbrite.jpg) #032 50% 25% no-repeat;
+  }
+
+  body.error > header {
+    background: url(/images/redsand.jpg) #944 50% 25% no-repeat;
+  }
+
+  body > header {
+    background: url(/images/metro.jpg) #444 50% 25% no-repeat;
+    color: white;
+    padding: 0.5em;
+    text-shadow: 0 0 5px black;
+    text-align: center;
+  }
+
+  body > header h1 {
+    font-size: 36px;
+    font-weight: normal;
+    line-height: 1em;
+    margin: 0;
+    padding: 0;
+  }
+
+  body > header p {
+    font-style: italic;
+    margin: 0;
+    padding: 0;
+  }
+
+  body > header .links {
+    font-style: normal;
+  }
+
+  body > header a {
+    color: inherit;
+  }
+
+  body > header a:hover {
+    text-shadow: 0 0 3px #CCC;
+  }
+
+  main {
+    max-width: 1024px;
+    margin: 0 auto;
+    padding: 18px 9px 0;
+  }
+
+  footer {
+    max-width: 1024px;
+    margin: 0 auto;
+  }
+}
+
+@media screen and (min-width: 400px) {
+  body > header h1 {
+    font-size: 56px;
+  }
+}
+
+@media screen and (min-height: 600px) {
+  body > header h1 {
+    margin: 28px 18px;
+  }
+
+  body > header p {
+    margin: 8px 18px;
+  }
+}
+
+@media screen and (min-width: 400px) and (min-height: 600px) {
+  body.root > header {
+    padding: 150px 0.5em 100px;
+  }
+}
+
+footer {
+  border-top: 1px solid #CCC;
+  font-size: 0.8em;
+  color: #444;
+}
+
+.hidden {
+  display: none;
+}
+
+body.resume > header ul {
+  margin: 0;
+  padding: 0;
+}
+
+body.resume > header li {
+  display: inline;
+}
+
+body.resume > header li + li:before {
+  content: " | ";
+}
+
+body.resume > main p {
+  margin: 0 0 1em 0;
+}
+
+body.resume > main h2 {
+  font-size: 24px;
+  margin: 0.5em 0;
+  color: #486;
+}
+
+@media (min-width : 600px) {
+  body.resume > main {
+    position: relative;
+    padding: 18px 18px 0 150px;
+    max-width: 856px;
+  }
+
+  body.resume > main h2 {
+    font-size: 1em;
+    position: absolute;
+    padding: 0 10px;
+    margin: 0;
+    width: 120px;
+    text-align: right;
+    border-right: 1px solid #486;
+    left: 0;
+  }
+}
+
+body.resume > main h3 {
+  font-size: 1em;
+  margin: 1em 0 0 0;
+  padding: 0;
+}
+
+body.resume > main h4 {
+  font-size: 0.8em;
+  margin: 0;
+  padding: 0;
+  color: #444;
+}
+
+body.resume > main ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1em 0;
+}
+
+body.resume > main ol {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1em 0;
+}
+
+body.resume > main li {
+  margin: 0 0 0.5em 0;
+}
+
+body.resume > main cite {
+  font-style: normal;
+}
+
+.resume #skills li {
+  display: inline;
+}
+
+.resume #skills li:after {
+  content: ", ";
+}
+
+.resume #skills li:last-child:after {
+  content: "";
+}
+
+.resume #publications .conference {
+  color: #666;
+}
