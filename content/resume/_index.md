@@ -37,9 +37,11 @@ summary: Private pilot and electrical engineer with experience in embedded syste
   <h2>Experience</h2>
   <ol>
     <li>
-      <h3>Hardware Engineer, <a href="https://www.solveforx.com/">Google[x]</a></h3>
+      <h3>Hardware Engineer, <a href="https://x.company/loon/">Project Loon</a>, <a href="https://abc.xyz/">Alphabet</a></h3>
       <h4>July 2014 - Present</h4>
-      <p>Circuit design, <abbr title="Printed Circuit Board">PCB</abbr> layout, and firmware development for avionics systems as part of <a href="http://www.solveforx.com/loon/">Project Loon.</a> Primary focus on sensor systems.</p>
+      <p>Circuit design, <abbr title="Printed Circuit Board">PCB</abbr> layout, firmware development, and integrated testing for flight systems.  Systems centered around use of the ARM <a href="https://developer.arm.com/products/processors/cortex-m/cortex-m3">Cortex-M3</a> and <a href="https://developer.arm.com/products/processors/cortex-m/cortex-m4">Cortex-M4</a>.  Limited work investigating use of the <a href="https://developer.arm.com/products/processors/cortex-r/cortex-r5">Cortex-R5</a> (including initial CPU bring-up).  General focus on sensor systems.</p>
+      <p>One project paired a <a href="https://www.xilinx.com/products/silicon-devices/fpga/artix-7.html">Xilinx Artix-7 FPGA</a> with a Cortex-M4 microcontroller.  Implemented signal synthesis, capture, and estimation on the FPGA and interfaced it to the MCU.  For developer simplicity, the FPGA presented itself as an SRAM such that the MCU firmware could access it as a memory-mapped peripheral.</p>
+      <p>Interfaced with Enterprise PLM Systems, Component Manufacturers, Prototyping Vendors, and Contract Manufacturers.  Implemented and administered database for the centralized management of component libraries for Altium and Orcad/Allegro.</p>
     </li>
     <li>
       <h3>Research Engineer, <a href="http://www.lps.umd.edu/">Laboratory for Physical Sciences</a></h3>
@@ -92,9 +94,9 @@ summary: Private pilot and electrical engineer with experience in embedded syste
 <section id="aviation">
   <h2>Aviation</h2>
   <ul>
-    <li>Private Pilot’s License (<abbr title="Airplane, Single Engine, Land">ASEL</abbr>), May 2012</li>
+    <li>Private Pilot’s License (<abbr title="Airplane, Single Engine, Land">ASEL</abbr>, <abbr title="Instrument Rating">IR</abbr>), May 2012</li>
     <li>Member <a href="http://aopa.org/"><abbr title="Aircraft Owners and Pilots Association">AOPA</abbr></a>, February 2012-Present</li>
-    <li>Member <a href="http://eaa.org/"><abbr title="Experimental Aircraft Association">EAA</abbr></a>, July 2011-Present</li>
+    <li>Lifetime Member <a href="http://eaa.org/"><abbr title="Experimental Aircraft Association">EAA</abbr></a>, July 2011-Present</li>
   </ul>
 </section>
 <section id="publications">
