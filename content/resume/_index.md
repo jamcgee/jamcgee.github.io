@@ -37,8 +37,13 @@ summary: Private pilot and electrical engineer with experience in embedded syste
   <h2>Experience</h2>
   <ol>
     <li>
+      <h3>Hardware Engineer, <a href="http://google.com/">Google</a>, <a href="https://abc.xyz/">Alphabet</a></h3>
+      <h4>July 2018 - Present</h4>
+      <p>Circuit design and machine learning for computer vision applications.</p>
+    </li>
+    <li>
       <h3>Hardware Engineer, <a href="https://x.company/loon/">Project Loon</a>, <a href="https://abc.xyz/">Alphabet</a></h3>
-      <h4>July 2014 - Present</h4>
+      <h4>July 2014 - July 2018</h4>
       <p>Circuit design, <abbr title="Printed Circuit Board">PCB</abbr> layout, firmware development, and integrated testing for flight systems.  Systems centered around use of the ARM <a href="https://developer.arm.com/products/processors/cortex-m">Cortex-M</a>.  Limited work investigating use of the <a href="https://developer.arm.com/products/processors/cortex-r">Cortex-R</a> (including initial CPU bring-up) and <abbr title="Field Programmable Gate Arrays">FPGAs</abbr>.  General focus on sensor systems.</p>
       <p>Interfaced with Enterprise PLM Systems, Component Manufacturers, Prototyping Vendors, and Contract Manufacturers.  Implemented and administered database for the centralized management of component libraries for Altium and Orcad/Allegro.</p>
     </li>
@@ -111,5 +116,11 @@ summary: Private pilot and electrical engineer with experience in embedded syste
     <li class="journal">K.A. Jones, P.B. Shah, T.S. Zheleva, M.H. Ervin, M.A. Derenge, J.A. Freitas, S. Harmon, J. McGee, and R.D. Vispute, <q><a href="http://dx.doi.org/10.1063/1.1798404">Effects of high-temperature anneals on 4H-SiC Implanted with Al or Al and Si</a>,</q> in <i>Journal of Applied Physics</i>, vol. 96, pp. 5613-5618, Nov 2004.</li>
     <li class="conference">J. Polley, D. Blazakis, J. McGee, D. Rusk, and J.S. Baras, <q><a href="http://dx.doi.org/10.1109/SAHCN.2004.1381912">ATEMU: a fine-grained sensor network simulator</a>,</q> in <i>Proc.  Sensor and Ad Hoc Communications and Networks</i>, 2004, pp. 145-152.</li>
     <li class="conference">J. McGee, M. Karir, and J.S. Baras, <q><a href="http://dx.doi.org/10.1007/978-3-540-24643-5_12">Implementing Ad Hoc to Terrestrial Network Gateways</a>,</q> in <i>Proc. Wired/Wireless Internet Communications</i>, 2004, pp. 132-142.</li>
+  </ul>
+</section>
+<section>
+  <h2>Statistics</h2>
+  <ul>
+    <li>Erdős Distance: 4 (Jonathan McGee <a href="http://dx.doi.org/10.1007/978-3-540-24643-5_12">&#x2192;</a> John S Baras <a href="https://mathscinet.ams.org/mathscinet-getitem?mr=1198920">&#x2192;</a> Lorenzo Finesso <a href="https://mathscinet.ams.org/mathscinet-getitem?mr=2886953">&#x2192;</a> László Gerencsér <a href="https://mathscinet.ams.org/mathscinet-getitem?mr=321803">&#x2192;</a> Paul Erdős)</li>
   </ul>
 </section>
