@@ -8,7 +8,6 @@
   <link rel="{{ .Rel }}" type="{{ .MediaType.Type }}" href="{{ .Permalink | relURL }}"/>
 {{- end }}
   <link rel="stylesheet" type="text/css" href="{{ "css/site.css" | relURL }}" />
-  {{ .Hugo.Generator }}
   <meta name="viewport" content="width=device-width,user-scalable=no" />
 </head>
 <body class="{{ .Params.class }}">

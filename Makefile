@@ -1,4 +1,4 @@
-HTMLDIR?=/var/www/test
+HTMLDIR?=/zdata/db/www/test
 PARAMS=--cleanDestinationDir --enableGitInfo --noChmod --noTimes
 
 all:
