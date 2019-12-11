@@ -37,6 +37,11 @@ summary: Private pilot and electrical engineer with experience in embedded syste
   <h2>Experience</h2>
   <ol>
     <li>
+      <h3>Founder, <a href="http://etherealsystems.net">Ethereal Systems</a></h3>
+      <h4>June 2019 - Present</h4>
+      <p>Contract circuit design, <abbr title="Printed Circuit Board">PCB</abbr> layout, <abbr title="Field Programmable Gate Array">FPGA</abbr> and firmware development.</p>
+    </li>
+    <li>
       <h3>Hardware Engineer, <a href="http://google.com/">Google</a>, <a href="https://abc.xyz/">Alphabet</a></h3>
       <h4>July 2018 - June 2019</h4>
       <p>Circuit design, <abbr title="Printed Circuit Board">PCB</abbr> layout, firmware development, and machine learning for prototyping computer vision applications.</p>
