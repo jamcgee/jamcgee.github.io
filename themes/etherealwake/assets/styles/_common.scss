@@ -11,6 +11,18 @@ nav, header, main, footer {
   display: block;
 }
 
+body.error > main blockquote {
+  font-family: monospace;
+}
+
+blockquote {
+  border-color: #CCC;
+  border-style: solid;
+  border-width: 0 0 0 8px;
+  margin: 8px;
+  padding: 0 0 0 16px;
+}
+
 .hidden {
   display: none;
 }
