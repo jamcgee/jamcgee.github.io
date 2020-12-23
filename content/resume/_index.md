@@ -1,7 +1,10 @@
 ---
+# Index
+date: 2018-06-02
+sitemap:
+  changeFreq: monthly
+# Metadata
 title: Jonathan McGee - Resume
-class: resume
-
 author:
   name: Jonathan McGee
   email: continuing.search@etherealwake.com
@@ -123,7 +126,7 @@ summary: Private pilot and electrical engineer with experience in embedded syste
     <li class="conference">J. McGee, M. Karir, and J.S. Baras, <q><a href="http://dx.doi.org/10.1007/978-3-540-24643-5_12">Implementing Ad Hoc to Terrestrial Network Gateways</a>,</q> in <i>Proc. Wired/Wireless Internet Communications</i>, 2004, pp. 132-142.</li>
   </ul>
 </section>
-<section>
+<section id="statistics">
   <h2>Statistics</h2>
   <ul>
     <li>Erdős Distance: 4 (Jonathan McGee <a href="http://dx.doi.org/10.1007/978-3-540-24643-5_12">&#x2192;</a> John S Baras <a href="https://mathscinet.ams.org/mathscinet-getitem?mr=1198920">&#x2192;</a> Lorenzo Finesso <a href="https://mathscinet.ams.org/mathscinet-getitem?mr=2886953">&#x2192;</a> László Gerencsér <a href="https://mathscinet.ams.org/mathscinet-getitem?mr=321803">&#x2192;</a> Paul Erdős)</li>

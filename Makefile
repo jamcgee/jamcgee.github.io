@@ -1,14 +1,27 @@
-HTMLDIR?=/zdata/db/www/test.etherealwake.com
-RELEASE?=/zdata/db/www/etherealwake.com
-PARAMS=--cleanDestinationDir --enableGitInfo --noChmod --noTimes
+FLAGS ?= --minify
+TESTFLAGS ?= --buildDrafts --buildFuture --cleanDestinationDir
+BASEDIR ?= /zdata/db/www
 
+# Build for release
 all:
-	hugo -v ${PARAMS}
+	hugo -v ${FLAGS}
+
+# Clear out all generated content
 clean:
-	rm -rf public
-install:
-	hugo ${PARAMS} --minify --destination ${HTMLDIR}
+	rm -rf public resources
+
+# Run local server for testing
 server:
-	hugo server
+	hugo server --baseURL=http://localhost/ ${TESTFLAGS}
+
+# Install into test server
+TESTHOST ?= test.etherealwake.com
+TESTBASE ?= ${BASEDIR}/${TESTHOST}
+test:
+	hugo --baseURL=https://${TESTHOST}/ --destination=${TESTBASE} ${TESTFLAGS}
+
+# Install into production server
+RELHOST ?= etherealwake.com
+RELBASE ?= ${BASEDIR}/${RELHOST}
 release:
-	hugo ${PARAMS} --minify --destination ${RELEASE}
+	hugo --destination=${RELBASE} ${FLAGS}

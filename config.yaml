@@ -1,13 +1,26 @@
+# Hugo Configuration
 baseURL: https://etherealwake.com/
-languageCode: en-us
-title: Ethereal Wake
-theme: etherealwake
+languageCode: en-US
+defaultContentLanguage: en
+disableKinds: ["404", "RSS"]
+enableGitInfo: true
+enableRobotsTXT: true
 
+# Site Configuration
+title: Ethereal Wake
 author:
   name: Jonathan McGee
   email: broken.source@etherealwake.com
-copyright: Copyright © 2014-2018 Jonathan McGee.  All Rights Reserved.
+copyright: Copyright © 2014-2020 Jonathan McGee
 
+# Theme Configuration
+markup:
+  goldmark:
+    renderer:
+      unsafe: true
+theme: etherealwake
+
+# Menu Definitions
 menu:
   main:
   - name: Home
