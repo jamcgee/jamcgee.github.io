@@ -1,0 +1,29 @@
+<!-- Entries are marked up per BibTeX, formatted per IEEE -->
+<ol>
+{{ range .Params.items }}
+  {{ $authors := len .authors -}}
+  <li class="{{ .class }}">
+    {{ if lt $authors 2 -}}
+      {{ range .authors }}{{ .name }}, {{ end -}}
+    {{ else if eq $authors 2 -}}
+      {{ (index .authors 0).name }} and {{ (index .authors 1).name }},
+    {{ else if lt $authors 7 -}}
+      {{ range $index, $author := .authors }}{{ $author.name }}, {{ if eq $index (sub $authors 2) }}and {{ end }}{{ end -}}
+    {{ else -}}
+      {{ (index .authors 0).name }} et al,
+    {{ end }}
+    <q>{{ with .url }}<a href="{{.}}">{{ end }}{{ .title }}{{ if .url }}</a>{{ end }}</q>{{ with .type -}},
+    {{ . }}{{ end }}{{ if .conference -}},
+    <i>{{ .conference }}</i>{{ with .location -}},
+    {{ . }}{{ end -}},
+    {{ dateFormat "Jan. 2006" .date }}{{ else if .journal -}},
+    in <i>{{ .journal }}</i>{{ end }}{{ with .volume -}},
+    vol. {{.}}{{ end }}{{ with .number -}},
+    no. {{.}}{{ end }}{{ with .pages -}},
+    pp. {{.}}{{ end }}{{ with .school -}},
+    {{ . }}{{ end }}{{ if ne .class "conference" -}},
+    {{ dateFormat "2006" .date }}{{ end }}{{ with .doi -}},
+    doi: {{.}}{{ end }}.
+  </li>
+{{ end }}
+</ol>

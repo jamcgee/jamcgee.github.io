@@ -6,4 +6,5 @@ sitemap:
 # Metadata
 title: Ethereal Wake
 subtitle: Center for the study of the Luminiferous Æther
+description: Jonathan McGee's Personal Website
 ---

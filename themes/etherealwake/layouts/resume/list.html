@@ -4,15 +4,26 @@
 {{- with .Params.author.email }}
   <li><a href="mailto:{{.}}">{{.}}</a></li>
 {{- end }}
-{{- with .Params.author.homepage }}
+{{- with .Params.author.url }}
   <li><a href="{{.}}">{{.}}</a></li>
 {{- end }}
-</ul>
-{{- with .Params.summary }}
-<p class="summary">{{.}}</p>
+{{- with .Params.author.github }}
+<li><a href="https://github.com/{{.}}">GitHub</a></li>
 {{- end }}
+</ul>
+{{ .Content }}
 {{ end }}
 
 {{ define "main" }}
-{{ .Content }}
+  {{ $directory := printf "%s%s" .File.Dir "_index" }}
+  {{ $bundle := .Site.GetPage $directory }}
+  {{ $fragments := $bundle.Resources.ByType "page" }}
+  {{ range $fragments }}
+    {{ if not .Params.disabled }}
+    <section id="{{ .File.ContentBaseName }}">
+      <h2>{{ .Title }}</h2>
+      {{ partial (printf "fragments/%s" .Params.Fragment ) . }}
+    </section>
+    {{ end }}
+  {{ end }}
 {{ end }}

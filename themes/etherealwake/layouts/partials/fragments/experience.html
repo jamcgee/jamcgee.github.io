@@ -1,0 +1,11 @@
+<ol>
+{{ range .Params.items }}
+  <li>
+    {{- with .organization }}
+    <h3>{{ with .url }}<a href="{{.}}">{{ end }}{{ .name }}{{ with .url }}</a>{{end}}{{ with .location }}, {{.}}{{ end }}</h3>
+    {{- end }}
+    <h4>{{ .title }}, {{ dateFormat "January 2006" .startDate }} - {{ with .endDate }}{{ dateFormat "January 2006" . }}{{ else }}Present{{ end }}</h4>
+    {{ .content | markdownify }}
+  </li>
+{{ end }}
+</ol>
