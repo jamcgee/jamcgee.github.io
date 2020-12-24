@@ -1,0 +1,169 @@
+body {
+  background: #FFF;
+  color: #000;
+  font-family: Cambria, Georgia, Times, serif;
+  font-size: 18px;
+  line-height: 1.5em;
+  margin: 0;
+}
+
+nav, header, main, footer {
+  display: block;
+}
+
+.hidden {
+  display: none;
+}
+
+@media print {
+  body > header {
+    text-align: center;
+  }
+
+  body > header p {
+    font-style: italic;
+    margin: 0;
+    padding: 0;
+  }
+
+  body > header h1 {
+    font-size: 56px;
+    font-weight: normal;
+    line-height: 1em;
+    margin: 0;
+    padding: 0;
+  }
+
+  body > header .links {
+    font-style: normal;
+  }
+
+  a {
+    text-decoration: none;
+    color: inherit;
+  }
+
+  nav {
+    display: none;
+  }
+}
+
+@media screen {
+  body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  div.content {
+    display: block;
+    max-width: 1024px;
+    margin: 0 auto;
+  }
+
+  body > nav {
+    background: black;
+    color: darkgrey;
+    padding: 10px;
+    text-align: center;
+  }
+
+  body > nav ul, body > nav li {
+    display: inline;
+    margin: 0;
+    padding: 0;
+  }
+
+  body > nav li + li:before {
+    content: " | ";
+  }
+
+  body > nav a {
+    text-transform: uppercase;
+    text-decoration: none;
+    padding: 10px 20px;
+    color: #888;
+  }
+
+  body > nav a:hover {
+    text-shadow: 0 0 3px #CCC;
+  }
+
+  body > nav a.active {
+    color: #FFF;
+  }
+
+  body > header {
+    background: url(/images/metro.jpg) #444 50% 25% no-repeat;
+    color: #FFF;
+    padding: 10px;
+    text-align: center;
+    text-shadow: 0 0 5px #000;
+  }
+
+  body.home > header {
+    background: url(/images/metro.jpg) #444 50% 10% no-repeat;
+  }
+
+  body.resume > header {
+    background: url(/images/scotchbrite.jpg) #032 50% 25% no-repeat;
+  }
+
+  body.error > header {
+    background: url(/images/redsand.jpg) #944 50% 25% no-repeat;
+  }
+
+  body > header h1 {
+    font-size: 36px;
+    font-weight: normal;
+    line-height: 1em;
+  }
+
+  body > header p {
+    font-style: italic;
+  }
+
+  body > header .links {
+    font-style: normal;
+  }
+
+  body > header a {
+    color: inherit;
+  }
+
+  body > header a:hover {
+    text-shadow: 0 0 3px #CCC;
+  }
+
+  body > main {
+    flex-grow: 1;
+  }
+
+  body > footer {
+    background: #CCC;
+    font-size: 0.8em;
+    padding: 0 10px;
+  }
+}
+
+@media screen and (min-width: 400px) {
+  body > header h1 {
+    font-size: 56px;
+  }
+}
+
+@media screen and (min-height: 600px) {
+  body > header h1 {
+    margin: 28px 18px;
+  }
+
+  body > header p {
+    margin: 8px 18px;
+  }
+}
+
+@media screen and (min-width: 400px) and (min-height: 600px) {
+  body.home > header {
+    padding: 150px 0.5em 100px;
+  }
+}

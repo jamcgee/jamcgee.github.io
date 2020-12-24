@@ -1,19 +1,21 @@
 <!DOCTYPE html>
 <html lang="{{ .Site.LanguageCode | default "en" }}">
 <head>
-  <meta charset="utf-8" />
-  <title>{{ .Title }}</title>
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-{{- range .AlternativeOutputFormats }}
-  <link rel="{{ .Rel }}" type="{{ .MediaType.Type }}" href="{{ .Permalink | relURL }}"/>
-{{- end }}
-  <link rel="stylesheet" type="text/css" href="{{ "css/site.css" | relURL }}" />
-  <meta name="viewport" content="width=device-width,user-scalable=no" />
+{{ partial "head.html" . -}}
+{{ block "meta" . }}{{ end -}}
 </head>
-<body class="{{ .Params.class }}">
-{{- block "nav" . }}{{ partial "site-nav" . }}{{ end -}}
-{{- block "header" . }}{{ partial "site-header" . }}{{ end -}}
+<body class="{{ .Kind }} {{ .Type }}">
+{{ partial "nav.html" . -}}
+<header>
+<div class="content">
+{{- block "header" . }}{{ partial "header.html" . }}{{ end -}}
+</div>
+</header>
+<main>
+<div class="content">
 {{- block "main" . }}{{ end -}}
-{{- block "footer" . }}{{ partial "site-footer" . }}{{ end -}}
+</div>
+</main>
+{{ partial "footer.html" . -}}
 </body>
 </html>

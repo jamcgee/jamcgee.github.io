@@ -1,0 +1,91 @@
+body.resume > header ul {
+  margin: 0;
+  padding: 0;
+}
+
+body.resume > header li {
+  display: inline;
+}
+
+body.resume > header li + li:before {
+  content: " | ";
+}
+
+body.resume > main p {
+  margin: 0 0 1em 0;
+}
+
+body.resume > main h2 {
+  color: #486;
+  font-size: 24px;
+  margin: 0.5em 0;
+}
+
+@media (min-width : 600px) {
+  body.resume > main section {
+    max-width: 856px;
+    margin: 18px 0;
+    padding: 0 0 0 150px;
+    position: relative;
+  }
+
+  body.resume > main h2 {
+    border-right: 2px solid #486;
+    font-size: 1em;
+    left: 0;
+    margin: 0;
+    padding: 0 10px;
+    position: absolute;
+    text-align: right;
+    width: 120px;
+  }
+}
+
+body.resume > main h3 {
+  font-size: 1em;
+  margin: 1em 0 0 0;
+  padding: 0;
+}
+
+body.resume > main h4 {
+  color: #444;
+  font-size: 0.8em;
+  margin: 0;
+  padding: 0;
+}
+
+body.resume > main ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1em 0;
+}
+
+body.resume > main ol {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1em 0;
+}
+
+body.resume > main li {
+  margin: 0 0 0.5em 0;
+}
+
+body.resume > main cite {
+  font-style: normal;
+}
+
+.resume #skills li {
+  display: inline;
+}
+
+.resume #skills li:after {
+  content: ", ";
+}
+
+.resume #skills li:last-child:after {
+  content: "";
+}
+
+.resume #publications .conference {
+  color: #666;
+}

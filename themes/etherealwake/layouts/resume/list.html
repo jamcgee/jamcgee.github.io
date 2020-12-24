@@ -1,19 +1,18 @@
-{{ define "header" -}}
-<header>
-  <h1>{{ .Params.author.name }}</h1>
-  <ul>
+{{ define "header" }}
+<h1>{{ .Params.author.name }}</h1>
+<ul>
 {{- with .Params.author.email }}
-    <li><a href="mailto:{{.}}">{{.}}</a></li>
+  <li><a href="mailto:{{.}}">{{.}}</a></li>
 {{- end }}
 {{- with .Params.author.homepage }}
-    <li><a href="{{.}}">{{.}}</a></li>
+  <li><a href="{{.}}">{{.}}</a></li>
 {{- end }}
-  </ul>
-  <p class="summary">{{ .Params.summary }}</p>
-</header>
+</ul>
+{{- with .Params.summary }}
+<p class="summary">{{.}}</p>
 {{- end }}
-{{ define "main" -}}
-<main>
-{{ .Content -}}
-</main>
+{{ end }}
+
+{{ define "main" }}
+{{ .Content }}
 {{ end }}

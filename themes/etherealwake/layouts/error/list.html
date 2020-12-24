@@ -1,0 +1,16 @@
+{{ define "meta" }}
+<style>article .content { border: 1px #000 solid; margin: 16px; padding: 8px; }</style>
+{{ end }}
+
+{{ define "main" }}
+{{ .Content }}
+<!-- List the error pages for review -->
+{{ range .Pages }}
+<article>
+<h2><a href="{{ .Permalink }}">{{ with .Params.Subtitle }}{{.}}{{ else }}{{ .Title }}{{ end }}</a></h2>
+<div class="content">
+{{ .Content }}
+</div>
+</article>
+{{ end }}
+{{ end }}
