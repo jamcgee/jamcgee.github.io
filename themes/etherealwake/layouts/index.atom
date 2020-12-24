@@ -1,0 +1,9 @@
+{{ "<?xml version=\"1.0\" encoding=\"utf-8\" ?>" | safeHTML }}
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="{{ .Site.LanguageCode | default "en" }}">
+{{ partial "header.atom" . -}}
+{{ $pages := where .Site.RegularPages ".Params.hidden" "!=" true -}}
+{{ $pages := $pages.ByPublishDate.Reverse -}}
+{{ range first 10 $pages -}}
+{{ partial "article.atom" . -}}
+{{ end -}}
+</feed>

@@ -2,7 +2,7 @@
 baseURL: https://etherealwake.com/
 languageCode: en-US
 defaultContentLanguage: en
-disableKinds: ["404", "RSS"]
+disableKinds: ["404"]
 enableGitInfo: true
 enableRobotsTXT: true
 
@@ -19,6 +19,55 @@ markup:
     renderer:
       unsafe: true
 theme: etherealwake
+
+# Content Management
+frontmatter:
+  # Primary date associated with the page.  This is the primary user-visible
+  # timestamp, used for filename generation, ordering, and pagination.  It
+  # must always have a value.
+  date:
+    - date
+    - publishDate
+    - :filename
+    - lastmod
+    - :git
+    - :fileModTime
+  # Timestamp for most recent modification.  We give priority to the `lastmod`
+  # variable since some pages (like the resume) may be composites of multiple
+  # pages and we'll need to update the modification date by hand.  This is
+  # primarily used when adding metadata to indices.
+  lastmod:
+    - lastmod
+    - :git
+    - :fileModTime
+  # Publication date.  Hugo will neither render this page nor include it in
+  # default page lists until after this date.  It should not be used for
+  # presentation and indexing (use `date` instead).
+  publishDate:
+    - publishDate
+    - :filename
+    - date
+
+# Content Types
+mediaTypes:
+  application/atom+xml:
+    suffixes: ["atom"]
+  application/rss+xml:
+    suffixes: ["rss"]
+outputFormats:
+  ATOM:
+    mediaType: application/atom+xml
+  RSS:
+    mediaType: application/rss+xml
+outputs:
+  home:
+    - html
+    - atom
+    - rss
+  section:
+    - html
+    - atom
+    - rss
 
 # Menu Definitions
 menu:
