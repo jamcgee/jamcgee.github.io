@@ -53,7 +53,7 @@ frontmatter:
     - :filename
     - date
 permalinks:
-  article: /:year/:month/:day:/:slug/
+  article: /:year/:month/:slug/
 
 # Content Types
 mediaTypes:
