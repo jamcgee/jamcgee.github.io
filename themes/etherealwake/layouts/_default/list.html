@@ -1,3 +1,22 @@
 {{ define "main" }}
 {{ .Content }}
+
+<div class="feed">
+{{ range .Paginator.Pages }}
+{{ partial "article" . }}
+{{ end }}
+</div>
+
+<nav>
+{{ template "_internal/pagination.html" . }}
+</nav>
+
+{{ $rss := .OutputFormats.Get "RSS" }}
+{{ $atom := .OutputFormats.Get "ATOM" }}
+{{ if or $rss $atom }}
+<p><img alt="" class="feed-icon" src="/images/feed.svg"> Subscribe via
+{{- with $atom }} <a href="{{ .RelPermalink }}">Atom</a>{{ end }}
+{{- if and $rss $atom }} or{{ end }}
+{{- with $rss }} <a href="{{ .RelPermalink }}">RSS</a>{{ end }}
+</p>{{ end }}
 {{ end }}

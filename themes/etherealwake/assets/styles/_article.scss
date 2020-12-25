@@ -1,0 +1,122 @@
+/*
+ * Rendering articles in a list
+ */
+
+.feed > article {
+  border: 1px #000 solid;
+  border-radius: 4px;
+  margin: 16px 16px;
+  padding: 8px;
+}
+
+article > .title {
+  margin: 0 0 2px;
+}
+
+.page.article .title {
+  margin-bottom: 6px;
+}
+
+article > .title a {
+  color: inherit;
+  text-decoration: none;
+}
+
+@media screen {
+  article > .title a:hover {
+    color: #444;
+    text-decoration: underline;
+  }
+
+  article > .title a:visited {
+    color: #888;
+    text-decoration: underline;
+  }
+}
+
+/*
+ * Metadata right below the title
+ */
+
+ul.metadata {
+  color: #444;
+  font-size: 0.8em;
+  font-weight: bold;
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+
+ul.metadata > li {
+  display: inline;
+}
+
+ul.metadata > li:first-child:before {
+  content: none;
+}
+
+ul.metadata > li:before {
+  content: " | ";
+  margin: 0 4px;
+}
+
+/*
+ * Cheap knockoff of Bootstrap's Pagination component
+ */
+
+@media print {
+  .pagination {
+    display: none;
+  }
+}
+
+@media screen {
+  .pagination {
+    display: flex;
+    cursor: default;
+    font-size: 1.25em;
+    list-style-type: none;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .page-link {
+    border: 1px solid #444;
+    color: #444;
+    margin-left: -1px;
+    padding: 0.25em 0.5em;
+    text-decoration: none;
+  }
+
+  .page-item:first-child .page-link {
+    border-radius: 8px 0 0 8px;
+  }
+
+  .page-item:last-child .page-link {
+    border-radius: 0 8px 8px 0;
+  }
+
+  .page-link {
+    background: #FFF;
+  }
+
+  .page-link:hover {
+    background: #CCC;
+  }
+
+  .disabled > .page-link {
+    background: transparent;
+    color: #888;
+    cursor: inherit;
+  }
+
+  .active > .page-link {
+    background: #444;
+    color: #FFF;
+  }
+}
+
+.feed-icon {
+  height: 16px;
+  width: 16px;
+}

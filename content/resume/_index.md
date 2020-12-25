@@ -3,6 +3,8 @@
 date: 2018-06-02
 sitemap:
   changeFreq: monthly
+outputs:
+  - html
 # Metadata
 title: Jonathan McGee - Resume
 author:

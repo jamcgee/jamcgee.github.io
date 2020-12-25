@@ -1,3 +1,7 @@
+/*
+ * General Elements
+ */
+
 body {
   background: #FFF;
   color: #000;
@@ -26,6 +30,10 @@ blockquote {
 .hidden {
   display: none;
 }
+
+/*
+ * Strip most navigation and decoration on print
+ */
 
 @media print {
   body > header {
@@ -60,6 +68,10 @@ blockquote {
   }
 }
 
+/*
+ * On the screen, we need to render the navigation bar and some banners.
+ */
+
 @media screen {
   body {
     display: flex;
@@ -86,7 +98,11 @@ blockquote {
     padding: 0;
   }
 
-  body > nav li + li:before {
+  body > nav li:first-child:before {
+    content: none;
+  }
+
+  body > nav li:before {
     content: " | ";
   }
 
@@ -149,12 +165,29 @@ blockquote {
 
   body > main {
     flex-grow: 1;
+    padding: 0 8px;
   }
 
   body > footer {
     background: #CCC;
     font-size: 0.8em;
     padding: 0 10px;
+  }
+
+  .button {
+    color: #FFF;
+    background: #888;
+    border: 1px solid #888;
+    border-radius: 4px;
+    padding: 8px 12px;
+  }
+
+  .button:hover {
+    background: #666;
+  }
+
+  a.button {
+    text-decoration: none;
   }
 }
 

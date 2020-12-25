@@ -1,0 +1,12 @@
+{{ define "main" }}
+{{ .Content }}
+
+{{ $pages := where .Site.RegularPages ".Params.hidden" "!=" true }}
+{{ $pages := $pages.ByDate.Reverse }}
+
+<div class="feed">
+{{ range first 4 $pages }}
+{{ partial "article" . }}
+{{ end }}
+</div>
+{{ end }}

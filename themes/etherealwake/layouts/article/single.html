@@ -1,0 +1,13 @@
+{{ define "header" }}
+<h1>{{ .Site.Title }}</h1>
+{{ end }}
+
+{{ define "main" }}
+<h1 class="title">{{ .Title }}</h1>
+<ul class="metadata">
+  <li><time datetime="{{ .Date }}">{{ .PublishDate.Format "2006 Jan 2" }}</time></li>
+  <li><a href="{{ .Permalink }}" rel="bookmark">Permalink</a></li>
+  <li>{{ .WordCount }} words, {{ .ReadingTime }} min read</li>
+</ul>
+{{ .Content }}
+{{ end }}

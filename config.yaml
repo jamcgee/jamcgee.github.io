@@ -2,7 +2,10 @@
 baseURL: https://etherealwake.com/
 languageCode: en-US
 defaultContentLanguage: en
-disableKinds: ["404"]
+disableKinds:
+  - "404"
+  - taxonomy
+  - term
 enableGitInfo: true
 enableRobotsTXT: true
 
@@ -11,7 +14,7 @@ title: Ethereal Wake
 author:
   name: Jonathan McGee
   email: broken.source@etherealwake.com
-copyright: Copyright © 2014-2020 Jonathan McGee
+copyright: Copyright © 2014-2020 Jonathan McGee. All Rights Reserved.
 
 # Theme Configuration
 markup:
@@ -21,6 +24,8 @@ markup:
 theme: etherealwake
 
 # Content Management
+taxonomies:
+  tag: tags
 frontmatter:
   # Primary date associated with the page.  This is the primary user-visible
   # timestamp, used for filename generation, ordering, and pagination.  It
@@ -47,6 +52,8 @@ frontmatter:
     - publishDate
     - :filename
     - date
+permalinks:
+  article: /:year/:month/:day:/:slug/
 
 # Content Types
 mediaTypes:
@@ -72,8 +79,15 @@ outputs:
 # Menu Definitions
 menu:
   main:
-  - name: Home
-    url: /
-  - identifier: resume
-    name: Resume
-    url: /resume/
+    - name: Home
+      url: /
+      weight: 100
+    - name: Resume
+      url: /resume/
+      weight: 200
+    - name: Blog
+      url: /article/
+      weight: 300
+    - name: Email
+      url: mailto:continuing.search@etherealwake.com
+      weight: 400
