@@ -33,7 +33,6 @@ frontmatter:
   date:
     - date
     - publishDate
-    - :filename
     - lastmod
     - :git
     - :fileModTime
@@ -50,10 +49,9 @@ frontmatter:
   # presentation and indexing (use `date` instead).
   publishDate:
     - publishDate
-    - :filename
     - date
 permalinks:
-  article: /:year/:month/:slug/
+  article: /:year/:month/:filename/
 
 # Content Types
 mediaTypes:
@@ -86,7 +84,7 @@ menu:
       url: /resume/
       weight: 200
     - name: Blog
-      url: /article/
+      url: /blog/
       weight: 300
     - name: Email
       url: mailto:continuing.search@etherealwake.com

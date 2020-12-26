@@ -4,7 +4,7 @@
       <pubDate>{{ .Date.Format "Mon, 02 Jan 2006 15:04:05 -0700" | safeHTML }}</pubDate>
       <guid>{{ .Permalink }}</guid>
 {{- with .Summary }}
-      <description>{{ . | html }}</description>
+      <description>{{ . | plainify | chomp }}</description>
 {{- end }}
 {{- with .Content }}
       <atom:content type="html">{{ "<![CDATA[" | safeHTML }}{{ . | chomp }}]]></atom:content>
