@@ -37,6 +37,18 @@ pre {
   padding: 4px 8px;
 }
 
+code {
+  background: #EEE;
+  border: 1px solid #CCC;
+  padding: 0 2px;
+}
+
+pre > code {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
 /*
  * Strip most navigation and decoration on print
  */

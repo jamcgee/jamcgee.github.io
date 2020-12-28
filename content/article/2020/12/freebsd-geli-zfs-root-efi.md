@@ -20,7 +20,7 @@ Just boot into the live CD, format the file systems, unpack the tarballs, instal
 
 While a custom installation allows you to fulfill your OCD tendencies, it requires you to have a strong understanding of how the system is constructed.
 Unfortunately, FreeBSD's documentation has not been keeping up with the evolution with the system's capabilities.
-For example, the page on [efi(8)](https://www.freebsd.org/cgi/man.cgi?query=efi&sektion=8) is extremely short and does not address modern concerns like ZFS and full disk encryption.
+For example, the page on [`efi(8)`](https://www.freebsd.org/cgi/man.cgi?query=efi&sektion=8) is extremely short and does not address modern concerns like ZFS and full disk encryption.
 In fact, much of the limited information on that page is downright misleading.
 
 <!--more-->
@@ -42,7 +42,7 @@ In fact, it's practically a [full-fledged operating system](https://en.wikipedia
 This means that not only is the first stage boot loader not required, the actual boot loader can be made much simpler since many of the things it's traditionally been required to do are now provided by the firmware.
 
 Going back to those instructions, the fundamental problem is that the EFI first stage boot loader does not support ZFS root with GELI (FreeBSD's full disk encryption module).
-Following those instructions would produce a system incapable of supporting such an arrangement, despite it being supported by the legacy [gptzfsboot(8)](https://www.freebsd.org/cgi/man.cgi?query=gptzfsboot&sektion=8) first stage loader.
+Following those instructions would produce a system incapable of supporting such an arrangement, despite it being supported by the legacy [`gptzfsboot(8)`](https://www.freebsd.org/cgi/man.cgi?query=gptzfsboot&sektion=8) first stage loader.
 But the work around is easy: EFI is perfectly capable of loading the second stage loader directly and the second stage loader supports both of these features.
 
 While FreeBSD 13 is going to shake things up with the transition to OpenZFS 2.0, that's still a few months away.
@@ -51,7 +51,7 @@ To keep things simple, I've tried to eliminate many of the more complicated orga
 
 ## Partitions
 
-The first thing we need to do is partition the disk using the [gpart(8)](https://www.freebsd.org/cgi/man.cgi?query=gpart&sektion=8) command.
+The first thing we need to do is partition the disk using the [`gpart(8)`](https://www.freebsd.org/cgi/man.cgi?query=gpart&sektion=8) command.
 As we are discussing the use of EFI, that usually means the [GPT](https://en.wikipedia.org/wiki/GUID_Partition_Table) partition scheme.
 
 ```sh
@@ -77,7 +77,7 @@ With the partitions created, we need to prepare the file systems.
 
 Since we're going to need some files from it anyway, let's start with the ZFS pool.
 
-First, we need to use the [geli(8)](https://www.freebsd.org/cgi/man.cgi?query=geli&sektion=8) command on each partition to initialize the full disk encryption:
+First, we need to use the [`geli(8)`](https://www.freebsd.org/cgi/man.cgi?query=geli&sektion=8) command on each partition to initialize the full disk encryption:
 
 ```sh
 geli init -g -s 4k gpt/zdata0
@@ -106,7 +106,7 @@ If you're working from the live CD, you'll probably need to add something like `
 
 With the pool created and imported, we can now create our root directory for FreeBSD.
 By tradition, these are direct children of `${zpool}/ROOT`.
-So let's create our first dataset using [zfs(8)](https://www.freebsd.org/cgi/man.cgi?query=zfs&sektion=8).
+So let's create our first dataset using [`zfs(8)`](https://www.freebsd.org/cgi/man.cgi?query=zfs&sektion=8).
 
 ```sh
 zfs create -p zdata/ROOT/freebsd
@@ -115,14 +115,14 @@ zfs create -p zdata/ROOT/freebsd
 Installing the system is just a matter of unpacking the distribution tarballs.
 You can download these from the [FreeBSD website](http://ftp.freebsd.org/pub/FreeBSD/releases/amd64/).
 At a minimum we're going to need `base.txz` and `kernel.txz`, but you may find `lib32.txz` and `src.txz` to be useful.
-Before you install everything, ports are better sourced through [portsnap(8)](https://www.freebsd.org/cgi/man.cgi?query=portsnap&sektion=8) while the rest are mainly for system development.
+Before you install everything, ports are better sourced through [`portsnap(8)`](https://www.freebsd.org/cgi/man.cgi?query=portsnap&sektion=8) while the rest are mainly for system development.
 
 ```sh
 tar xfC base.txz ${altroot}/zdata/ROOT/freebsd
 tar xfC kernel.txz ${altroot}/zdata/ROOT/freebsd
 ```
 
-> **Note:** For those not familiar with the BSD [tar(1)](https://www.freebsd.org/cgi/man.cgi?query=tar&sektion=1), it can automatically determine the compression so there's no need to remember `z`, `J`, or the other silly options when extracting a tarball.
+> **Note:** For those not familiar with the BSD [`tar(1)`](https://www.freebsd.org/cgi/man.cgi?query=tar&sektion=1), it can automatically determine the compression so there's no need to remember `z`, `J`, or the other silly options when extracting a tarball.
 In fact, the utility completely ignores those options when reading an archive.
 
 I typically use this installation as template from which I can *clone* not only the base system, but any jails I plan to operate.
@@ -147,7 +147,7 @@ chmod 700 ${altroot}/zdata/ROOT
 ## EFI System Partition
 
 Now, we have everything we need to prepare our EFI system partition.
-First, we need to format the system with FAT using [newfs_msdos(8)](https://www.freebsd.org/cgi/man.cgi?query=newfs_msdos&sektion=8).
+First, we need to format the system with FAT using [`newfs_msdos(8)`](https://www.freebsd.org/cgi/man.cgi?query=newfs_msdos&sektion=8).
 Typically, we use FAT32 for this this, but some systems may be able to handle other FAT variants.
 
 ```sh
@@ -163,7 +163,7 @@ cp ${altroot}/zdata/ROOT/freebsd/boot/loader.efi /mnt/EFI/BOOT/BOOTX64.EFI
 umount /mnt
 ```
 
-As described in the introduction, we are copying `loader.efi` and not `boot1.efi` as described in [uefi(8)](https://www.freebsd.org/cgi/man.cgi?query=uefi&sektion=8).
+As described in the introduction, we are copying `loader.efi` and not `boot1.efi` as described in [`uefi(8)`](https://www.freebsd.org/cgi/man.cgi?query=uefi&sektion=8).
 This is intentional.
 
 ## Preparing for First Boot
@@ -264,7 +264,7 @@ If you are using multiple disks, you will probably partition each disk the same 
 This means each of your disks would have space reserved for the EFI system partition.
 If you're doing that, you might as well set up a mirror so they all contain the same data and EFI can fall back to any of them in the event of a disk failure.
 
-We set up a mirror in a similar manner as we did with GELI, but instead use [gmirror(8)](https://www.freebsd.org/cgi/man.cgi?query=gmirror&sektion=8):
+We set up a mirror in a similar manner as we did with GELI, but instead use [`gmirror(8)`](https://www.freebsd.org/cgi/man.cgi?query=gmirror&sektion=8):
 
 ```sh
 gmirror label efi gpt/efi0 gpt/efi1
