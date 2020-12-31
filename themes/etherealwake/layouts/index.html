@@ -5,10 +5,19 @@
 {{ $pages := $pages.ByDate.Reverse }}
 
 <div class="feed">
-{{ range first 4 $pages }}
+{{ range first 1 $pages }}
 {{ partial "article" . }}
 {{ end }}
 </div>
 
-{{ partial "feeds" . }}
+{{ $rss := .OutputFormats.Get "RSS" }}
+{{ $atom := .OutputFormats.Get "ATOM" }}
+<p>{{ if or $rss $atom }}<img alt="" class="feed-icon" src="/images/feed.svg"> {{ end -}}
+Read more content in the <a href="/blog/">blog</a>
+{{- if or $rss $atom }}
+or subscribe via
+{{- with $atom }} <a href="{{ .RelPermalink }}">Atom</a>{{ end -}}
+{{- if and $rss $atom }} or{{ end -}}
+{{- with $rss }} <a href="{{ .RelPermalink }}">RSS</a>{{ end -}}
+{{ end }}</p>
 {{ end }}
