@@ -79,16 +79,18 @@ Just like the startup sequence, the shutdown sequence is a handy [table of instr
 4. Destroy the jail (actual call to [`jail_remove(2)`](https://www.freebsd.org/cgi/man.cgi?query=jail_remove&sektion=2)).
    - If you notice, it never reverses `vnet.interface` before this point.
      The kernel will simply release the interfaces back to the base system...once all the TCP timed waits are over.
-5. Unmount File Systems.
+5. Execute the `exec.poststop` scripts.
+   - This is where you could copy data out of the filesystem, for example.
+6. Unmount File Systems.
    1. Unmount `/proc` (if enabled by `mount.procfs`).
    2. Unmount `/dev/fs` (if enabled by `mount.fdescfs`).
    3. Unmount `/dev` (if enabled by `mount.devfs`).
    4. Unmount the file systems listed in `mount.fstab`.
    5. Unmount the file systems listed in `mount`.
-5. Delete network alises.
+7. Delete network alises.
    1. Remove the IPv6 aliases listed in `ip6.addr`.
    2. Remove the IPv4 aliases listed in `ip4.addr`.
-6. Execute the `exec.release` scripts.
+8. Execute the `exec.release` scripts.
    - This is where you could destroy the file system you created at the very beginning.
 
 What happens when one of these steps fails?
