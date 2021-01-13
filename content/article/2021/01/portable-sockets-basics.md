@@ -192,12 +192,16 @@ The socket-specific equivalents are [`recvmsg`](https://www.freebsd.org/cgi/man.
 These extend `readv` and `writev`, not just in supporting the flags register, but by exchanging other bits of sideband information such as file descriptors in the case of Unix domain sockets.
 
 Under Windows, the situation is more complicated.
-The vectored equivalents to the generic descriptor functions, [`ReadFileScatter`](https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-readfilescatter) and [`WriteFileGather`](https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-writefilegather), are exclusive to file handles and will not function with sockets.
-The functions [`WSARecvMsg`](https://docs.microsoft.com/en-us/windows/win32/api/mswsock/nc-mswsock-lpfn_wsarecvmsg) and [`WSASendMsg`](https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsasendmsg) are the most direct equivalents to `recvmsg` and `sendmsg` but need to be retrieved using [`WSAIoctl`](https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsaioctl) instead of being exported from the library like normal functions.
-The directly exported functions [`WSARecv`](https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsarecv) and [`WSASend`](https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsasend) are intermediate in behavior between `recvmsg`/`sendmsg` and `readv`/`writev`.
+The vectored equivalents to the generic descriptor functions, [`ReadFileScatter`](https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-readfilescatter) and [`WriteFileGather`](https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-writefilegather), are exclusive to file handles and will not function with sockets or pipes.
+The functions [`WSARecvMsg`](https://docs.microsoft.com/en-us/windows/win32/api/mswsock/nc-mswsock-lpfn_wsarecvmsg) and [`WSASendMsg`](https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsasendmsg) are the most direct equivalents to `recvmsg` and `sendmsg`; however, they only work on raw (`SOCK_RAW`) and datagram (`SOCK_DGRAM`) sockets.
+Further, `WSARecvMsg` is not exported by `ws2_32.dll` and needs to be retrieved using [`WSAIoctl`](https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsaioctl).
+
+The functions [`WSARecv`](https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsarecv) and [`WSASend`](https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsasend) are intermediate in behavior between `recvmsg`/`sendmsg` and `readv`/`writev`.
 The types [`WSABUF`](https://docs.microsoft.com/en-us/windows/win32/api/ws2def/ns-ws2def-wsabuf) and [`WSAMSG`](https://docs.microsoft.com/en-us/windows/desktop/api/ws2def/ns-ws2def-wsamsg) serve as the equivalents to `struct iovec` and `struct msghdr`.
 Unfortunately, while Microsoft copied the conventions of `struct iovec` and `struct msghdr`, they changed the name of the members to reflect Win32 conventions.
 This means we either need to write translation functions or abuse the ABI stability Windows provides and cast from custom types.
+
+Due to this difference, it's recommended that `sendmsg` and `recvmsg` only be used when their specific functionality is required and a separate wrapper function is introduced for vectored operation on stream sockets.
 
 ## Socket Multiplexing
 
