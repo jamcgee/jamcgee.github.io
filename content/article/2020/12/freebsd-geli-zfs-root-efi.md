@@ -10,18 +10,21 @@ tags:
   - zfs
 ---
 
+**NOTE:** These instructions were written at the time of FreeBSD 12.2.
+They are still applicable as of FreeBSD 13.0, but recent updates to the documentation have fixed many of the complaints.
+
 On my home server, I use [FreeBSD](https://www.freebsd.org/).
-While the BSD's have been falling behind Linux in the past decade, they still appeal to many people and even have a few tricks left in them.
-Most notably, as Linux has been struggling with next generation file systems for a few years now, FreeBSD has supported [ZFS](https://en.wikipedia.org/wiki/ZFS) *for over a decade*.
+Sadly, the BSD's have been falling behind Linux in the past decade but they still appeal to many people and even have a few tricks left in them.
+Most notably, as Linux has been struggling with next generation file systems for a few years now, FreeBSD has integrated [ZFS](https://en.wikipedia.org/wiki/ZFS) *for over a decade*.
 
 While modern Linux distros become ever-more complex interplays of components, the BSD's have remained relatively simple.
 Custom installation (by hand or script) is trivial when the system is distributed as a tarball or two versus a constellation of packages numbering in the thousands.
 Just boot into the live CD, format the file systems, unpack the tarballs, install the boot loader, and reboot into your new system.
 
-While a custom installation allows you to fulfill your OCD tendencies, it requires you to have a strong understanding of how the system is constructed.
+A custom installation allows you to fulfill your OCD tendencies, but it requires you to have a strong understanding of how the system is constructed.
 Unfortunately, FreeBSD's documentation has not been keeping up with the evolution with the system's capabilities.
 For example, the page on [`efi(8)`](https://www.freebsd.org/cgi/man.cgi?query=efi&sektion=8) is extremely short and does not address modern concerns like ZFS and full disk encryption.
-In fact, much of the limited information on that page is downright misleading.
+~~In fact, much of the limited information on that page is downright misleading.~~  [**NOTE:** This has been fixed as of FreeBSD 13.]
 
 <!--more-->
 
@@ -33,10 +36,10 @@ A traditional boot process comes in three phases:
 
 The use of two separate boot loaders seems unnecessarily complicated from a naive perspective, but it serves an essential purpose on many systems.
 The firmware's boot capabilities are limited so it may not be possible to fit all the functionality required to load a kernel into that space.
-As the most obvious example, the classic PC BIOS would only load 512 *bytes* into memory, which is clearly insufficient for reading a modern file system or configuring the CPU for protected mode.
+As the most obvious example, the classic PC BIOS would only load 512 *bytes* into memory, clearly insufficient for reading a modern file system or configuring the CPU for protected mode.
 Many systems ended up with *three* boot loaders just to work around this limitation.
 
-Those EFI instructions are clearly written with this model in mind.
+~~Those EFI instructions are clearly written with this model in mind.~~
 However, EFI is not a limited system.
 In fact, it's practically a [full-fledged operating system](https://en.wikipedia.org/wiki/Unified_Extensible_Firmware_Interface), capable of loading drivers and providing high-level services to the operating system or its boot loader.
 This means that not only is the first stage boot loader not required, the actual boot loader can be made much simpler since many of the things it's traditionally been required to do are now provided by the firmware.
@@ -163,8 +166,8 @@ cp ${altroot}/zdata/ROOT/freebsd/boot/loader.efi /mnt/EFI/BOOT/BOOTX64.EFI
 umount /mnt
 ```
 
-As described in the introduction, we are copying `loader.efi` and not `boot1.efi` as described in [`uefi(8)`](https://www.freebsd.org/cgi/man.cgi?query=uefi&sektion=8).
-This is intentional.
+As described in the introduction, we are copying `loader.efi`~and not `boot1.efi` ~~as described in [`uefi(8)`](https://www.freebsd.org/cgi/man.cgi?query=uefi&sektion=8).
+This is intentional~~.
 
 ## Preparing for First Boot
 
@@ -181,6 +184,9 @@ geom_eli_load="YES"
 zfs_load="YES"
 ```
 
+**NOTE:** `aesni(4)` is included as part of `GENERIC` as of FreeBSD 13 and does not need to be included in `loader.conf`.
+In previous versions, this was required to enable hardware acceleration of cryptographic operations.
+
 We will probably need to have a minimal [/etc/rc.conf](https://www.freebsd.org/cgi/man.cgi?query=rc.conf&sektion=5) (adjust appropriately):
 
 ```sh
@@ -195,7 +201,7 @@ gptboot_enable="YES"
 zfsd_enable="YES"
 ```
 
-And we might want a little more than our `devfs` and our ZFS pool, so create an initial [/etc/fstab](https://www.freebsd.org/cgi/man.cgi?query=fstab&sektion=5):
+And we might want a little more than the default `devfs` and our ZFS pool, so create an initial [/etc/fstab](https://www.freebsd.org/cgi/man.cgi?query=fstab&sektion=5):
 
 ```sh
 # Device        Mountpoint          FStype    Options         Dump    Pass#
@@ -255,6 +261,7 @@ procfs on /proc (procfs, local)
 From this point, make the system yours:
 
 - Set the root password and create additional users.
+- Override the default timezone.
 - Install interesting packages.
 - Register it with Ansible, Puppet, or whatever system management tool you are using.
 
