@@ -10,31 +10,29 @@ items:
     organization:
       name: Ethereal Systems
       location: Mountain View, CA
-      url: http://etherealsystems.net
+      url: https://etherealsystems.net
     startDate: 2019-06-01
     content: |
       Contract circuit design, <abbr title="Printed Circuit Board">PCB</abbr> layout, <abbr title="Field Programmable Gate Array">FPGA</abbr> and firmware development.
+
+      Designed and implemented an FPGA-based data acquisition and signal processing core for a miniaturized weather RADAR system.
+      Electronics work included circuit design and schematic capture for the integrated CPU  module, FPGA module, and related power systems.
+      Software work included the HDL for the FPGA and related software on the host computer for communication with the FPGA over PCI-Express.
+
+      On a smaller scale, provided contracted assistance in circuit design and board layout for the control electronics of a satellite propulsion system, firmware for consumer electronics, and firmware for the control electronics in an autonomous vehicle.
   - title: Hardware Engineer
     organization:
-      name: Google
+      name: Alphabet (Google/X)
       location: Mountain View, CA
-      url: http://google.com/
-    startDate: 2018-06-01
-    endDate: 2019-06-01
-    content: |
-      Circuit design, <abbr title="Printed Circuit Board">PCB</abbr> layout, firmware development, and machine learning for prototyping computer vision applications.
-  - title: Hardware Engineer
-    organization:
-      name: Loon
-      location: Mountain View, CA
-      url: https://x.company/loon/
+      url: https://abc.xyz/
     startDate: 2014-07-01
-    endDate: 2018-07-01
+    endDate: 2019-06-01
     content: |
       Circuit design, <abbr title="Printed Circuit Board">PCB</abbr> layout, firmware development, and integrated testing for flight systems.
       Systems centered around use of the ARM [Cortex-M](https://developer.arm.com/products/processors/cortex-m).
       Limited work investigating use of the [Cortex-R](https://developer.arm.com/products/processors/cortex-r) (including initial CPU bring-up) and <abbr title="Field Programmable Gate Arrays">FPGAs</abbr>.
       General focus on sensor systems.
+      Limited experience with machine learning for prototyping computer vision applications.
 
       Interfaced with Enterprise PLM Systems, Component Manufacturers, Prototyping Vendors, and Contract Manufacturers.
       Implemented and administered database for the centralized management of component libraries for Altium and Orcad/Allegro.
@@ -42,7 +40,7 @@ items:
     organization:
       name: Laboratory for Physical Sciences
       location: College Park, MD
-      url: http://www.lps.umd.edu/"
+      url: https://www.lps.umd.edu/
     startDate: 2008-05-01
     endDate: 2014-07-01
     content: |
@@ -74,7 +72,7 @@ items:
     organization:
       name: University of Maryland
       location: College Park, MD
-      url: http://www.umd.edu/
+      url: https://www.umd.edu/
     startDate: 2004-06-01
     endDate: 2007-08-01
     content: |
@@ -84,7 +82,7 @@ items:
     organization:
       name: University of Maryland
       location: College Park, MD
-      url: http://www.umd.edu/
+      url: https://www.umd.edu/
     startDate: 2004-06-01
     endDate: 2003-05-01
     content: |
