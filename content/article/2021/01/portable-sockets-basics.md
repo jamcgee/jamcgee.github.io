@@ -78,16 +78,16 @@ While the most trivial of applications may abort on the first error, most applic
 When the application is handling signals under Unix, `EINTR` is also important although it has no equivalent in modern versions of WinSock.
 Even within different varieties of Unix, there's no guarantee that `EWOULDBLOCK` and `EAGAIN` have distinct values (making them unsuitable for use in a `switch` statement).
 
-Confusingly, the runtime provided by Visual Studio has the full set of POSIX error numbers provided its copy of `<errno.h>` but these are disjoint from the codes actually used by WinSock.
+Confusingly, the runtime provided by Visual Studio has the full set of POSIX error numbers provided in its copy of `<errno.h>` but these are disjoint from the codes actually used by WinSock.
 Instead, the error codes used by WinSock are prefixed with `WSA` (e.g. `WSAEWOULDBLOCK`).
 The simplest solution would be to simply `#define` aliases for [WinSock error codes](https://docs.microsoft.com/en-us/windows/win32/winsock/windows-sockets-error-codes-2) under Unix.
 
 Care should be taken because not all error codes match up, even when they share the same name.
 For example, `connect` returns `WSAEWOULDBLOCK` under Windows when connecting asynchronously but `EINPROGRESS` under Unix.
 In fact, `WSAEINPROGRESS` only arises from library reentry so it should never occur in a properly written WinSock application.
-It's often best to just define a function to test against the different error codes to distinguish between expected conditions and actual failures.
+As a result, it's often best to just define a function to test against the different error codes to distinguish between expected conditions and actual failures.
 
-Alternatively, when using [`<system_error>`](https://en.cppreference.com/w/cpp/header/system_error) in C++, Microsoft's implementation of [`std::system_category`](https://en.cppreference.com/w/cpp/error/system_category) will automatically handle the translations when compared to values from [`std::errc`](https://en.cppreference.com/w/cpp/error/errc).
+Alternatively, when using [`<system_error>`](https://en.cppreference.com/w/cpp/header/system_error), Microsoft's implementation of [`std::system_category`](https://en.cppreference.com/w/cpp/error/system_category) will automatically handle the translations when compared to values from [`std::errc`](https://en.cppreference.com/w/cpp/error/errc).
 
 ```c++
 auto error = std::error_code(last_socket_error(), std::system_category());
@@ -97,7 +97,7 @@ if (error == std::errc::would_block) {
 ```
 
 Retrieving the error string is similarly different as [`strerror`](https://en.cppreference.com/w/c/string/byte/strerror) and [`perror`](https://en.cppreference.com/w/c/io/perror) only work with the standard values from [`<errno.h>`](https://en.cppreference.com/w/cpp/error/errno_macros).
-Under Windows, retrieving the string requires the use of [`FormatMessage`](https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-formatmessagea).
+Under Windows, this action requires the use of [`FormatMessage`](https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-formatmessagea) or `std::system_category`.
 
 ## Library Initialization
 
@@ -142,8 +142,8 @@ It should be pointed out that it is not guaranteed under WinSock that sockets ar
 Thankfully, these cases are rare with the [responsible API being deprecated](https://docs.microsoft.com/en-us/windows/win32/winsock/categorizing-layered-service-providers-and-applications), but it is something to consider as it may lead to confusing error conditions in user applications.
 As a result, it is recommended that `send` and `recv` (or their extended specializations) be used exclusively.
 
-The strange use of types extends to related functions like [`getsockopt`](https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-getsockopt) and [`setsockopt`](https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-setsockopt).
-As with `send` and `recv` functions, Windows uses `int` to represent sizes and expects buffers to be of type `char`.
+The unorthodox use of types extends to related functions such as [`getsockopt`](https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-getsockopt) and [`setsockopt`](https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-setsockopt).
+As with `send` and `recv`, Windows uses `int` to represent sizes and expects buffers to be of type `char`.
 
 Many other function families are identical between the platforms beyond the difference in headers, such as [`accept`](https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-accept), [`bind`](https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-bind), [`listen`](https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-listen), [`connect`](https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-connect), [`getaddrinfo`](https://docs.microsoft.com/en-us/windows/win32/api/ws2tcpip/nf-ws2tcpip-getaddrinfo), [`htonl`](https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-htonl), [`htons`](https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-htons), [`inet_ntop`](https://docs.microsoft.com/en-us/windows/win32/api/ws2tcpip/nf-ws2tcpip-inet_ntop), [`inet_pton`](https://docs.microsoft.com/en-us/windows/win32/api/ws2tcpip/nf-ws2tcpip-inet_pton), and [`socket`](https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-socket).
 In a few cases, constants have different names.
@@ -166,7 +166,7 @@ This is not a huge loss as configuring non-blocking status is generally part of 
 
 One of the questionable design decisions shared between Windows and Unix is that descriptors are inherited by child processes by default.
 In addition to causing files and sockets to remain open longer than anticipated, this can have profound consequences on Linux's `epoll` due to certain defects in its design.
-Under certain conditions, a process can continue to receive notifications for sockets it no longer has access to with no mechanism to cancel them.
+Under certain conditions, a Linux process can continue to receive notifications for sockets it no longer has access to with no mechanism to cancel them.
 
 Under Unix, the inheritance property can be partially controlled through the use of the `O_CLOEXEC` flag, manipulated using `fcntl`, or configured during socket creation with the `SOCK_CLOEXEC` flag as the second parameter to [`socket`](https://www.freebsd.org/cgi/man.cgi?query=socket&sektion=2) or the fourth parameter in [`accept4`](https://www.freebsd.org/cgi/man.cgi?query=accept4&sektion=2).
 In a multi-threaded environment, this is especially critical as a race condition exists between creation of a descriptor and modification of the close-on-exec flag.
@@ -189,7 +189,7 @@ Under Unix, there are two sets of functions available for vectored I/O.
 The first are the generic descriptor functions functions [`readv`](https://www.freebsd.org/cgi/man.cgi?query=readv&sektion=2) and [`writev`](https://www.freebsd.org/cgi/man.cgi?query=writev&sektion=2).
 Imported from `<sys/uio.h>`, they work on descriptors of all types and use an array of type `struct iovec` to enumerate the associated buffers.
 The socket-specific equivalents are [`recvmsg`](https://www.freebsd.org/cgi/man.cgi?query=recvmsg&sektion=2) and [`sendmsg`](https://www.freebsd.org/cgi/man.cgi?query=sendmsg&sektion=2).
-These extend `readv` and `writev`, not just in supporting the flags register, but by exchanging other bits of sideband information such as file descriptors in the case of Unix domain sockets.
+These extend `readv` and `writev`, not just in supporting the flags argument, but by exchanging other bits of sideband information such as file descriptors in the case of Unix domain sockets.
 
 Under Windows, the situation is more complicated.
 The vectored equivalents to the generic descriptor functions, [`ReadFileScatter`](https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-readfilescatter) and [`WriteFileGather`](https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-writefilegather), are exclusive to file handles and will not function with sockets or pipes.
@@ -211,16 +211,16 @@ Since `select` is the inferior function, there is little point to using it (outs
 If you need to use it, the largest problem is going to be the number of descriptors that can be represented by `fd_set`.
 On all platforms, this can be tuned by setting `FD_SETSIZE` *before* including the socket headers.
 Due to the different nature in socket representation, the interpretation of the constant is slightly different.
-On Windows, `fd_set` is implemented as an array and `FD_SETSIZE` determines the size of that array (defaulting to 64).
-On Unix, `fd_set` is implemented as a bitfield and `FD_SETSIZE` impacts the high descriptor number that can be saved in the structure (typically defaulting to 1024).
+On Windows, `fd_set` is implemented as an array and `FD_SETSIZE` determines the *number* of sockets that can be stored in the array (defaulting to 64).
+On Unix, `fd_set` is implemented as a bitfield and `FD_SETSIZE` impacts the *highest* descriptor number that can be saved in the structure (typically defaulting to 1024).
 
 The superior option, `poll`, is available on all currently *supported* platforms, introduced by Microsoft in Windows 8.1 under the name [`WSAPoll`](https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsapoll).
 Its absence from Windows 7 may cause issues for some developers despite that system no longer being supported by Microsoft.
 The only notable difference is that `WSAPoll` is very picky about the values placed in the `events` field: including `POLLHUP`, `POLLERR`, or `POLLNVAL` will cause the function to fail.
 As these conditions are checked regardless, this doesn't introduce any meaningful compatibility issue.
 
-For applications dealing with a larger number of simultaneous connections, it is generally necessary to move onto the more modern systems, such as [epoll](https://man7.org/linux/man-pages/man7/epoll.7.html) on Linux, [kqueue](https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2) on BSD derivatives, and [I/O Completion Ports](https://docs.microsoft.com/en-us/windows/win32/fileio/i-o-completion-ports) or [Registered I/O](https://docs.microsoft.com/en-us/windows/win32/api/mswsock/ns-mswsock-rio_extension_function_table) on Windows.
-Commercial Unices tend to adopt the IOCP model from Windows.
+For applications dealing with a larger number of simultaneous connections, it is generally necessary to move onto the more modern systems, such as [epoll](https://man7.org/linux/man-pages/man7/epoll.7.html) on Linux, [kqueue](https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2) on BSD derivatives (including macOS), and [I/O Completion Ports](https://docs.microsoft.com/en-us/windows/win32/fileio/i-o-completion-ports) or [Registered I/O](https://docs.microsoft.com/en-us/windows/win32/api/mswsock/ns-mswsock-rio_extension_function_table) on Windows.
+Commercial Unices (AIX, Solaris) have adopted the IOCP model from Windows.
 Due to the complexity of these interfaces and significant differences in their conceptual models, greater levels of abstraction are required to provide source compatibility.
 At this point, libraries like [libuv](https://libuv.org/) or [asio](https://think-async.com/) become attractive.
 
@@ -232,7 +232,7 @@ The primary purpose in Unix is provide a channel for communication with a subpro
 Given the radically different paradigms regarding the creation of subprocesses and exchanging handles across process boundaries, there is little need to fully abstract this function.
 
 In order to transmit handles to another process in Windows, the process is more akin to serialization.
-The sending process will serialize a socket descriptor using [`WSADuplicateSocketW`](https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsaduplicatesocketw), dump the contents of `WSAPROTOCOL_INFO` on the wire, and deserializing in the receiving process by calling [`WSASocketW`](https://docs.microsoft.com/en-us/windows/desktop/api/winsock2/nf-winsock2-wsasocketw).
+The sending process will serialize a socket descriptor using [`WSADuplicateSocketW`](https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsaduplicatesocketw), dump the contents of `WSAPROTOCOL_INFO` on the wire, and deserialize in the receiving process by calling [`WSASocketW`](https://docs.microsoft.com/en-us/windows/desktop/api/winsock2/nf-winsock2-wsasocketw).
 Other kernel objects can be transferred using the [`DuplicateHandle`](https://docs.microsoft.com/en-us/windows/win32/api/handleapi/nf-handleapi-duplicatehandle) function.
 By contrast, Unix can exchange file descriptors using the ancillary data buffer in `recvmsg` and `sendmsg`.
 
@@ -420,6 +420,7 @@ inline int poll(struct pollfd *fds, int nfds, int timeout) {
 }
 
 inline ssize_t recvmsg(socket_t sock, struct msghdr *msg, DWORD flags) {
+  // NOTE: This does not implement the ancillary data feature
   DWORD bytes = 0;
   int result = WSARecvFrom(sock, (WSABUF*)msg->msg_iov, msg->msg_iovlen,
                            &bytes, &flags, (struct sockaddr*)msg->msg_name,
@@ -431,6 +432,7 @@ inline ssize_t recvmsg(socket_t sock, struct msghdr *msg, DWORD flags) {
 }
 
 inline ssize_t sendmsg(socket_t sock, const struct msghdr *msg, DWORD flags) {
+  // NOTE: This does not implement the ancillary data feature
   DWORD bytes = 0;
   int result = WSASendTo(sock, (WSABUF*)msg->msg_iov, msg->msg_iovlen,
                          &bytes, flags, (const struct sockaddr*)msg->msg_name,
