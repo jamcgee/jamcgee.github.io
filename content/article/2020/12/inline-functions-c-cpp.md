@@ -255,7 +255,7 @@ const char *test_cpp(void);
 
 int main() {
   printf("test_c = %s\n", test_c());
-  printf("test_cpp = %s\n", test_c());
+  printf("test_cpp = %s\n", test_cpp());
 }
 ```
 
