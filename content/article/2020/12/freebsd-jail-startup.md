@@ -18,10 +18,10 @@ The last time I touched [iocage](https://iocage.io/) (years ago, granted), it wa
 So I wanted my jails to go through the closest analog I could to Docker without porting over a massive ecosystem.
 That means if I'm going to write my own scripts, I need to understand how the FreeBSD jail system is put together.
 
-<!--more-->
-
 > **Note:** Jail functionality has improved *a lot* in the past two years.
-> I had started this essay with a lot of anger over rather annoying aggravations I had to work around only to find things much improved during my research.
+> I had started this essay with a lot of frustration over things I had to work around only to find things much improved during my research.
+
+<!--more-->
 
 ## Jail Startup Sequence
 

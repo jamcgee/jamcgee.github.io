@@ -14,7 +14,7 @@ One of the features I've been trying to make use of are *linkstamps*.
 The idea behind linkstamps is to embed information such as the Git commit identifier into the resulting binary, providing direct traceability for deployed binaries.
 Unfortunately, regarding this feature, Bazel suffers from the common documentation anti-pattern where they describe what an option *is*, not what it *does*.
 
-**Note:** These instructions were written at the time of Bazel 4.2.1.
+> **Note:** These instructions were written at the time of Bazel 4.2.1.
 
 <!--more-->
 

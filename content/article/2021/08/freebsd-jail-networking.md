@@ -9,8 +9,6 @@ tags:
   - sysadmin
 ---
 
-**NOTE:** These instructions were written at the time of FreeBSD 13.0.
-
 When using FreeBSD, the most common method for virtualization and process isolation are jails.
 Introduced with FreeBSD 4.0 in March of 2000, they predate the closest Linux equivalent, cgroups (and, by extension, Docker), by nearly a decade.
 
@@ -20,6 +18,8 @@ As such, I've had to scrape multiple sources and [reverse engineer system progra
 
 In today's article, I'll describe the results of my foray into FreeBSD jail networking.
 It's not the most cohesive piece, but I'll refine it over time and hopefully it will assist someone else in their efforts to deploy FreeBSD jails.
+
+> **Note:** These instructions were written at the time of FreeBSD 13.0.
 
 <!--more-->
 

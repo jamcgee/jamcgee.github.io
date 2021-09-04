@@ -10,9 +10,6 @@ tags:
   - zfs
 ---
 
-**NOTE:** These instructions were written at the time of FreeBSD 12.2.
-They are still applicable as of FreeBSD 13.0, but recent updates to the documentation have fixed many of the complaints.
-
 On my home server, I use [FreeBSD](https://www.freebsd.org/).
 Sadly, the BSD's have been falling behind Linux in the past decade but they still appeal to many people and even have a few tricks left in them.
 Most notably, as Linux has been struggling with next generation file systems for a few years now, FreeBSD has integrated [ZFS](https://en.wikipedia.org/wiki/ZFS) *for over a decade*.
@@ -25,6 +22,9 @@ A custom installation allows you to fulfill your OCD tendencies, but it requires
 Unfortunately, FreeBSD's documentation has not been keeping up with the evolution with the system's capabilities.
 For example, the page on [`efi(8)`](https://www.freebsd.org/cgi/man.cgi?query=efi&sektion=8) is extremely short and does not address modern concerns like ZFS and full disk encryption.
 ~~In fact, much of the limited information on that page is downright misleading.~~  [**NOTE:** This has been fixed as of FreeBSD 13.]
+
+> **NOTE:** These instructions were written at the time of FreeBSD 12.2.
+> They are still applicable as of FreeBSD 13.0, but recent updates to the documentation have fixed many of the complaints.
 
 <!--more-->
 
