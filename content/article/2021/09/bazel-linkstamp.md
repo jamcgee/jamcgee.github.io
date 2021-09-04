@@ -26,7 +26,7 @@ The `stdout` of this script is captured and parsed as a set of name-value pairs,
 Additional whitespace is captured as part of the value.
 
 Once parsed, the variables are separated into two groups: stable and volatile.
-Volatile variables are the default and are assumed frequently with little consequence on the binary itself, so these variables are ignored when making decisions regarding stale build artifacts.
+Volatile variables are the default and are assumed to change frequently with little consequence on the binary itself, so these variables are ignored when making decisions regarding stale build artifacts.
 Stable variables are expected to change rarely or have greater consequence on the binary (e.g. version numbers), triggering a rebuild each time they change, and are marked by prefixing the name with with `STABLE_`.
 
 **Note:** The `STABLE_` prefix is actually part of the name and is retained in the status metadata files.
@@ -38,7 +38,7 @@ Relevant source file: [BazelWorkspaceStatusModule.java](https://github.com/bazel
 
 Access to the status information can be made through three mechanisms:
 
-1. The `stamp` attribute on many of the built-in rules, which interacts with the `--[no]stamp` command line setting to support redacting the build variables for faster builds.
+1. The `stamp` attribute on many of the built-in rules, which interacts with the `--[no]stamp` command line setting to support redacting the variables for faster builds.
    Unfortunately, access is generally limited to the built-in variables (`BUILD_*`).
    The use of this option with the C++ rules is described below.
 2. The *undocumented* `stamp` attribute on [`genrule`](https://docs.bazel.build/versions/4.2.0/be/general.html#genrule).
