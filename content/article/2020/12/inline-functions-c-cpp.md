@@ -77,7 +77,7 @@ test2:
 
 Under `extern inline`, it behaves like a completely normal function.
 The `inline` keyword merely serves as an optimization hint and has no impact on the implementation of the function.
-In fact, it's often *completely* ignored while the optimizer makes its own decisions.
+In fact, it's often completely *ignored* while the optimizer makes its own decisions.
 
 However, by virtue of being a normal function, it means that should multiple source files try to implement the function, the linker will generate duplicate symbol errors.
 Unlike C++, C99 requires the programmer to ensure only a single copy is realized.
@@ -99,7 +99,7 @@ test2:
         ret
 ```
 
-The output is very similar to that of `extern inline` withe the notable difference being the lack of a `.globl` for the function symbol.
+The output is very similar to that of `extern inline` with the notable difference being the lack of a `.globl` for the function symbol.
 This means that even though the function implementation exists, it won't be visible outside this object file.
 
 In a way, `static inline` acts like an intermediate step between `inline` and `extern inline`.
