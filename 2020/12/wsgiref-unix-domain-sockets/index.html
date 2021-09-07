@@ -1,0 +1,155 @@
+<!doctype html><html lang=en-us><head><meta charset=utf-8><title>wsgiref and Unix Domain Sockets</title><link rel=stylesheet type=text/css href=/css/site.min.43a8091bfcf24b00a59a240c5087845072b0210f7ee047ab82de298097cfcef1.css integrity="sha256-Q6gJG/zySwClmiQMUIeEUHKwIQ9+4Eergt4pgJfPzvE="><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name=description content="Recently, I needed to hack together a quick server-side application for a test page.
+When it comes to quick and dirty, most people turn to Python.
+While Python is hardly my favorite language, it is certainly suited for the task.
+One of my requirements was that I wanted to minimize the number of dependencies.
+Installing Python is bad enough (my nginx container is extremely bare bones), but installing a massive framework for what was effectively a wrapper around a system command would make things even worse.
+So I decided to make due with wsgiref.simple_server that ships with CPython.
+Unfortunately, when it came time to installing the script on the server, I discovered that simple_server only supports IPv4 and that is baked in.
+For security purposes, I like to use unix domain sockets whenever possible.
+It guarantees the endpoint can only be access from the local host and I can even configure permissions based on the user.
+Fortunately, it isn&rsquo;t that hard to modify simple_server to support other protocols."><meta name=generator content="Hugo 0.85.0"><link rel=canonical href=https://etherealwake.com/2020/12/wsgiref-unix-domain-sockets/><meta property="og:title" content="wsgiref and Unix Domain Sockets"><meta property="og:description" content="Recently, I needed to hack together a quick server-side application for a test page.
+When it comes to quick and dirty, most people turn to Python.
+While Python is hardly my favorite language, it is certainly suited for the task.
+One of my requirements was that I wanted to minimize the number of dependencies.
+Installing Python is bad enough (my nginx container is extremely bare bones), but installing a massive framework for what was effectively a wrapper around a system command would make things even worse.
+So I decided to make due with wsgiref.simple_server that ships with CPython.
+Unfortunately, when it came time to installing the script on the server, I discovered that simple_server only supports IPv4 and that is baked in.
+For security purposes, I like to use unix domain sockets whenever possible.
+It guarantees the endpoint can only be access from the local host and I can even configure permissions based on the user.
+Fortunately, it isn&rsquo;t that hard to modify simple_server to support other protocols."><meta property="og:type" content="article"><meta property="og:url" content="https://etherealwake.com/2020/12/wsgiref-unix-domain-sockets/"><meta property="article:section" content="article"><meta property="article:published_time" content="2020-12-26T11:15:00-08:00"><meta property="article:modified_time" content="2021-09-07T14:08:04-07:00"><meta name=twitter:card content="summary"><meta name=twitter:title content="wsgiref and Unix Domain Sockets"><meta name=twitter:description content="Recently, I needed to hack together a quick server-side application for a test page.
+When it comes to quick and dirty, most people turn to Python.
+While Python is hardly my favorite language, it is certainly suited for the task.
+One of my requirements was that I wanted to minimize the number of dependencies.
+Installing Python is bad enough (my nginx container is extremely bare bones), but installing a massive framework for what was effectively a wrapper around a system command would make things even worse.
+So I decided to make due with wsgiref.simple_server that ships with CPython.
+Unfortunately, when it came time to installing the script on the server, I discovered that simple_server only supports IPv4 and that is baked in.
+For security purposes, I like to use unix domain sockets whenever possible.
+It guarantees the endpoint can only be access from the local host and I can even configure permissions based on the user.
+Fortunately, it isn&rsquo;t that hard to modify simple_server to support other protocols."></head><body class="page article"><nav><div class=content><ul><li><a href=/>Home</a></li><li><a href=/resume/>Resume</a></li><li><a href=/blog/>Blog</a></li><li><a href=mailto:continuing.search@etherealwake.com>Email</a></li></ul></div></nav><header><div class=content><h1>Ethereal Wake</h1></div></header><main><div class=content><h1 class=title>wsgiref and Unix Domain Sockets</h1><ul class=metadata><li><time datetime="2020-12-26 11:15:00 -0800 -0800">2020 Dec 26</time></li><li><a href=https://etherealwake.com/2020/12/wsgiref-unix-domain-sockets/ rel=bookmark>Permalink</a></li><li>990 words, 5 min read</li></ul><p>Recently, I needed to hack together a quick server-side application for a test page.
+When it comes to quick and dirty, most people turn to <a href=https://www.python.org/>Python</a>.
+While Python is hardly my <em>favorite</em> language, it is certainly suited for the task.</p><p>One of my requirements was that I wanted to minimize the number of dependencies.
+Installing Python is bad enough (my nginx container is <em>extremely</em> bare bones), but installing a massive framework for what was effectively a wrapper around a system command would make things even worse.
+So I decided to make due with <code>wsgiref.simple_server</code> that ships with CPython.</p><p>Unfortunately, when it came time to installing the script on the server, I discovered that <code>simple_server</code> only supports IPv4 and that is baked in.
+For security purposes, I like to use unix domain sockets whenever possible.
+It guarantees the endpoint can only be access from the local host and I can even configure permissions based on the <em>user</em>.
+Fortunately, it isn&rsquo;t that hard to modify <code>simple_server</code> to support other protocols.</p><h2 id=socket-families-and-python>Socket Families and Python</h2><p>Each protocol family has its own unique representation for an address.
+Most people are familiar with IPv4 (<code>AF_INET</code>), which uses a 32-bit IP address and a 16-bit port.
+Related to IPV4 is IPv6 (<code>AF_INET6</code>), which extends the address to 128 bits and adds two more fields: scope id and flow id.
+These later two are ignored by most people, but are used to handle link local addresses (scope id) and multicast (flow id).
+But simplest of all are unix domain sockets (<code>AF_UNIX</code>), which need only a string.</p><p>Whereas these address are represented with unique types in C, Python represents them all as tuples (except for <code>AF_UNIX</code> which is just the string).
+<code>AF_INET</code> addresses are a two element tuple.
+<code>AF_INET6</code> addresses can be either four elements (the full representation) or two elements (a compatibility hack with <code>AF_INET</code>).
+Unfortunately, throughout the <code>simple_server</code> code, it just naively assumes everything is <code>AF_INET</code>.
+There&rsquo;s some hand waving at <code>AF_INET6</code> support, but it fails miserably when faced with the bare string of <code>AF_UNIX</code>.</p><h2 id=fixing-wsgiserver>Fixing <code>WSGIServer</code></h2><p>The first problem we encounter can be found in the implementation of <code>WSGIServer</code>.
+More accurately, this is inherited from the <a href=https://github.com/python/cpython/blob/v3.9.1/Lib/http/server.py#L136>base implementation of <code>HTTPServer</code></a> itself:</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=color:#66d9ef>def</span> <span style=color:#a6e22e>server_bind</span>(self):
+    <span style=color:#e6db74>&#34;&#34;&#34;Override server_bind to store the server name.&#34;&#34;&#34;</span>
+    socketserver<span style=color:#f92672>.</span>TCPServer<span style=color:#f92672>.</span>server_bind(self)
+    host, port <span style=color:#f92672>=</span> self<span style=color:#f92672>.</span>server_address[:<span style=color:#ae81ff>2</span>]
+    self<span style=color:#f92672>.</span>server_name <span style=color:#f92672>=</span> socket<span style=color:#f92672>.</span>getfqdn(host)
+    self<span style=color:#f92672>.</span>server_port <span style=color:#f92672>=</span> port
+</code></pre></div><p>Here, we see it just naively assumes the address is a tuple of two or more elements.
+While that will work for <code>AF_INET</code> and <code>AF_INET6</code>, it will fail for <code>AF_UNIX</code>.
+To fix this, we need to wholesale replace the implementation of <code>server_bind</code>:</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=color:#f92672>from</span> wsgiref.simple_server <span style=color:#f92672>import</span> WSGIServer
+<span style=color:#f92672>import</span> socket
+<span style=color:#f92672>import</span> socketserver
+
+<span style=color:#66d9ef>class</span> <span style=color:#a6e22e>NewWSGISServer</span>(WSGIServer):
+    <span style=color:#66d9ef>def</span> __init__(self, server_address, RequestHandlerClass,
+                 address_family <span style=color:#f92672>=</span> socket<span style=color:#f92672>.</span>AF_INET):
+        <span style=color:#75715e># Override Address Family</span>
+        self<span style=color:#f92672>.</span>address_family <span style=color:#f92672>=</span> address_family
+        WSGIServer<span style=color:#f92672>.</span>__init__(self, server_address, RequestHandler)
+
+    <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>server_bind</span>(self):
+        <span style=color:#75715e># Expand HTTPServer&#39;s handling of address families</span>
+        socketserver<span style=color:#f92672>.</span>TCPServer<span style=color:#f92672>.</span>server_bind(self)
+        <span style=color:#66d9ef>if</span> self<span style=color:#f92672>.</span>address_family <span style=color:#f92672>==</span> socket<span style=color:#f92672>.</span>AF_UNIX:
+            server_name <span style=color:#f92672>=</span> socket<span style=color:#f92672>.</span>gethostname()
+            self<span style=color:#f92672>.</span>server_port <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>
+        <span style=color:#66d9ef>else</span>:
+            server_name <span style=color:#f92672>=</span> self<span style=color:#f92672>.</span>server_address[<span style=color:#ae81ff>0</span>]
+            self<span style=color:#f92672>.</span>server_port <span style=color:#f92672>=</span> self<span style=color:#f92672>.</span>server_address[<span style=color:#ae81ff>1</span>]
+        self<span style=color:#f92672>.</span>server_name <span style=color:#f92672>=</span> socket<span style=color:#f92672>.</span>getfqdn(server_name)
+        self<span style=color:#f92672>.</span>setup_environ()
+</code></pre></div><p>The unresolved question is how best to fill out <code>server_name</code> and <code>server_port</code> for a <code>AF_UNIX</code> address.
+In this case, I simply used the local hostname and a zero.
+Assigning <code>None</code> to <code>server_port</code> ends up creating a problem later when it&rsquo;s inevitably converted to a string.</p><h2 id=fixing-wsgirequesthandler>Fixing <code>WSGIRequestHandler</code></h2><p>The next problem can be found in the implementation of <code>WSGIRequestHandler</code>.
+More accurately, it can be found throughout the implementation of <code>HTTPRequestHandler</code>.
+However, it&rsquo;s used purely for cosmetic purposes so we can simply inject a placeholder value.</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=color:#f92672>from</span> wsgiref.simple_server <span style=color:#f92672>import</span> WSGIRequestHandler
+<span style=color:#f92672>import</span> socket
+
+<span style=color:#66d9ef>class</span> <span style=color:#a6e22e>NewWSGIRequestHandler</span>(WSGIRequestHandler):
+    <span style=color:#66d9ef>def</span> __init__(self, request, client_address, server):
+        self<span style=color:#f92672>.</span>address_family <span style=color:#f92672>=</span> server<span style=color:#f92672>.</span>address_family
+        <span style=color:#66d9ef>if</span> self<span style=color:#f92672>.</span>address_family <span style=color:#f92672>==</span> socket<span style=color:#f92672>.</span>AF_UNIX:
+            client_address <span style=color:#f92672>=</span> (<span style=color:#e6db74>&#39;&lt;unix&gt;&#39;</span>, <span style=color:#ae81ff>0</span>)
+        WSGIRequestHandler<span style=color:#f92672>.</span>__init__(self, request, client_address, server)
+</code></pre></div><p>One of the problems with unix domain sockets is that the client generally has <em>no</em> address, so we just fill in <code>&lt;unix></code> so it has <em>something</em>.</p><h2 id=putting-it-together>Putting It Together</h2><p>There&rsquo;s one last problem to address with unix domain sockets.
+There is a file on the filesystem associated with the socket.
+If that file exists when we create the socket, the process will fail.
+When we close the socket, the file is not cleaned up for us.
+So, we&rsquo;re going to need a helper to manage this for us.</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=color:#f92672>import</span> os
+
+<span style=color:#66d9ef>class</span> <span style=color:#a6e22e>AddressManager</span>(object):
+    <span style=color:#66d9ef>def</span> __init__(self, family, addr<span style=color:#f92672>=</span><span style=color:#66d9ef>None</span>, path<span style=color:#f92672>=</span><span style=color:#66d9ef>None</span>):
+        self<span style=color:#f92672>.</span>family <span style=color:#f92672>=</span> family
+        self<span style=color:#f92672>.</span>addr <span style=color:#f92672>=</span> addr <span style=color:#f92672>or</span> path
+        self<span style=color:#f92672>.</span>path <span style=color:#f92672>=</span> path
+
+    <span style=color:#66d9ef>def</span> __enter__(self):
+        self<span style=color:#f92672>.</span>delete()
+        <span style=color:#66d9ef>return</span> (self<span style=color:#f92672>.</span>family, self<span style=color:#f92672>.</span>addr)
+
+    <span style=color:#66d9ef>def</span> __exit__(self, type, value, traceback):
+        <span style=color:#66d9ef>try</span>:
+            self<span style=color:#f92672>.</span>delete()
+        <span style=color:#66d9ef>except</span> <span style=color:#a6e22e>PermissionError</span>:
+            logging<span style=color:#f92672>.</span>warning(<span style=color:#e6db74>&#39;Failed to delete socket </span><span style=color:#e6db74>%s</span><span style=color:#e6db74>&#39;</span>, self<span style=color:#f92672>.</span>path)
+
+    <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>delete</span>(self):
+        <span style=color:#66d9ef>if</span> <span style=color:#f92672>not</span> self<span style=color:#f92672>.</span>path:
+            <span style=color:#66d9ef>return</span>
+        <span style=color:#66d9ef>try</span>:
+            os<span style=color:#f92672>.</span>remove(self<span style=color:#f92672>.</span>path)
+        <span style=color:#66d9ef>except</span> <span style=color:#a6e22e>FileNotFoundError</span>:
+            <span style=color:#66d9ef>pass</span>
+</code></pre></div><p>Now, we can create our <code>simple_server</code> and start answering requests.</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=color:#66d9ef>with</span> AddressManager(socket<span style=color:#f92672>.</span>AF_UNIX, path<span style=color:#f92672>=</span>path) <span style=color:#66d9ef>as</span> (family, addr):
+    <span style=color:#66d9ef>with</span> NewWSGISServer(addr, NewWSGIRequestHandler, family) <span style=color:#66d9ef>as</span> httpd:
+        httpd<span style=color:#f92672>.</span>set_app(handler)
+        httpd<span style=color:#f92672>.</span>serve_forever()
+</code></pre></div><blockquote><p><strong>Note:</strong> You&rsquo;ll probably want to fix the permissions on the socket after it is created.
+FreeBSD applies the file permissions when determining connection rights for the socket but this is system-dependent.</p></blockquote><h2 id=other-annoyances-initial-environment>Other Annoyances: Initial Environment</h2><p><code>wsgiref</code> commits one of the greatest programmer sins possible: the use of <em>hidden</em> global state.
+When the module is <em>first loaded</em>, it makes <a href=https://github.com/python/cpython/blob/v3.9.1/Lib/wsgiref/handlers.py#L110>a copy of the global environment</a> and then uses it to populate every request handler.</p><p>As part of our overhaul, we can stem this information leak, too.
+First, we need to write a replacement for <code>WSGIServerHandler</code>:</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=color:#f92672>from</span> wsgiref.simple_server <span style=color:#f92672>import</span> WSGIServerHandler
+
+<span style=color:#66d9ef>class</span> <span style=color:#a6e22e>NewServerHandler</span>(WSGIServerHandler):
+    os_environ <span style=color:#f92672>=</span> {}
+</code></pre></div><p>And then we need to make our request handler use it.
+Unfortunately, <code>wsgiref</code> does not make this easy, so we&rsquo;re going to need to duplicate a lot of code.</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=color:#f92672>from</span> wsgiref.simple_server <span style=color:#f92672>import</span> WSGIRequestHandler
+<span style=color:#f92672>import</span> socket
+
+<span style=color:#66d9ef>class</span> <span style=color:#a6e22e>NewWSGIRequestHandler</span>(WSGIRequestHandler):
+    <span style=color:#66d9ef>def</span> __init__(self, request, client_address, server):
+        <span style=color:#75715e># NOTE: This is unchanged from the previous example</span>
+        self<span style=color:#f92672>.</span>address_family <span style=color:#f92672>=</span> server<span style=color:#f92672>.</span>address_family
+        <span style=color:#66d9ef>if</span> self<span style=color:#f92672>.</span>address_family <span style=color:#f92672>==</span> socket<span style=color:#f92672>.</span>AF_UNIX:
+            client_address <span style=color:#f92672>=</span> (<span style=color:#e6db74>&#39;&lt;unix&gt;&#39;</span>, <span style=color:#66d9ef>None</span>)
+        WSGIRequestHandler<span style=color:#f92672>.</span>__init__(self, request, client_address, server)
+
+    <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>handle</span>(self):
+        self<span style=color:#f92672>.</span>raw_requestline <span style=color:#f92672>=</span> self<span style=color:#f92672>.</span>rfile<span style=color:#f92672>.</span>readline(<span style=color:#ae81ff>65537</span>)
+        <span style=color:#66d9ef>if</span> len(self<span style=color:#f92672>.</span>raw_requestline) <span style=color:#f92672>&gt;</span> <span style=color:#ae81ff>65536</span>:
+            self<span style=color:#f92672>.</span>requestline <span style=color:#f92672>=</span> <span style=color:#e6db74>&#39;&#39;</span>
+            self<span style=color:#f92672>.</span>request_version <span style=color:#f92672>=</span> <span style=color:#e6db74>&#39;&#39;</span>
+            self<span style=color:#f92672>.</span>command <span style=color:#f92672>=</span> <span style=color:#e6db74>&#39;&#39;</span>
+            self<span style=color:#f92672>.</span>send_error(<span style=color:#ae81ff>414</span>)
+            <span style=color:#66d9ef>return</span>
+        <span style=color:#66d9ef>if</span> <span style=color:#f92672>not</span> self<span style=color:#f92672>.</span>parse_request():
+            <span style=color:#66d9ef>return</span>
+        handler <span style=color:#f92672>=</span> NewServerHandler(
+            self<span style=color:#f92672>.</span>rfile, self<span style=color:#f92672>.</span>wfile, self<span style=color:#f92672>.</span>get_stderr(), self<span style=color:#f92672>.</span>get_environ(),
+            multithread<span style=color:#f92672>=</span><span style=color:#66d9ef>False</span>,
+        )
+        handler<span style=color:#f92672>.</span>request_handler <span style=color:#f92672>=</span> self
+        handler<span style=color:#f92672>.</span>run(self<span style=color:#f92672>.</span>server<span style=color:#f92672>.</span>get_app())
+</code></pre></div><p>And there you have it: an implementation of <code>wsgiref</code> that lets you listen on unix domain sockets and won&rsquo;t leak your environment.</p></div></main><footer><div class=content><p>Copyright © 2021 Jonathan McGee. All Rights Reserved.</p></div></footer></body></html>

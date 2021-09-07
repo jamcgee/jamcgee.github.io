@@ -1,0 +1,250 @@
+<!doctype html><html lang=en-us><head><meta charset=utf-8><title>Inline Functions in C and C++</title><link rel=stylesheet type=text/css href=/css/site.min.43a8091bfcf24b00a59a240c5087845072b0210f7ee047ab82de298097cfcef1.css integrity="sha256-Q6gJG/zySwClmiQMUIeEUHKwIQ9+4Eergt4pgJfPzvE="><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name=description content="Inline functions are a notable feature of both C and C++.
+By exposing the source file to the implementation of a function, they allow a variety of optimization techniques that wouldn&rsquo;t be possible if it had to call out to a subroutine in a different file (at least without link-time optimization).
+However, despite the common syntax, the C and C++ languages implement them in very different ways.
+While C++ takes a &ldquo;user friendly&rdquo; approach and automatically manages the manipulation of multiple implementations, C requires a more manual approach.
+As a result, inline functions are less common in C and mixed language code, generally using the nuclear option of declaring them static.
+/* test.h */
+inline int test1(void) {
+  return 12;
+}
+
+/* test.c or test.cpp */
+int test2(void) {
+  return test1();
+}
+Sometimes, the easiest way to understand a rule is to see it in action.
+Let&rsquo;s analyze how modern compilers deal with C and C++ inline functions in different situations."><meta name=generator content="Hugo 0.85.0"><link rel=canonical href=https://etherealwake.com/2020/12/inline-functions-c-cpp/><meta property="og:title" content="Inline Functions in C and C++"><meta property="og:description" content="Inline functions are a notable feature of both C and C++.
+By exposing the source file to the implementation of a function, they allow a variety of optimization techniques that wouldn&rsquo;t be possible if it had to call out to a subroutine in a different file (at least without link-time optimization).
+However, despite the common syntax, the C and C++ languages implement them in very different ways.
+While C++ takes a &ldquo;user friendly&rdquo; approach and automatically manages the manipulation of multiple implementations, C requires a more manual approach.
+As a result, inline functions are less common in C and mixed language code, generally using the nuclear option of declaring them static.
+/* test.h */
+inline int test1(void) {
+  return 12;
+}
+
+/* test.c or test.cpp */
+int test2(void) {
+  return test1();
+}
+Sometimes, the easiest way to understand a rule is to see it in action.
+Let&rsquo;s analyze how modern compilers deal with C and C++ inline functions in different situations."><meta property="og:type" content="article"><meta property="og:url" content="https://etherealwake.com/2020/12/inline-functions-c-cpp/"><meta property="article:section" content="article"><meta property="article:published_time" content="2020-12-30T17:30:00-08:00"><meta property="article:modified_time" content="2021-09-07T14:08:04-07:00"><meta name=twitter:card content="summary"><meta name=twitter:title content="Inline Functions in C and C++"><meta name=twitter:description content="Inline functions are a notable feature of both C and C++.
+By exposing the source file to the implementation of a function, they allow a variety of optimization techniques that wouldn&rsquo;t be possible if it had to call out to a subroutine in a different file (at least without link-time optimization).
+However, despite the common syntax, the C and C++ languages implement them in very different ways.
+While C++ takes a &ldquo;user friendly&rdquo; approach and automatically manages the manipulation of multiple implementations, C requires a more manual approach.
+As a result, inline functions are less common in C and mixed language code, generally using the nuclear option of declaring them static.
+/* test.h */
+inline int test1(void) {
+  return 12;
+}
+
+/* test.c or test.cpp */
+int test2(void) {
+  return test1();
+}
+Sometimes, the easiest way to understand a rule is to see it in action.
+Let&rsquo;s analyze how modern compilers deal with C and C++ inline functions in different situations."></head><body class="page article"><nav><div class=content><ul><li><a href=/>Home</a></li><li><a href=/resume/>Resume</a></li><li><a href=/blog/>Blog</a></li><li><a href=mailto:continuing.search@etherealwake.com>Email</a></li></ul></div></nav><header><div class=content><h1>Ethereal Wake</h1></div></header><main><div class=content><h1 class=title>Inline Functions in C and C++</h1><ul class=metadata><li><time datetime="2020-12-30 17:30:00 -0800 -0800">2020 Dec 30</time></li><li><a href=https://etherealwake.com/2020/12/inline-functions-c-cpp/ rel=bookmark>Permalink</a></li><li>1703 words, 8 min read</li></ul><p>Inline functions are a notable feature of both C and C++.
+By exposing the source file to the implementation of a function, they allow a variety of optimization techniques that wouldn&rsquo;t be possible if it had to call out to a subroutine in a different file (at least without link-time optimization).</p><p>However, despite the common syntax, the C and C++ languages implement them in very different ways.
+While C++ takes a &ldquo;user friendly&rdquo; approach and automatically manages the manipulation of multiple implementations, C requires a more manual approach.
+As a result, inline functions are less common in C and mixed language code, generally using the nuclear option of declaring them <code>static</code>.</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c data-lang=c><span style=color:#75715e>/* test.h */</span>
+<span style=color:#66d9ef>inline</span> <span style=color:#66d9ef>int</span> <span style=color:#a6e22e>test1</span>(<span style=color:#66d9ef>void</span>) {
+  <span style=color:#66d9ef>return</span> <span style=color:#ae81ff>12</span>;
+}
+
+<span style=color:#75715e>/* test.c or test.cpp */</span>
+<span style=color:#66d9ef>int</span> <span style=color:#a6e22e>test2</span>(<span style=color:#66d9ef>void</span>) {
+  <span style=color:#66d9ef>return</span> test1();
+}
+</code></pre></div><p>Sometimes, the easiest way to understand a rule is to see it in action.
+Let&rsquo;s analyze how modern compilers deal with C and C++ inline functions in different situations.</p><h2 id=inline-functions-in-c>Inline Functions in C</h2><p>C99 introduced inline functions to the language and it has the simplest implementation.
+It&rsquo;s best to think of an inline function not as being the actual implementation, but alternate implementation the compiler may <em>choose</em> to use.</p><p>When compiled under C, our example program produces the following assembly output (stripped of anything related to debugging):</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-gas data-lang=gas>        <span style=color:#a6e22e>.text</span>
+
+<span style=color:#75715e># inline int test1(void)
+</span><span style=color:#75715e></span>
+<span style=color:#75715e># int test2(void)
+</span><span style=color:#75715e></span>        <span style=color:#a6e22e>.globl</span>  <span style=color:#66d9ef>test2</span>
+test2:
+        <span style=color:#a6e22e>call</span>    <span style=color:#66d9ef>test1@PLT</span>
+        <span style=color:#a6e22e>ret</span>
+</code></pre></div><p>Our inline function is <em>gone</em>.
+As described by C99, the <code>inline</code> keyword by itself does not result in the actual generation of a function.
+If we tried to link this object, we would face an unresolved symbol error unless the function was exported by another translation unit.
+Only should the compiler choose to inline the function will the function exist and it only exists within that translation unit.</p><p>If we want the compiler to generate the code for the function, we need to use <code>extern inline</code> (or remove the <code>inline</code> keyword entirely).</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-gas data-lang=gas>        <span style=color:#a6e22e>.text</span>
+
+<span style=color:#75715e># extern inline int test1(void)
+</span><span style=color:#75715e></span>        <span style=color:#a6e22e>.globl</span>  <span style=color:#66d9ef>test1</span>
+test1:
+        <span style=color:#a6e22e>movl</span>    <span style=color:#66d9ef>$12</span>, %eax
+        <span style=color:#a6e22e>ret</span>
+
+<span style=color:#75715e># int test2(void)
+</span><span style=color:#75715e></span>        <span style=color:#a6e22e>.globl</span>  <span style=color:#66d9ef>test2</span>
+test2:
+        <span style=color:#a6e22e>call</span>    <span style=color:#66d9ef>test1</span>
+        <span style=color:#a6e22e>ret</span>
+</code></pre></div><p>Under <code>extern inline</code>, it behaves like a completely normal function.
+The <code>inline</code> keyword merely serves as an optimization hint and has no impact on the implementation of the function.
+In fact, it&rsquo;s often completely <em>ignored</em> while the optimizer makes its own decisions.</p><p>However, by virtue of being a normal function, it means that should multiple source files try to implement the function, the linker will generate duplicate symbol errors.
+Unlike C++, C99 requires the programmer to ensure only a single copy is realized.</p><p>The opposite linkage specifier from <code>extern</code> is <code>static</code> and it, too, can be used with <code>inline</code>.</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-gas data-lang=gas>        <span style=color:#a6e22e>.text</span>
+
+<span style=color:#75715e># static inline int test1(void)
+</span><span style=color:#75715e></span>test1:
+        <span style=color:#a6e22e>movl</span>    <span style=color:#66d9ef>$12</span>, %eax
+        <span style=color:#a6e22e>ret</span>
+
+<span style=color:#75715e># int test2(void)
+</span><span style=color:#75715e></span>        <span style=color:#a6e22e>.globl</span>  <span style=color:#66d9ef>test2</span>
+test2:
+        <span style=color:#a6e22e>call</span>    <span style=color:#66d9ef>test1</span>
+        <span style=color:#a6e22e>ret</span>
+</code></pre></div><p>The output is very similar to that of <code>extern inline</code> with the notable difference being the lack of a <code>.globl</code> for the function symbol.
+This means that even though the function implementation exists, it won&rsquo;t be visible outside this object file.</p><p>In a way, <code>static inline</code> acts like an intermediate step between <code>inline</code> and <code>extern inline</code>.
+Like <code>extern inline</code>, it doesn&rsquo;t require an external implementation and like <code>inline</code>, it won&rsquo;t interfere with implementations in other modules.
+However, this flexibility leads to code duplication as each source file will be using its own, private, implementation.</p><h2 id=inline-functions-in-c-1>Inline Functions in C++</h2><p>The <code>inline</code> keyword first showed up in C++ and, as a result, it sets the precedent for how the average person understands inline functions.
+One of the guarantees is not only do the multiple compilations of an inline function not conflict with each other, each module will share the same implication.
+Take the function pointer in source file A and you&rsquo;ll get the exact same result as taking the function pointer in source file B.</p><p>Compiling our test program in gcc as a C++ program, we get the following output:</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-gas data-lang=gas><span style=color:#75715e># inline int test1(void)
+</span><span style=color:#75715e></span>        <span style=color:#a6e22e>.section</span> <span style=color:#66d9ef>.text._Z5test1v</span>,<span style=color:#e6db74>&#34;axG&#34;</span>,<span style=color:#a6e22e>@progbits</span>,<span style=color:#66d9ef>_Z5test1v</span>,<span style=color:#66d9ef>comdat</span>
+        <span style=color:#a6e22e>.weak</span>   <span style=color:#66d9ef>_Z5test1v</span>
+_Z5test1v:
+        <span style=color:#a6e22e>movl</span>    <span style=color:#66d9ef>$12</span>, %eax
+        <span style=color:#a6e22e>ret</span>
+
+<span style=color:#75715e># int test2(void)
+</span><span style=color:#75715e></span>        <span style=color:#a6e22e>.text</span>
+        <span style=color:#a6e22e>.globl</span>  <span style=color:#66d9ef>_Z5test2v</span>
+_Z5test2v:
+        <span style=color:#a6e22e>call</span>    <span style=color:#66d9ef>_Z5test1v</span>
+        <span style=color:#a6e22e>ret</span>
+</code></pre></div><p>The output is similar to what we see for <code>extern inline</code> in C99.
+Sure, the function names are mangled, but there are two significant differences.
+First, the inline function is marked <em>weak</em>.
+After all, this object file could have its implementation replaced by that in another object files, which is the very reason for marking a weak symbol.</p><p>Second, while our normal function is placed in the <code>.text</code> section, something interesting is happening with our inline function.
+Frankly, I&rsquo;m going to need to consult the <a href=https://sourceware.org/binutils/docs/as/Section.html#ELF-Version>GNU Assembler documentation</a> to make sense of it.</p><p>We can extract a few pertinent details from the section declaration:</p><ul><li>The section is named <code>.text._Z5test1v</code>.
+Since we are creating a section with unique characteristics, it&rsquo;s going to need a unique name.
+Here, GCC just appends the mangled function name but a random name would be just as acceptable.</li><li>The section is allocatable (&ldquo;a&rdquo;), executable (&ldquo;x&rdquo;), and a member of a section group (&ldquo;G&rdquo;).
+Executable is obvious and allocatable just means it gets loaded into the program&rsquo;s memory space.
+The group membership is clearly where the magic is starting to happen.</li><li><code>@progbits</code> means that the section contains data that gets stored in the binary.
+This applies not just to code and data, but things like symbol tables and debugging information.
+This is in contrast to uninitialized sections like <code>.bss</code> which don&rsquo;t need to be stored on disk.</li><li>The second appearance of <code>_Z5test1v</code> is the <em>group name</em>, which is how the linker will identify the multiple realizations.
+Here, it is set the managed function name.</li><li>Finally, <code>comdat</code> instructs the linker to discard all but one copy of this section.
+The linker will need the group membership to determine the duplicate copies.</li></ul><p>If we want to understand how the resulting object file is put together, we can run <code>readelf</code> to see how the various file structures have changed.</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plain data-lang=plain>Section Headers:
+  [Nr] Name              Type             Address           Offset
+       Size              EntSize          Flags  Link  Info  Align
+  [ 1] .group            GROUP            0000000000000000  00000040
+       0000000000000008  0000000000000004          12    11     4
+  [ 6] .text._Z5test1v   PROGBITS         0000000000000000  00000057
+       000000000000000f  0000000000000000 AXG       0     0     1
+  [12] .symtab           SYMTAB           0000000000000000  00000110
+       0000000000000138  0000000000000018          13    11     8
+
+COMDAT group section [    1] `.group&#39; [_Z5test1v] contains 1 sections:
+   [Index]    Name
+   [    6]   .text._Z5test1v
+
+Symbol table &#39;.symtab&#39; contains 13 entries:
+   Num:    Value          Size Type    Bind   Vis      Ndx Name
+    11: 0000000000000000    15 FUNC    WEAK   DEFAULT    6 _Z5test1v
+    12: 0000000000000000    15 FUNC    GLOBAL DEFAULT    2 _Z5test2v
+</code></pre></div><p>The <code>.text._Z5test1v</code> section is marked as being a member of a group, which was clearly called out on the <code>.section</code> line, but we also have a new <code>.group</code> section with non-zero &ldquo;link&rdquo; and &ldquo;info&rdquo; fields.
+Inside the group, we see it has a name (which comes from the &ldquo;info&rdquo; field) and lists the sections that are members of the group.
+Finally, the &ldquo;link&rdquo; field references the symbol table section containing the names it will be using.</p><p>What happens if we have more than one inline function?</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plain data-lang=plain>Section Headers:
+  [Nr] Name              Type             Address           Offset
+       Size              EntSize          Flags  Link  Info  Align
+  [ 1] .group            GROUP            0000000000000000  00000040
+       0000000000000008  0000000000000004          14    13     4
+  [ 2] .group            GROUP            0000000000000000  00000048
+       0000000000000008  0000000000000004          14    14     4
+  [ 7] .text._Z5test1v   PROGBITS         0000000000000000  00000064
+       000000000000000f  0000000000000000 AXG       0     0     1
+  [ 8] .text._Z5test3v   PROGBITS         0000000000000000  00000073
+       000000000000000f  0000000000000000 AXG       0     0     1
+  [14] .symtab           SYMTAB           0000000000000000  00000148
+       0000000000000180  0000000000000018          15    13     8
+
+COMDAT group section [    1] `.group&#39; [_Z5test1v] contains 1 sections:
+   [Index]    Name
+   [    7]   .text._Z5test1v
+
+COMDAT group section [    2] `.group&#39; [_Z5test3v] contains 1 sections:
+   [Index]    Name
+   [    8]   .text._Z5test3v
+
+Symbol table &#39;.symtab&#39; contains 16 entries:
+   Num:    Value          Size Type    Bind   Vis      Ndx Name
+    13: 0000000000000000    15 FUNC    WEAK   DEFAULT    7 _Z5test1v
+    14: 0000000000000000    15 FUNC    WEAK   DEFAULT    8 _Z5test3v
+    15: 0000000000000000    20 FUNC    GLOBAL DEFAULT    3 _Z5test2v
+</code></pre></div><p>Each is placed in its own separate individual section and group.</p><p>If the inline function makes use of its own static variables they, too, end up in individual sections and groups.</p><h2 id=mixing-c-and-c>Mixing C and C++</h2><p>What happens if we use the same header file in both C and C++?
+Well, without any additional changes&mldr;nothing.
+By default, C++ will mangle the name, making the two languages fully independent.</p><p>So, what happens if we use <code>extern "C"</code> to force them to share an implementation?
+Officially, I think we&rsquo;re getting into undefined behavior.
+In effect, the two separate languages are violating the one implementation rule.
+Setting that aside, what happens in practice?</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c++ data-lang=c++><span style=color:#75715e>/* common.h */</span>
+<span style=color:#75715e>#ifdef __cplusplus
+</span><span style=color:#75715e></span><span style=color:#66d9ef>extern</span> <span style=color:#e6db74>&#34;C&#34;</span> {
+<span style=color:#75715e>#endif
+</span><span style=color:#75715e></span><span style=color:#66d9ef>inline</span> <span style=color:#66d9ef>const</span> <span style=color:#66d9ef>char</span> <span style=color:#f92672>*</span><span style=color:#a6e22e>common</span>(<span style=color:#66d9ef>void</span>) {
+<span style=color:#75715e>#ifdef __cplusplus
+</span><span style=color:#75715e></span>  <span style=color:#66d9ef>return</span> <span style=color:#e6db74>&#34;C++&#34;</span>;
+<span style=color:#75715e>#else
+</span><span style=color:#75715e></span>  <span style=color:#66d9ef>return</span> <span style=color:#e6db74>&#34;C&#34;</span>;
+<span style=color:#75715e>#endif
+</span><span style=color:#75715e></span>}
+
+<span style=color:#66d9ef>const</span> <span style=color:#66d9ef>char</span> <span style=color:#f92672>*</span><span style=color:#a6e22e>test_c</span>(<span style=color:#66d9ef>void</span>);
+<span style=color:#66d9ef>const</span> <span style=color:#66d9ef>char</span> <span style=color:#f92672>*</span><span style=color:#a6e22e>test_cpp</span>(<span style=color:#66d9ef>void</span>);
+
+<span style=color:#75715e>#ifdef __cplusplus
+</span><span style=color:#75715e></span>}
+<span style=color:#75715e>#endif
+</span></code></pre></div><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c data-lang=c><span style=color:#75715e>/* common.c */</span>
+<span style=color:#75715e>#include</span> <span style=color:#75715e>&lt;stdio.h&gt;</span><span style=color:#75715e>
+</span><span style=color:#75715e>#include</span> <span style=color:#75715e>&#34;common.h&#34;</span><span style=color:#75715e>
+</span><span style=color:#75715e></span>
+<span style=color:#66d9ef>int</span> <span style=color:#a6e22e>main</span>() {
+  printf(<span style=color:#e6db74>&#34;test_c = %s</span><span style=color:#ae81ff>\n</span><span style=color:#e6db74>&#34;</span>, test_c());
+  printf(<span style=color:#e6db74>&#34;test_cpp = %s</span><span style=color:#ae81ff>\n</span><span style=color:#e6db74>&#34;</span>, test_cpp());
+}
+</code></pre></div><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c data-lang=c><span style=color:#75715e>/* inline.c */</span>
+<span style=color:#75715e>#include</span> <span style=color:#75715e>&#34;common.h&#34;</span><span style=color:#75715e>
+</span><span style=color:#75715e></span><span style=color:#66d9ef>const</span> <span style=color:#66d9ef>char</span> <span style=color:#f92672>*</span><span style=color:#a6e22e>test_c</span>() {
+  <span style=color:#66d9ef>return</span> common();
+}
+</code></pre></div><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c++ data-lang=c++><span style=color:#75715e>/* inline.cpp */</span>
+<span style=color:#75715e>#include</span> <span style=color:#75715e>&#34;common.h&#34;</span><span style=color:#75715e>
+</span><span style=color:#75715e></span><span style=color:#66d9ef>const</span> <span style=color:#66d9ef>char</span> <span style=color:#f92672>*</span><span style=color:#a6e22e>test_cpp</span>() {
+  <span style=color:#66d9ef>return</span> common();
+}
+</code></pre></div><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plain data-lang=plain>~/source/test$ cc -o test -Wall -Wextra -Werror \
+  -fsanitize=undefined common.c inline.c inline.cpp
+
+~/source/test$ ./test
+test_c = C++
+test_cpp = C++
+</code></pre></div><p>Since we never declared an <code>extern</code> version of the function in C, it needs to pull an implementation from somewhere and it&rsquo;s clearly pulling it from the shared copy created by the C++ file.
+While this works, it&rsquo;s very brittle.
+If there isn&rsquo;t a C++ source file referencing the symbol, nothing will be emitted and the C file will fail to link.
+We need to force an implementation to allow the C code to function reliably.</p><p>So, what happens to C++ if we force the implementation in C?</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c data-lang=c><span style=color:#75715e>/* inline2.c */</span>
+<span style=color:#75715e>#include</span> <span style=color:#75715e>&#34;common.h&#34;</span><span style=color:#75715e>
+</span><span style=color:#75715e></span><span style=color:#66d9ef>const</span> <span style=color:#66d9ef>char</span> <span style=color:#f92672>*</span><span style=color:#a6e22e>common</span>(<span style=color:#66d9ef>void</span>);
+
+<span style=color:#66d9ef>const</span> <span style=color:#66d9ef>char</span> <span style=color:#f92672>*</span><span style=color:#a6e22e>test_c</span>() {
+  <span style=color:#66d9ef>return</span> common();
+}
+</code></pre></div><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plain data-lang=plain>~/source/test$ cc -o test -Wall -Wextra -Werror \
+  -fsanitize=undefined common.c inline2.c inline.cpp
+
+~/source/test$ ./test
+test_c = C
+test_cpp = C
+</code></pre></div><p>In this case, the <em>weak</em> symbol emitted by the C++ implementation is being overridden by the C implementation.
+So, while I&rsquo;m sure it&rsquo;s a gross violation of the standards, it seems to work.</p><p>And yes, it even works with MSVC (or, in this case, <a href=https://clang.llvm.org/docs/MSVCCompatibility.html>clang-cl</a> on top of WSL2):</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plain data-lang=plain>~/source/test$ cl -o test.exe -Wall -Wextra -Werror \
+  common.c inline.c inline.cpp
+
+~/source/test$ ./test.exe
+test_c = C
+test_cpp = C
+
+~/source/test$ file test.exe
+test.exe: PE32+ executable (console) x86-64, for MS Windows
+</code></pre></div></div></main><footer><div class=content><p>Copyright © 2021 Jonathan McGee. All Rights Reserved.</p></div></footer></body></html>

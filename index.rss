@@ -1,0 +1,1868 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Ethereal Wake</title>
+    <link>https://etherealwake.com/</link>
+    <description>Recent content on Ethereal Wake</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <docs>https://www.rssboard.org/rss-specification</docs>
+    <language>en-US</language>
+    <managingEditor>broken.source@etherealwake.com (Jonathan McGee)</managingEditor>
+    <webMaster>broken.source@etherealwake.com (Jonathan McGee)</webMaster>
+    <copyright>Copyright © 2021 Jonathan McGee. All Rights Reserved.</copyright>
+    <lastBuildDate>Sun, 03 Jan 2021 15:36:18 -0800</lastBuildDate>
+    <atom:link href="https://etherealwake.com/index.rss" rel="self" type="application/rss+xml" />
+    <atom:link href="https://etherealwake.com/" rel="alternate" type="text/html" />
+    <atom:link href="https://etherealwake.com/index.atom" rel="alternate" type="application/atom+xml" />
+    <item>
+      <title>Bazel Linkstamp</title>
+      <link>https://etherealwake.com/2021/09/bazel-linkstamp/</link>
+      <pubDate>Fri, 03 Sep 2021 19:45:00 -0700</pubDate>
+      <guid>https://etherealwake.com/2021/09/bazel-linkstamp/</guid>
+      <description>Bazel is one of the least terrible build systems out there. It can handle large codebases, mixed languages, and cross-platform builds like a champ. Unfortunately, it suffers from rather poor documentation with an enterprise Java codebase that is a nightmare to decipher.
+One of the features I&amp;rsquo;ve been trying to make use of are linkstamps. The idea behind linkstamps is to embed information such as the Git commit identifier into the resulting binary, providing direct traceability for deployed binaries. Unfortunately, regarding this feature, Bazel suffers from the common documentation anti-pattern where they describe what an option is, not what it does.
+ Note: These instructions were written at the time of Bazel 4.2.1.</description>
+      <atom:content type="html"><![CDATA[<p><a href="https://bazel.build/">Bazel</a> is one of the <em>least terrible</em> build systems out there.
+It can handle large codebases, mixed languages, and cross-platform builds like a champ.
+Unfortunately, it suffers from rather poor documentation with an enterprise Java codebase that is a nightmare to decipher.</p>
+<p>One of the features I&rsquo;ve been trying to make use of are <em>linkstamps</em>.
+The idea behind linkstamps is to embed information such as the Git commit identifier into the resulting binary, providing direct traceability for deployed binaries.
+Unfortunately, regarding this feature, Bazel suffers from the common documentation anti-pattern where they describe what an option <em>is</em>, not what it <em>does</em>.</p>
+<blockquote>
+<p><strong>Note:</strong> These instructions were written at the time of Bazel 4.2.1.</p>
+</blockquote>
+<h2 id="workspace-status">Workspace Status</h2>
+<p>The primary mechanism for getting VCS information into Bazel, is the <a href="https://docs.bazel.build/versions/4.2.0/user-manual.html#workspace_status"><code>--workspace_status_command</code></a> option.
+This takes a <em>path</em> to a script or executable that is invoked at the beginning of each build.
+The <code>stdout</code> of this script is captured and parsed as a set of name-value pairs, with the name and value separated <em>by a single space character</em> (ASCII 32).
+Additional whitespace is captured as part of the value.</p>
+<p>Once parsed, the variables are separated into two groups: stable and volatile.
+Volatile variables are the default and are assumed to change frequently with little consequence on the binary itself, so these variables are ignored when making decisions regarding stale build artifacts.
+Stable variables are expected to change rarely or have greater consequence on the binary (e.g. version numbers), triggering a rebuild each time they change, and are marked by prefixing the name with with <code>STABLE_</code>.</p>
+<p><strong>Note:</strong> The <code>STABLE_</code> prefix is actually part of the name and is retained in the status metadata files.
+Some of the built-in variables (namely <code>BUILD_EMBED_LABEL</code>, <code>BUILD_HOST</code>, <code>BUILD_USER</code>) are considered stable despite lacking this prefix.</p>
+<p>Relevant source file: <a href="https://github.com/bazelbuild/bazel/blob/4.2.0/src/main/java/com/google/devtools/build/lib/bazel/BazelWorkspaceStatusModule.java">BazelWorkspaceStatusModule.java</a></p>
+<h2 id="access-to-status">Access to Status</h2>
+<p>Access to the status information can be made through three mechanisms:</p>
+<ol>
+<li>The <code>stamp</code> attribute on many of the built-in rules, which interacts with the <code>--[no]stamp</code> command line setting to support redacting the variables for faster builds.
+Unfortunately, access is generally limited to the built-in variables (<code>BUILD_*</code>).
+The use of this option with the C++ rules is described below.</li>
+<li>The <em>undocumented</em> <code>stamp</code> attribute on <a href="https://docs.bazel.build/versions/4.2.0/be/general.html#genrule"><code>genrule</code></a>.
+This places a dependency on the files <code>bazel-out/stable-status.txt</code> and <code>bazel-out/volatile-status.txt</code>, which contain both the built-in variables and those generated by <code>--workspace_status_command</code>.</li>
+<li>The <em>undocumented</em> <code>version_file</code> and <code>info_file</code> attributes on the <a href="https://docs.bazel.build/versions/4.2.0/skylark/lib/ctx.html"><code>ctx</code></a> object, which are references to <a href="https://docs.bazel.build/versions/4.2.0/skylark/lib/File.html"><code>File</code></a> objects.</li>
+</ol>
+<p>It should be pointed out that the only mechanisms by which the full set of workspace status variables can be accessed are <em>undocumented</em>.
+And as they only give you access to the file, not its contents, they cannot be combined with the <a href="https://docs.bazel.build/versions/4.2.0/skylark/lib/actions.html#expand_template"><code>expand_template</code></a> or <a href="https://docs.bazel.build/versions/4.2.0/skylark/lib/actions.html#write"><code>write</code></a> actions.</p>
+<p>Relevant source file: <a href="https://github.com/bazelbuild/bazel/blob/4.2.0/src/main/java/com/google/devtools/build/lib/starlarkbuildapi/StarlarkRuleContextApi.java">StarlarkRuleContextApi.java</a></p>
+<h2 id="c-rules">C++ Rules</h2>
+<p>The built-in C++ rules interact with the linkstamping system in a counter-intuitive manner that involves an unusual interaction between <code>cc_binary</code> (or <code>cc_test</code>) and <code>cc_library</code>.
+The <code>cc_binary</code> rule has a tri-state <a href="https://docs.bazel.build/versions/4.2.0/be/c-cpp.html#cc_binary.stamp"><code>stamp</code></a> argument that enables or disables the use of linkstamping while the encoding of the linkstamp is defined by the <a href="https://docs.bazel.build/versions/4.2.0/be/c-cpp.html#cc_library.linkstamp"><code>linkstamp</code></a> argument on <code>cc_library</code>.
+This means that use of linkstamping <em>requires</em> a library to provide the encoding (presumably a library that <em>only</em> deals with linkstamping).</p>
+<p>First, the C++ rules only expose the following workspace status variables:</p>
+<ul>
+<li><code>BUILD_EMBED_LABEL</code> (string) - <code>&quot;&quot;</code> unless overridden by the <code>--embed_label</code> option.</li>
+<li><code>BUILD_HOST</code> (string) - Automatically populated by Bazel.</li>
+<li><code>BUILD_SCM_REVISION</code> (string) - <code>&quot;0&quot;</code> unless overridden by the <code>--workspace_status_command</code> script.</li>
+<li><code>BUILD_SCM_STATUS</code> (string) - <code>&quot;&quot;</code> unless overridden by the  <code>--workspace_status_command</code> script.</li>
+<li><code>BUILD_TIMESTAMP</code> (integer) - Automatically populated by Bazel.</li>
+<li><code>BUILD_USER</code> (string) - Automatically populated by Bazel.</li>
+</ul>
+<p>Any other variables set by your <code>--workspace_status_command</code> script are simply not available.
+Worse, <code>BUILD_SCM_REVISION</code> and <code>BUILD_SCM_STATUS</code> are considered <em>volatile</em> parameters (they&rsquo;re populated by the status script and don&rsquo;t start with <code>STABLE_</code>), so there&rsquo;s no guarantee your binaries will be updated if these values change.</p>
+<p>The source file provided to <code>cc_library.linkstamp</code> is not compiled with the library but, instead, with the binary that eventually depends on it.
+Unlike normal source files, it has no access to the library&rsquo;s headers and must be entirely self-contained, which can be a problem if you&rsquo;re embedding this information into a data structure.
+Bazel&rsquo;s C++ rules will <em>inject</em> the status variables into the preprocessor using the <code>-include</code> argument to gcc.</p>
+<p>As a demonstration, we can see how this is executed using <code>bazel aquery</code> (after simplifying the output):</p>
+<pre><code>action 'Compiling linkstamp.cc'
+  Mnemonic: CppLinkstampCompile
+  Inputs: [bazel-out/k8-fastbuild/include/build-info-redacted.h, linkstamp.cc]
+  Outputs: [bazel-out/k8-fastbuild/bin/_objs/linkstamp/linkstamp.o]
+  Command Line: (exec /usr/bin/gcc \
+    '-DG3_BUILD_TARGET=&quot;bazel-out/k8-fastbuild/bin/linkstamp&quot;' \
+    '-DG3_TARGET_NAME=&quot;//:linkstamp&quot;' \
+    '-DBUILD_COVERAGE_ENABLED=0' \
+    '-DGPLATFORM=&quot;local&quot;' \
+    -include \
+    bazel-out/k8-fastbuild/include/build-info-redacted.h \
+    -c \
+    linkstamp.cc \
+    -o \
+    bazel-out/k8-fastbuild/bin/_objs/linkstamp/linkstamp.o)
+</code></pre><p>The specific files injected are dependent on the interaction between the <code>cc_binary.stamp</code> argument and the <code>--[no]stamp</code> option to Bazel.
+When stamping is disabled, either because <code>--nostamp</code> is selected or the binary forces it off (e.g. tests), the file <code>build-info-redacted.h</code> is included, which renders all strings to <code>&quot;redacted&quot;</code> and the timestamp to zero.</p>
+<p>Relevant Source File: <a href="https://github.com/bazelbuild/bazel/blob/4.2.0/src/main/java/com/google/devtools/build/lib/rules/cpp/WriteBuildInfoHeaderAction.java">WriteBuildInfoHeaderAction.java</a></p>
+<h2 id="limitations">Limitations</h2>
+<p>The workspace status system suffers from some glaring limitations:</p>
+<ul>
+<li>The lifetime of a variable (stable vs volatile) is embedded into the <em>name</em> of the variable (i.e. the <code>STABLE_</code> prefix), meaning that any change to the lifetime ripples through all references to said variable.</li>
+<li>The invoked script is identified by a command line option, not the <code>WORKSPACE</code>, making it impossible to select out different scripts by OS (e.g. Windows vs Unix) or providing reliable operation when referenced by dependent workspaces.</li>
+<li>The invoked script is identified by <em>path</em>, not by label.
+This means the script cannot be a build artifact from the workspace.</li>
+<li>There is no <em>documented</em> mechanism by which a C++ build can access additional variables from the status set or integrate the data in more complicate data structures described by headers.
+The later is very common for firmware builds, which need to place the stamp in a specific location for discovery purposes.</li>
+</ul>
+<p>Some of these can be mitigated, either by using undocumented features (e.g. <code>genrule.stamp</code> or the attributes on <code>ctx</code>) or using <code>genrule</code> to execute programs that extract information from outside the sandbox.</p>
+<h2 id="intended-usage-example">Intended Usage Example</h2>
+<p>For simple linkstamping needs, one can simply rely on the built-in rules and get the intended <code>--stamp</code>/<code>--nostamp</code> behavior.</p>
+<h3 id="bazelrc">.bazelrc</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">build --workspace_status_command<span style="color:#f92672">=</span>tools/workspace-status.sh
+build:release -c opt --stamp
+</code></pre></div><h3 id="toolsbuild">tools/BUILD</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python">cc_library(
+    name <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;linkstamp&#34;</span>,
+    linkstamp <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;linkstamp.c&#34;</span>,
+)
+</code></pre></div><h3 id="toolslinkstamph">tools/linkstamp.h</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++"><span style="color:#75715e">#ifndef TOOLS_LINKSTAMP_H_
+</span><span style="color:#75715e">#define TOOLS_LINKSTAMP_H_
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;time.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e"></span>
+<span style="color:#75715e">#ifdef __cplusplus
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">extern</span> <span style="color:#e6db74">&#34;C&#34;</span> {
+<span style="color:#75715e">#endif
+</span><span style="color:#75715e"></span>
+<span style="color:#66d9ef">extern</span> <span style="color:#66d9ef">const</span> time_t build_timestamp;
+<span style="color:#66d9ef">extern</span> <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> build_revision[];
+<span style="color:#66d9ef">extern</span> <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> build_status[];
+
+<span style="color:#75715e">#ifdef __cplusplus
+</span><span style="color:#75715e"></span>}  <span style="color:#75715e">// extern &#34;C&#34;
+</span><span style="color:#75715e"></span><span style="color:#75715e">#endif
+</span><span style="color:#75715e">#endif  </span><span style="color:#75715e">// TOOLS_LINKSTAMP_H_
+</span></code></pre></div><h3 id="toolslinkstampc">tools/linkstamp.c</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;time.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">const</span> time_t build_timestamp <span style="color:#f92672">=</span> BUILD_TIMESTAMP;
+<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> build_revision[] <span style="color:#f92672">=</span> BUILD_SCM_REVISION;
+<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> build_status[] <span style="color:#f92672">=</span> BUILD_SCM_STATUS;
+</code></pre></div><h3 id="toolsworkspace-statussh">tools/workspace-status.sh</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell"><span style="color:#75715e">#!/bin/sh -
+</span><span style="color:#75715e"></span>echo <span style="color:#e6db74">&#34;BUILD_SCM_REVISION </span><span style="color:#66d9ef">$(</span>git rev-parse HEAD<span style="color:#66d9ef">)</span><span style="color:#e6db74">&#34;</span>
+<span style="color:#66d9ef">if</span> git diff --quiet; <span style="color:#66d9ef">then</span>
+  echo <span style="color:#e6db74">&#34;BUILD_SCM_STATUS clean&#34;</span>
+<span style="color:#66d9ef">else</span>
+  echo <span style="color:#e6db74">&#34;BUILD_SCM_STATUS dirty&#34;</span>
+<span style="color:#66d9ef">fi</span>
+</code></pre></div><h2 id="genrule-example">genrule Example</h2>
+<p>If its necessary to access other status variables, the <code>genrule.stamp</code> option can be used to gain access to the intended data.</p>
+<h3 id="toolsbuild-1">tools/BUILD</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python">cc_library(
+    name <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;linkstamp&#34;</span>,
+    hdrs <span style="color:#f92672">=</span> [<span style="color:#e6db74">&#34;:linkstamp-gen&#34;</span>],
+)
+
+genrule(
+    name <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;linkstamp-gen&#34;</span>,
+    outs <span style="color:#f92672">=</span> [<span style="color:#e6db74">&#34;linkstamp.h&#34;</span>],
+    cmd <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;$(location linkstamp.sh) &gt; $@&#34;</span>,
+    exec_tools <span style="color:#f92672">=</span> [<span style="color:#e6db74">&#34;linkstamp.sh&#34;</span>],
+    stamp <span style="color:#f92672">=</span> <span style="color:#66d9ef">True</span>,
+    visibility <span style="color:#f92672">=</span> [<span style="color:#e6db74">&#34;//visibility:private&#34;</span>],
+)
+</code></pre></div><h3 id="toolslinkstampsh">tools/linkstamp.sh</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh"><span style="color:#75715e">#!/bin/sh -
+</span><span style="color:#75715e"></span>echo <span style="color:#e6db74">&#34;#ifndef TOOLS_LINKSTAMP_H_&#34;</span>
+echo <span style="color:#e6db74">&#34;#define TOOLS_LINKSTAMP_H_&#34;</span>
+cat bazel-out/stable-status.txt bazel-out/volatile-status.txt | sed -Ee<span style="color:#e6db74">&#39;s/^(\w+) (.*)/#define \1 &#34;\2&#34;/&#39;</span>
+echo <span style="color:#e6db74">&#34;#endif&#34;</span>
+</code></pre></div><h3 id="bazel-bintoolslinkstamph-example-output">bazel-bin/tools/linkstamp.h (Example Output)</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#ifndef TOOLS_LINKSTAMP_H_
+</span><span style="color:#75715e">#define TOOLS_LINKSTAMP_H_
+</span><span style="color:#75715e">#define BUILD_EMBED_LABEL &#34;&#34;
+</span><span style="color:#75715e">#define BUILD_HOST &#34;redacted&#34;
+</span><span style="color:#75715e">#define BUILD_USER &#34;redacted&#34;
+</span><span style="color:#75715e">#define BUILD_SCM_REVISION &#34;8e8b18a&#34;
+</span><span style="color:#75715e">#define BUILD_SCM_STATUS &#34;dirty&#34;
+</span><span style="color:#75715e">#define BUILD_TIMESTAMP &#34;1630722892&#34;
+</span><span style="color:#75715e">#define GIT_BRANCH &#34;test&#34;
+</span><span style="color:#75715e">#define STABLE_GIT_TAG &#34;v0.1.2+18-dirty&#34;
+</span><span style="color:#75715e">#endif
+</span></code></pre></div>]]></atom:content>
+    </item>
+    <item>
+      <title>FreeBSD Jails And Networking</title>
+      <link>https://etherealwake.com/2021/08/freebsd-jail-networking/</link>
+      <pubDate>Tue, 24 Aug 2021 00:00:00 -0700</pubDate>
+      <guid>https://etherealwake.com/2021/08/freebsd-jail-networking/</guid>
+      <description>When using FreeBSD, the most common method for virtualization and process isolation are jails. Introduced with FreeBSD 4.0 in March of 2000, they predate the closest Linux equivalent, cgroups (and, by extension, Docker), by nearly a decade.
+A core part of any virtualization technology is its interaction with the networking infrastructure. In this regard, I&amp;rsquo;ve found much of the available documentation lacking, often deferring to third party tools which are no longer maintained. As such, I&amp;rsquo;ve had to scrape multiple sources and reverse engineer system programs to figure out how it&amp;rsquo;s put together.
+In today&amp;rsquo;s article, I&amp;rsquo;ll describe the results of my foray into FreeBSD jail networking. It&amp;rsquo;s not the most cohesive piece, but I&amp;rsquo;ll refine it over time and hopefully it will assist someone else in their efforts to deploy FreeBSD jails.
+ Note: These instructions were written at the time of FreeBSD 13.0.</description>
+      <atom:content type="html"><![CDATA[<p>When using FreeBSD, the most common method for virtualization and process isolation are jails.
+Introduced with FreeBSD 4.0 in March of 2000, they predate the closest Linux equivalent, cgroups (and, by extension, Docker), by nearly a decade.</p>
+<p>A core part of any virtualization technology is its interaction with the networking infrastructure.
+In this regard, I&rsquo;ve found much of the <a href="https://docs.freebsd.org/en/books/handbook/jails/">available documentation</a> lacking, often deferring to third party tools which are no longer maintained.
+As such, I&rsquo;ve had to scrape multiple sources and <a href="/2020/12/freebsd-jail-startup/">reverse engineer system programs</a> to figure out how it&rsquo;s put together.</p>
+<p>In today&rsquo;s article, I&rsquo;ll describe the results of my foray into FreeBSD jail networking.
+It&rsquo;s not the most cohesive piece, but I&rsquo;ll refine it over time and hopefully it will assist someone else in their efforts to deploy FreeBSD jails.</p>
+<blockquote>
+<p><strong>Note:</strong> These instructions were written at the time of FreeBSD 13.0.</p>
+</blockquote>
+<h2 id="ip-sharing">IP Sharing</h2>
+<p>When jails were first introduced, they were modeled as a variant of <a href="https://www.freebsd.org/cgi/man.cgi?query=chroot&amp;sektion=4"><code>chroot(2)</code></a>, placing direct constraints on the superuser instead of creating a virtual machine.
+In this initial implementation, one of the objectives was to restrict access to the networking stack.
+Instead of having unfettered access, raw sockets are forbidden and socket activity is limited to a subset of the host&rsquo;s addresses.</p>
+<p>There&rsquo;s multiple ways to implement this in practice.
+The most common mechanism is to load up a bunch of IPs on the loopback device <code>lo0</code> and use firewall translation rules to give it network access.
+For example:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh"><span style="color:#75715e"># jail.conf</span>
+www <span style="color:#f92672">{</span>
+  ip4.addrs +<span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;lo0|192.168.0.5&#34;</span>;
+<span style="color:#f92672">}</span>
+</code></pre></div><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh"><span style="color:#75715e"># pf.conf</span>
+nat on $ext_if from 192.168.0.0/24 -&gt; $ext_if:0
+rdr on $ext_if to $ext_if:0 port <span style="color:#ae81ff">80</span> -&gt; 192.168.0.5
+</code></pre></div><p>Alternatively, the jail can be given addresses on the network device directly:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh"><span style="color:#75715e"># jail.conf</span>
+www <span style="color:#f92672">{</span>
+  <span style="color:#75715e"># The ordering of these addresses is significant</span>
+  ip4.addrs +<span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;lo0|127.0.0.2&#34;</span>;
+  ip4.addrs +<span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;igb0|1.2.3.4&#34;</span>;
+<span style="color:#f92672">}</span>
+</code></pre></div><p>The first caveat concerns the handling of loopback in general.
+As the addresses <code>127.0.0.1</code> and <code>::1</code> still belong to the host, those addresses are not available to jails.
+Instead, the jail will treat the first address listed under <code>ip4.addrs</code> and <code>ip6.addrs</code> as its loopback addresses and any attempt to bind to <code>127.0.0.1</code> or <code>::1</code> will bind to these addresses instead.
+This is why it&rsquo;s critical that the first address be an internal interface and protected using the system firewall.</p>
+<p>The second caveat stems from the nature of addresses as a shared resource between the jail and the host.
+This means that even when binding jails to external IPs, all traffic between jails will occur over <code>lo0</code> instead of the expected interface, which is important when constructing firewall rules.
+And since these addresses are shared with the host, the host can freely use these addresses when communicating with jails and will be able to bind (commonly seen by <code>ntpd</code> and <code>sshd</code> in their default configurations).
+It is important to avoid wildcard bindings on a machine hosting jails, especially on interfaces shared with jails.</p>
+<p>A common problem seen when using IPv6 with jails is that a given IPv6 address is not available in time for daemon startup, generating unexpected failures.
+This is a side-effect of the IPv6 Duplicate Address Detection (DAD) feature.
+There are two possible workarounds:</p>
+<ul>
+<li>Delay jail startup long enough for DAD to complete.</li>
+<li>Set the sysctl <code>net.inet6.ip6.dad_count=0</code> to disable DAD entirely.</li>
+</ul>
+<h2 id="network-virtualization">Network Virtualization</h2>
+<p>Over time, jails evolved from a refinement of <code>chroot(2)</code> to a more complete virtualization system.
+Kernel subsystems gained the ability to be virtualized, granting a unique namespace to jails, much like Linux&rsquo;s cgroups.
+One of the first examples of this was the System V IPC mechanisms (e.g. <code>sysvshm</code>).</p>
+<p>For several releases, FreeBSD had a work-in-progress jail feature where the networking stack could be virtualized.
+Called <a href="https://www.freebsd.org/cgi/man.cgi?query=vnet&amp;sektion=9">VNET</a>, it allowed jails to completely take over any number of interfaces (real or synthetic) and construct a proper networking stack.
+However, it was liable to induce kernel panics until it was finally brought to heel in the 12.0 release and became a standard part of the default kernel.</p>
+<p>The simplest method is to simply grant a jail exclusive control of a hardware device.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh">www <span style="color:#f92672">{</span>
+  vnet;
+  vnet.interface +<span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;igb2&#34;</span>;
+<span style="color:#f92672">}</span>
+</code></pre></div><p>When a jail marked as <code>vnet</code> is started, a new instance of the kernel&rsquo;s networking stack is brought up with its own, unique set of interfaces (including an <code>lo0</code>), addresses, routing tables, and firewall rules.
+The <code>jail(8)</code> utility will then take the listed interfaces and transfer ownership to the jail&rsquo;s networking stack.
+Once that&rsquo;s done, said interface completely disappears from the host and the jail can use it as a normal interface under its control.</p>
+<p>From inside the jail, we&rsquo;ll see a completely normal set of network interfaces:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plain" data-lang="plain">&gt; ifconfig
+lo0: flags=8049&lt;UP,LOOPBACK,RUNNING,MULTICAST&gt; metric 0 mtu 16384
+        options=680003&lt;RXCSUM,TXCSUM,LINKSTATE,RXCSUM_IPV6,TXCSUM_IPV6&gt;
+        inet6 ::1 prefixlen 128
+        inet6 fe80::1%lo0 prefixlen 64 scopeid 0x1
+        inet 127.0.0.1 netmask 0xff000000
+        groups: lo
+        nd6 options=21&lt;PERFORMNUD,AUTO_LINKLOCAL&gt;
+pflog0: flags=0&lt;&gt; metric 0 mtu 33160
+        groups: pflog
+igb2: flags=8822&lt;BROADCAST,SIMPLEX,MULTICAST&gt; metric 0 mtu 1500
+        options=4e507bb&lt;RXCSUM,TXCSUM,VLAN_MTU,VLAN_HWTAGGING,JUMBO_MTU,VLAN_HWCSUM,TSO4,TSO6,LRO,VLAN_HWFILTER,VLAN_HWTSO,RXCSUM_IPV6,TXCSUM_IPV6,NOMAP&gt;
+        ether 90:e2:ba:74:ba:ec
+        media: Ethernet autoselect (1000baseT &lt;full-duplex&gt;)
+        status: active
+        nd6 options=29&lt;PERFORMNUD,IFDISABLED,AUTO_LINKLOCAL&gt;
+</code></pre></div><p>And we can configure it like any normal interface using <code>rc.conf</code>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh"><span style="color:#75715e"># /etc/rc.conf</span>
+ifconfig_igb2<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;DHCP&#34;</span>
+ifconfig_igb2_ipv6<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;inet6 accept_rtadv&#34;</span>
+</code></pre></div><p>When the jail is shutdown, the hardware device will be returned to the host&rsquo;s control&hellip;eventually.
+Any outstanding connections are closed and placed into the <code>TIME_WAIT</code> state.
+Only once these connections expire will the interface be returned to the host, which can be a massive annoyance when restarting a jail.
+Thus far, I haven&rsquo;t found an effective way to speed up the process.</p>
+<h3 id="if_bridge-and-if_epair">if_bridge and if_epair</h3>
+<p>While some people may be able to dedicate an ethernet device to each jail, most people are going to engage in some form of software-defined networking.
+The traditional technique for this involves the use of <a href="https://www.freebsd.org/cgi/man.cgi?query=if_bridge&amp;sektion=4"><code>if_bridge(4)</code></a> and <a href="https://www.freebsd.org/cgi/man.cgi?query=if_epair&amp;sektion=4"><code>if_epair(4)</code></a>.</p>
+<p><code>if_epair</code> is a synthetic ethernet device that is the equivalent of a cross-over cable.
+When a new instance is cloned, you end up with a pair of interfaces, <code>epair&lt;num&gt;a</code> and <code>epair&lt;num&gt;b</code>.
+All traffic sent on one interface is received by the other.
+Using VNET, one end can be inserted into the jail to exchange traffic with the host.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh"><span style="color:#75715e"># jail.conf</span>
+www <span style="color:#f92672">{</span>
+  vnet;
+  vnet.interface +<span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;epair0b&#34;</span>;
+<span style="color:#f92672">}</span>
+</code></pre></div><p>The administrator is left with two possible choices: either they can assign an IP to the host system&rsquo;s end and treat it as a point-to-point link, performing routing and translation as necessary, or they can <em>bridge</em> the endpoints with each other and a physical network.
+When using the <code>epair</code> as a point-to-point link, we need only give it an address on the host side.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh"><span style="color:#75715e"># rc.conf</span>
+cloned_interfaces<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;epair0&#34;</span>
+ifconfig_epair0a<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;inet 1.2.3.4/30 up&#34;</span>
+</code></pre></div><p>More commonly, the host side of the <code>epairs</code> are all bundled together and (optionally) connected to an external interface.
+This uses the <code>if_bridge</code> interface, which behaves like a network switch.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh"><span style="color:#75715e"># rc.conf</span>
+cloned_interfaces<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;bridge0 epair0&#34;</span>
+ifconfig_bridge0<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;addm igb0 addm epair0a up&#34;</span>
+ifconfig_igb0<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;up&#34;</span>
+ifconfig_epair0a<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;up&#34;</span>
+</code></pre></div><p>There&rsquo;s a few caveats to consider.
+First, this can result in a massive number of network devices on the host system.
+Second, this will disable any hardware features on a physical device like TCP overloading and checksum computation.
+Third, performance can be poor as the bridge is not thread-safe and will serialize all traffic through a single lock.</p>
+<p>But most of all, firewall rules under this arrangement can be nightmarish.
+There are at least three network devices involved and it took me several readings through the <code>if_bridge</code> man page to even <em>begin</em> to understand how the firewall interacts with it all.
+In the end, I broke down to experimentation and fiddling with <code>sysctl</code> to make something I could handle.
+My final solution was to disable all the <code>net.link.bridge.pfil_*</code> sysctl&rsquo;s, place the host&rsquo;s addresses on the <code>if_bridge</code> interface, and let the owner of a given interface (<code>if_bridge</code> for the host, <code>if_epair</code> for the jails) control the associated firewall rules.</p>
+<h3 id="netgraph">Netgraph</h3>
+<p>An alternative networking approach under VNET is to use <a href="https://www.freebsd.org/cgi/man.cgi?query=netgraph&amp;sektion=4"><code>netgraph(4)</code></a>.
+Netgraph is a rather old subsystem within FreeBSD that doesn&rsquo;t get much press but it is specifically designed for these types of software-defined networking applications.
+Unlike the previous approach, where we slotted network devices together like legos, netgraph takes a graph-oriented approach to packet handling.</p>
+<p>Under netgraph, we have <em>nodes</em>, which are the entities that process packets, such as ethernet cards and switches.
+And each <em>node</em> has one or more <em>hooks</em>, which serve as the I/O ports to exchange packets between nodes.
+In our case, we&rsquo;re interested in three specific node types: <a href="https://www.freebsd.org/cgi/man.cgi?query=ng_ether&amp;sektion=4"><code>ng_ether(4)</code></a>, which allows us to interface with physical ethernet devices; <a href="https://www.freebsd.org/cgi/man.cgi?query=ng_eiface&amp;sektion=4"><code>ng_eiface(4)</code></a>, which creates a synthetic ethernet device; and <a href="https://www.freebsd.org/cgi/man.cgi?query=ng_bridge&amp;sektion=4"><code>ng_bridge(4)</code></a>, which lets us link two or more ethernet devices together in a switched network.</p>
+<p>Of these, <code>ng_eiface</code> and <code>ng_bridge</code> are the most straightforward.
+When creating an instance of <code>ng_eiface</code>, the kernel assigns it the first available index and creates a new synthetic device named <code>ngeth&lt;num&gt;</code>.
+It has a single hook, named <code>ether</code>, which allows it to deliver and receive packets from the kernel&rsquo;s protocol stack.
+Similarly, an instance of <code>ng_bridge</code> can have any number of hooks, all named <code>link&lt;num&gt;</code>, which connect any number of devices together.</p>
+<p>By comparison, <code>ng_ether</code> is a bit more complicated.
+Under normal operation, a packet received by the hardware is delivered to the kernel&rsquo;s protocol stack and packets generated by the kernel are transmitted out the port.
+Netgraph allows us to insert ourselves into the middle of that process.
+To accomplish this, <code>ng_ether</code> has <em>three</em> hooks, two of which are relevant to us: <code>lower</code> and <code>upper</code>.
+<code>lower</code> corresponds to the ethernet hardware itself: if we send a packet into <code>lower</code>, it will be transmitted out on the wire and if a packet is received from the wire, it will come out of <code>lower</code>.
+<code>upper</code>, on the other hand, corresponds to the kernel&rsquo;s protocol stack: when the kernel wants to send a packet, it will send it out <code>upper</code> and if we inject a packet into <code>upper</code>, it will be as if the networking stack received it from the wire.
+By default, <code>upper</code> is joined with <code>lower</code>, allowing the network device to operate normally; however, we can place an <code>ng_bridge</code> between the two ports and now we switch traffic between a physical segment, the kernel, and our jails (or virtual machines).</p>
+<p>Unfortunately, the base system doesn&rsquo;t provide any boot scripts to configure this for us, so we&rsquo;re on our own.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh"><span style="color:#75715e">#!/bin/sh
+</span><span style="color:#75715e"></span><span style="color:#75715e"># /usr/local/etc/rc.d/netgraph</span>
+<span style="color:#75715e">#</span>
+<span style="color:#75715e"># REQUIRE: FILESYSTEM kld</span>
+<span style="color:#75715e"># PROVIDE: netgraph</span>
+<span style="color:#75715e"># BEFORE: netif</span>
+
+netgraph_start<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+  <span style="color:#75715e"># Ensure the kernel modules are loaded</span>
+  kld_load ng_bridge ng_eiface ng_ether
+  <span style="color:#75715e"># Destroy any lingering pieces</span>
+  ngctl shutdown bridge0:
+  ngctl shutdown bridge1:
+  <span style="color:#75715e"># Create the graph</span>
+  ngctl -f- <span style="color:#e6db74">&lt;&lt;EOF
+</span><span style="color:#e6db74">    # Create the bridge by extending from the hardware device.
+</span><span style="color:#e6db74">    mkpeer igb0: ng_bridge lower link0
+</span><span style="color:#e6db74">    # Bridges don&#39;t have a name by default, so assign it one.
+</span><span style="color:#e6db74">    name igb0:lower bridge0
+</span><span style="color:#e6db74">    # With our bridge now named, we can finish connecting the hardware device.
+</span><span style="color:#e6db74">    connect igb0: bridge0: upper link1
+</span><span style="color:#e6db74">    # Create three synthetic devices and connect them to the bridge.
+</span><span style="color:#e6db74">    mkpeer bridge0: ng_eiface link2 ether
+</span><span style="color:#e6db74">    mkpeer bridge0: ng_eiface link3 ether
+</span><span style="color:#e6db74">    mkpeer bridge0: ng_eiface link4 ether
+</span><span style="color:#e6db74">
+</span><span style="color:#e6db74">    # For a virtual network, we can use ngctl&#39;s control socket as an anchor. 
+</span><span style="color:#e6db74">    mkpeer . ng_bridge virt link0
+</span><span style="color:#e6db74">    name virt bridge1
+</span><span style="color:#e6db74">    # Gaps in the hook sequence are acceptable (e.g. no link0 or link1).
+</span><span style="color:#e6db74">    mkpeer bridge1: ng_eiface link2 ether
+</span><span style="color:#e6db74">    mkpeer bridge1: ng_eiface link3 ether
+</span><span style="color:#e6db74">    mkpeer bridge1: ng_eiface link4 ether
+</span><span style="color:#e6db74">EOF</span>
+<span style="color:#f92672">}</span>
+
+netgraph_stop<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+  <span style="color:#75715e"># All the instances of eiface will vanish once the bridge is gone</span>
+  ngctl shutdown bridge0:
+  ngctl shutdown bridge1:
+<span style="color:#f92672">}</span>
+</code></pre></div><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh"><span style="color:#75715e"># jail.conf</span>
+www <span style="color:#f92672">{</span>
+  vnet;
+  vnet.interface +<span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;ngeth0&#34;</span>;
+  vnet.interface +<span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;ngeth3&#34;</span>;
+<span style="color:#f92672">}</span>
+</code></pre></div><p>One of the limitations of <code>ng_eiface</code> is that it simply assigns devices sequentially.
+This makes it exceptionally difficult to manage multiple virtual networks, especially if interfaces are being created during operation.
+To address this, we can use the <code>name</code> command from <code>ifconfig</code>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh">ifconfig ngeth0 name phys0
+ifconfig ngeth1 name phys1
+ifconfig ngeth2 name phys2
+
+ifconfig ngeth3 name virt0
+ifconfig ngeth4 name virt1
+ifconfig ngeth5 name virt2
+</code></pre></div><p>Now, we can use friendly names in our configuration.
+Of course, if we&rsquo;re building up our network graph dynamically, it doesn&rsquo;t address how one selects the newly created interface.
+For that, we need only to ask it.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plain" data-lang="plain">&gt; ngctl msg bridge1:link2 getifname
+Rec&#39;d response &#34;getifname&#34; (1) from &#34;[1a9]:&#34;:
+Args:   &#34;ngeth3&#34;
+</code></pre></div><p>Since ngctl wraps an annoying level of markup around the answer with no way to minimize it, we can use <a href="https://www.freebsd.org/cgi/man.cgi?query=expr&amp;sektion=1"><code>expr(1)</code></a> to select out the part we want:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh">iface<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>expr <span style="color:#e6db74">&#34;</span><span style="color:#66d9ef">$(</span>ngctl msg bridge1:link2 getifname<span style="color:#66d9ef">)</span><span style="color:#e6db74">&#34;</span> : <span style="color:#e6db74">&#39;.*Args:.*&#34;\([a-zA-Z]*[0-9]*\)&#34;&#39;</span><span style="color:#66d9ef">)</span>
+ifconfig <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>iface<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span> name virt0
+</code></pre></div><h3 id="interactions-with-if_lagg">Interactions with if_lagg</h3>
+<p>On a server with multiple interfaces, it makes sense to aggregate devices for reliability and performance.
+Under FreeBSD, this is accomplished with the <a href="https://www.freebsd.org/cgi/man.cgi?query=if_lagg&amp;sektion=4"><code>if_lagg(4)</code></a> device.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh"><span style="color:#75715e"># rc.conf</span>
+cloned_interfaces<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;lagg0&#34;</span>
+ifconfig_lagg0<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;laggport igb0 laggport igb1 1.2.3.4/24 up&#34;</span>
+ifconfig_igb0<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;up&#34;</span>
+ifconfig_igb1<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;up&#34;</span>
+</code></pre></div><p>Unfortunately, there is a complication when using the <code>failover</code> operating mode.
+By default, the <code>lagg</code> device will discard packets that come in from the &ldquo;wrong&rdquo; interface and netgraph runs afoul of this logic when delivering packets from the switch.
+This behavior can be suppressed using the <code>net.link.lagg.failover_rx_all</code> sysctl but I never managed to have it do anything other than lock up the network device.
+This means that under <code>failover</code>, the host can&rsquo;t use the <code>lagg</code> device for its own traffic or it won&rsquo;t be able to communicate with any devices bridged into that device.</p>
+<p>On my own system, I use a dedicated <code>lagg</code> device for the host and a second <code>lagg</code> device for the virtual devices.
+While it means that traffic between the public interfaces of the host and virtual machines goes through a physical switch, it is ultimately a minor problem.
+By having a dedicated networking device, the host&rsquo;s ethernet traffic takes advantage of the hardware TCP and checksum acceleration.</p>]]></atom:content>
+    </item>
+    <item>
+      <title>Portable Sockets: Basics</title>
+      <link>https://etherealwake.com/2021/01/portable-sockets-basics/</link>
+      <pubDate>Wed, 13 Jan 2021 10:00:00 -0800</pubDate>
+      <guid>https://etherealwake.com/2021/01/portable-sockets-basics/</guid>
+      <description>In the modern world, people tend to use massive frameworks to accomplish simple tasks. Nothing quite like swatting a fly with a nuclear missile when you load up 100 megs of runtime just to execute ping and post the result to a database. But sometimes, when you&amp;rsquo;re writing a utility, you want it to be quick and lightweight. And if you&amp;rsquo;re going through the effort, you might as well see about making it portable.
+Every extent Unix system uses BSD sockets for their networking layer, which traces back to 1983 and the release of 4.2BSD. In this model, network connections (&amp;ldquo;sockets&amp;rdquo;) are full fledged kernel objects that built on top of the existing Unix API (e.g. read, write, and close). Additional system calls were introduced both to create new sockets (e.g. socket) as well as provide networking-related operations (e.g. connect, listen, and accept).
+By comparison, the original version of WinSock was a completely user space affair with its own API, loosely modeled on BSD sockets, but distinct from the system&amp;rsquo;s native interface. As the interface transitioned into the 32-Bit era with WinSock 2, it began to integrate more closely into the Win32 API. While Microsoft has written some material on porting Unix applications to WinSock, it leaves unanswered the question as to how to portably target both platforms.</description>
+      <atom:content type="html"><![CDATA[<p>In the modern world, people tend to use massive frameworks to accomplish simple tasks.
+Nothing quite like swatting a fly with a nuclear missile when you load up 100 megs of runtime just to execute <code>ping</code> and post the result to a database.
+But sometimes, when you&rsquo;re writing a utility, you want it to be quick and lightweight.
+And if you&rsquo;re going through the effort, you might as well see about making it portable.</p>
+<p>Every extent Unix system uses BSD sockets for their networking layer, which traces back to 1983 and the release of 4.2BSD.
+In this model, network connections (&ldquo;sockets&rdquo;) are full fledged kernel objects that built on top of the existing Unix API (e.g. <code>read</code>, <code>write</code>, and <code>close</code>).
+Additional system calls were introduced both to create new sockets (e.g. <code>socket</code>) as well as provide networking-related operations (e.g. <code>connect</code>, <code>listen</code>, and <code>accept</code>).</p>
+<p>By comparison, the original version of WinSock was a completely user space affair with its own API, loosely modeled on BSD sockets, but distinct from the system&rsquo;s native interface.
+As the interface transitioned into the 32-Bit era with WinSock 2, it began to integrate more closely into the Win32 API.
+While Microsoft has written some material on <a href="https://docs.microsoft.com/en-us/windows/win32/winsock/porting-socket-applications-to-winsock">porting Unix applications to WinSock</a>, it leaves unanswered the question as to how to portably target both platforms.</p>
+<h2 id="header-files">Header Files</h2>
+<p>The first visible difference will be the set of headers to include.
+The networking functions in Unix are spread across a dozen different headers.
+Most of these headers are fairly obvious in function, but one of the more subtle points is the existence of <code>&lt;sys/types.h&gt;</code>.
+While many platforms will include it transitively, this header needs to be included before many others per POSIX.
+For broadest compatibility, it&rsquo;s better to explicitly include it at the beginning of the <code>#include</code> block.</p>
+<p>Windows is much simpler in this respect, nearly everything being drawn in by the <code>&lt;WinSock2.h&gt;</code> header.
+The only complication comes from its transitive dependency on <code>&lt;Windows.h&gt;</code>.
+By default, <code>&lt;Windows.h&gt;</code> will pull in a lot of extra stuff, some of it simultaneously deprecated and conflicting with modern API&rsquo;s (e.g. the original iteration of WinSock), so we need to define <code>WIN32_LEAN_AND_MEAN</code> to exclude these problematic headers.
+When using <code>C++</code>, it&rsquo;s good to make sure <code>NOMINMAX</code> is defined to prevent conflicts with the <code>min</code> and <code>max</code> functions from <code>&lt;algorithm&gt;</code>.</p>
+<p>Unfortunately, this transitive dependency means that <code>&lt;WinSock2.h&gt;</code> brings in an awful lot of stuff, much of it irrelevant to networking applications.
+This slows down compilation times (hence why precompiled headers are nearly ubiquitous in Win32 applications) and, worse, pollutes the namespace with a bunch of preprocessor macros.
+Given that socket handles and related types frequently end up getting referenced in type definitions, this means the entire application often ends up with a transitive dependency on the Win32 API even when doing nothing more than interacting with the various higher level wrappers.
+As such, one will often want to provide a separate header which declares basic types without pulling in the entire sockets library.</p>
+<h2 id="library-dependencies">Library Dependencies</h2>
+<p>Under Windows, the library or application needs to link with <code>ws2_32.dll</code>, provided by the matching import library <code>Ws2_32.lib</code>.
+Despite the use of the <code>32</code> designator, the 64-bit library shares the same name.
+The dependency can imported automatically with the <a href="https://docs.microsoft.com/en-us/cpp/preprocessor/comment-c-cpp">comment pragma</a> in MSVC.</p>
+<p>Under most Unix platforms, sockets are part of the standard C library and no additional dependencies are required.</p>
+<h2 id="socket-representation">Socket Representation</h2>
+<p>Under BSD sockets, socket descriptors are normal file descriptors and share all the same properties, being small non-negative integers (generally limited to a few thousand).</p>
+<p>Under WinSock, socket descriptors are (usually) normal NT kernel object handles.
+This means, that instead of <code>int</code>, sockets need to be of type <code>SOCKET</code> and the classic
+comparison with zero to detect error conditions is no longer valid.
+While sockets are supposed to be interchangeable with instances of <code>HANDLE</code> in many APIs, Microsoft choose to use a different representation so casting is necessary when sockets are used with normal Win32 function calls.</p>
+<p>Unfortunately, this dependence on <code>SOCKET</code> translates to a dependency on <code>&lt;WinSock2.h&gt;</code>, which we were actively trying to avoid.
+We can take advantage of the fact that Microsoft guarantees a stable ABI and simply use the underlying type, <code>UINT_PTR</code>, or the more standard <code>uintptr_t</code> from <code>&lt;stdint.h&gt;</code>.</p>
+<h2 id="error-reporting">Error Reporting</h2>
+<p>Under Unix, socket calls report their error status by returning <code>-1</code> and setting <code>errno</code>.
+The set of errors they can report are a superset of those generated by other Unix calls and are fully enumerated as <a href="https://en.cppreference.com/w/cpp/error/errno_macros">constants</a> in <code>&lt;errno.h&gt;</code>.</p>
+<p>However, under Windows, <code>errno</code> is part of the compiler runtime and not a system API; therefore, WinSock is forced to use a different reporting mechanism.
+As with BSD sockets, <code>-1</code> is returned on error but as a WinSock handle is not an integer, one cannot simply check the sign when examining the return values from functions like <a href="https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-socket"><code>socket</code></a> or <a href="https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-accept"><code>accept</code></a>.
+Instead, the program is expected to check for equality with <code>INVALID_SOCKET</code> or <code>SOCKET_ERROR</code>.
+Once an error is detected, the application calls <a href="https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsagetlasterror"><code>WSAGetLastError()</code></a> to retrieve the actual error code.
+Under extant versions of windows, this call is simply forwarded to the standard Win32 function <a href="https://docs.microsoft.com/en-us/windows/win32/api/errhandlingapi/nf-errhandlingapi-getlasterror"><code>GetLastError()</code></a>, so the same error handling can be used for all system calls.</p>
+<p>Complicating the situations further are the actual error values.
+While the most trivial of applications may abort on the first error, most applications will need to test for at least a few &ldquo;errors&rdquo; that occur in normal operation, namely those associated with non-blocking operation: <code>EWOULDBLOCK</code>, <code>EINPROGRESS</code>, and <code>EAGAIN</code>.
+When the application is handling signals under Unix, <code>EINTR</code> is also important although it has no equivalent in modern versions of WinSock.
+Even within different varieties of Unix, there&rsquo;s no guarantee that <code>EWOULDBLOCK</code> and <code>EAGAIN</code> have distinct values (making them unsuitable for use in a <code>switch</code> statement).</p>
+<p>Confusingly, the runtime provided by Visual Studio has the full set of POSIX error numbers provided in its copy of <code>&lt;errno.h&gt;</code> but these are disjoint from the codes actually used by WinSock.
+Instead, the error codes used by WinSock are prefixed with <code>WSA</code> (e.g. <code>WSAEWOULDBLOCK</code>).
+The simplest solution would be to simply <code>#define</code> aliases for <a href="https://docs.microsoft.com/en-us/windows/win32/winsock/windows-sockets-error-codes-2">WinSock error codes</a> under Unix.</p>
+<p>Care should be taken because not all error codes match up, even when they share the same name.
+For example, <code>connect</code> returns <code>WSAEWOULDBLOCK</code> under Windows when connecting asynchronously but <code>EINPROGRESS</code> under Unix.
+In fact, <code>WSAEINPROGRESS</code> only arises from library reentry so it should never occur in a properly written WinSock application.
+As a result, it&rsquo;s often best to just define a function to test against the different error codes to distinguish between expected conditions and actual failures.</p>
+<p>Alternatively, when using <a href="https://en.cppreference.com/w/cpp/header/system_error"><code>&lt;system_error&gt;</code></a>, Microsoft&rsquo;s implementation of <a href="https://en.cppreference.com/w/cpp/error/system_category"><code>std::system_category</code></a> will automatically handle the translations when compared to values from <a href="https://en.cppreference.com/w/cpp/error/errc"><code>std::errc</code></a>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++"><span style="color:#66d9ef">auto</span> error <span style="color:#f92672">=</span> std<span style="color:#f92672">::</span>error_code(last_socket_error(), std<span style="color:#f92672">::</span>system_category());
+<span style="color:#66d9ef">if</span> (error <span style="color:#f92672">==</span> std<span style="color:#f92672">::</span>errc<span style="color:#f92672">::</span>would_block) {
+  <span style="color:#75715e">// Logic
+</span><span style="color:#75715e"></span>}
+</code></pre></div><p>Retrieving the error string is similarly different as <a href="https://en.cppreference.com/w/c/string/byte/strerror"><code>strerror</code></a> and <a href="https://en.cppreference.com/w/c/io/perror"><code>perror</code></a> only work with the standard values from <a href="https://en.cppreference.com/w/cpp/error/errno_macros"><code>&lt;errno.h&gt;</code></a>.
+Under Windows, this action requires the use of <a href="https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-formatmessagea"><code>FormatMessage</code></a> or <code>std::system_category</code>.</p>
+<h2 id="library-initialization">Library Initialization</h2>
+<p>Prior to use of any socket-related function, Windows requires that the socket library be initialized.
+This is performed by a call to <a href="https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsastartup"><code>WSAStartup</code></a>.
+Unlike most functions (but similar to the <code>getaddrinfo</code> family), any error code is returned by the function so there is no need to consult <code>WSAGetLastError()</code>.
+For the most part, failure is limited to improper use of the function or excessive demand on system resources.</p>
+<p>There is a matching function <a href="https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsacleanup"><code>WSACleanup</code></a> that should be called as part of application shutdown.
+Together, <code>WSAStartup</code> and <code>WSACleanup</code> implement a reference counting scheme.
+After the initial initialization, each subsequent call to <code>WSAStartup</code> simply increments the counter.
+Calls to <code>WSACleanup</code> will decrement the counter until the final matching call, which will destroy all sockets and unload the library.</p>
+<p>The version provided during initialization should be <code>MAKEWORD(2,2)</code>.
+This represents the newest version of the WinSock API and was introduced during the Windows 95 and NT4 era, making it available in any system one would need to support.
+The only consideration is to verify that an earlier call to <code>WSAStartup</code> was not made by code targeting a deprecated version of the WinSock API.</p>
+<p>Under Unix, no such initialization is required.</p>
+<h2 id="basic-functions">Basic Functions</h2>
+<p>In Unix, a socket is a normal file descriptor and is closed using <a href="https://www.freebsd.org/cgi/man.cgi?query=close&amp;sektion=2"><code>close</code></a> from <code>&lt;unistd.h&gt;</code>.
+Under Windows, we need to use <a href="https://docs.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock2-closesocket"><code>closehandle</code></a> instead.
+This difference is trivially resolved by create a new function <code>closehandle</code> under Unix to use with our sockets.</p>
+<p>Both systems provide the <a href="https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-send"><code>send</code></a> and <a href="https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-recv"><code>recv</code></a> functions, which operate identically for the most part.
+The primary difference centers on types: WinSock uses <code>int</code> for the buffer size (instead of <code>size_t</code>) and expects the buffers to be of type <code>char</code> (instead of a more proper <code>void</code>).
+This means that all calls to <code>send</code> and <code>recv</code> need to be cast to char.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">copy_data</span>(<span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>buffer, size_t buflen) {
+  intptr_t bytes <span style="color:#f92672">=</span> recv(sock1, (<span style="color:#66d9ef">char</span><span style="color:#f92672">*</span>)buffer, buflen, <span style="color:#ae81ff">0</span>);
+  send(sock2, (<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span><span style="color:#f92672">*</span>)buffer, bytes, <span style="color:#ae81ff">0</span>);
+}
+</code></pre></div><p>The practical limitation of <code>send</code> and <code>recv</code> is that they are exclusively for use with sockets.
+In order to share a code path for both sockets and other descriptors (e.g. pipes), it is necessary to use the core read/write functions.
+Under Unix, this would be <code>read</code> and <code>write</code> but under Windows, this would be <a href="https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-readfile"><code>ReadFile</code></a> and <a href="https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-writefile"><code>WriteFile</code></a>.</p>
+<p>It should be pointed out that it is not guaranteed under WinSock that sockets are native kernel objects (and, by extension, compatible with <code>ReadFile</code> and <code>WriteFile</code>).
+Thankfully, these cases are rare with the <a href="https://docs.microsoft.com/en-us/windows/win32/winsock/categorizing-layered-service-providers-and-applications">responsible API being deprecated</a>, but it is something to consider as it may lead to confusing error conditions in user applications.
+As a result, it is recommended that <code>send</code> and <code>recv</code> (or their extended specializations) be used exclusively.</p>
+<p>The unorthodox use of types extends to related functions such as <a href="https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-getsockopt"><code>getsockopt</code></a> and <a href="https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-setsockopt"><code>setsockopt</code></a>.
+As with <code>send</code> and <code>recv</code>, Windows uses <code>int</code> to represent sizes and expects buffers to be of type <code>char</code>.</p>
+<p>Many other function families are identical between the platforms beyond the difference in headers, such as <a href="https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-accept"><code>accept</code></a>, <a href="https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-bind"><code>bind</code></a>, <a href="https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-listen"><code>listen</code></a>, <a href="https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-connect"><code>connect</code></a>, <a href="https://docs.microsoft.com/en-us/windows/win32/api/ws2tcpip/nf-ws2tcpip-getaddrinfo"><code>getaddrinfo</code></a>, <a href="https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-htonl"><code>htonl</code></a>, <a href="https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-htons"><code>htons</code></a>, <a href="https://docs.microsoft.com/en-us/windows/win32/api/ws2tcpip/nf-ws2tcpip-inet_ntop"><code>inet_ntop</code></a>, <a href="https://docs.microsoft.com/en-us/windows/win32/api/ws2tcpip/nf-ws2tcpip-inet_pton"><code>inet_pton</code></a>, and <a href="https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-socket"><code>socket</code></a>.
+In a few cases, constants have different names.
+For example, under Unix, the constants for <a href="https://www.freebsd.org/cgi/man.cgi?query=shutdown&amp;sektion=2"><code>shutdown</code></a> are named <code>SHUT_RD</code>, <code>SHUT_WR</code>, and <code>SHUT_RDWR</code> <a href="https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-shutdown">while under Windows</a>, these are <code>SD_RECV</code>, <code>SD_SEND</code>, and <code>SD_BOTH</code>.
+This can be trivially overcome by defining one set&rsquo;s names as aliases to the other.</p>
+<p><a href="https://docs.microsoft.com/en-us/windows/win32/api/ws2tcpip/nf-ws2tcpip-gai_strerrora"><code>gai_strerror</code></a> on Windows has a thread safety issue, so the use of <a href="https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-formatmessage"><code>FormatMessage</code></a> is preferred.</p>
+<h2 id="non-blocking-io">Non-Blocking I/O</h2>
+<p>While non-blocking I/O operates similarly under both platforms, kicking a socket into non-blocking mode is very different.
+Under Unix, this is configured by manipulating the descriptor status flags using the <code>F_SETFL</code> operation with <a href="ttps://www.freebsd.org/cgi/man.cgi?query=fcntl&amp;sektion=2"><code>fcntl</code></a>.
+Alternatively, most modern platforms support the use of the <code>SOCK_NONBLOCK</code> bitflag during socket creation, either as the second parameter to <a href="https://www.freebsd.org/cgi/man.cgi?query=socket&amp;sektion=2"><code>socket</code></a> or the fourth parameter in <a href="https://www.freebsd.org/cgi/man.cgi?query=accept4&amp;sektion=2"><code>accept4</code></a>.</p>
+<p>As Windows has no equivalent to <code>fcntl</code>, the manipulation is made using the <code>FIONBIO</code> operation with <a href="https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-ioctlsocket"><code>ioctlsocket</code></a>.
+There is no equivalent to <code>F_GETFL</code> under Windows, so directly querying the non-blocking status is not possible.
+This is not a huge loss as configuring non-blocking status is generally part of the application&rsquo;s start-up sequence and not something done reactively.</p>
+<h2 id="close-on-exec">Close-On-Exec</h2>
+<p>One of the questionable design decisions shared between Windows and Unix is that descriptors are inherited by child processes by default.
+In addition to causing files and sockets to remain open longer than anticipated, this can have profound consequences on Linux&rsquo;s <code>epoll</code> due to certain defects in its design.
+Under certain conditions, a Linux process can continue to receive notifications for sockets it no longer has access to with no mechanism to cancel them.</p>
+<p>Under Unix, the inheritance property can be partially controlled through the use of the <code>O_CLOEXEC</code> flag, manipulated using <code>fcntl</code>, or configured during socket creation with the <code>SOCK_CLOEXEC</code> flag as the second parameter to <a href="https://www.freebsd.org/cgi/man.cgi?query=socket&amp;sektion=2"><code>socket</code></a> or the fourth parameter in <a href="https://www.freebsd.org/cgi/man.cgi?query=accept4&amp;sektion=2"><code>accept4</code></a>.
+In a multi-threaded environment, this is especially critical as a race condition exists between creation of a descriptor and modification of the close-on-exec flag.
+While such descriptors will be closed upon successful completion of an <a href="https://www.freebsd.org/cgi/man.cgi?query=execve&amp;sektion=2"><code>execve</code></a> call, forked children will maintain the descriptor unless explicitly closed.</p>
+<p>On windows, most handles are not inherited by default; however, this is not the case for sockets.
+Similarly to Unix, sockets are created with the inherited bit enabled but can be disabled at creation by calling <a href="https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsasocketw"><code>WSASocketW</code></a> and supplying the <code>WSA_FLAG_NO_HANDLE_INHERIT</code> bit (Windows 7 SP1 and later); however, there is no equivalent to <code>accept4</code>.
+The functionality provided by <code>F_SETFD</code> is available from <a href="https://docs.microsoft.com/en-us/windows/win32/api/handleapi/nf-handleapi-sethandleinformation"><code>SetHandleInformation</code></a>.</p>
+<p>Due to the complex interactions between threads, processes, and descriptors, many projects have simply forbidden the use of subprocesses in threaded network applications.</p>
+<h2 id="scattergather-vectored-io">Scatter/Gather (Vectored I/O)</h2>
+<p>A common programming pattern is to insert framing into a data stream.
+For example, under HTTP/1.1, chunked encoding requires the addition of a length prefix and a suffix of <code>\r\n</code>.
+While this can implement this as three separate calls to <code>send</code>, the sequence has pretty significant performance considerations due to its interaction with TCP packetization.
+Instead, it is better to make use of a <em>gathered write</em>.</p>
+<p>Under Unix, there are two sets of functions available for vectored I/O.
+The first are the generic descriptor functions functions <a href="https://www.freebsd.org/cgi/man.cgi?query=readv&amp;sektion=2"><code>readv</code></a> and <a href="https://www.freebsd.org/cgi/man.cgi?query=writev&amp;sektion=2"><code>writev</code></a>.
+Imported from <code>&lt;sys/uio.h&gt;</code>, they work on descriptors of all types and use an array of type <code>struct iovec</code> to enumerate the associated buffers.
+The socket-specific equivalents are <a href="https://www.freebsd.org/cgi/man.cgi?query=recvmsg&amp;sektion=2"><code>recvmsg</code></a> and <a href="https://www.freebsd.org/cgi/man.cgi?query=sendmsg&amp;sektion=2"><code>sendmsg</code></a>.
+These extend <code>readv</code> and <code>writev</code>, not just in supporting the flags argument, but by exchanging other bits of sideband information such as file descriptors in the case of Unix domain sockets.</p>
+<p>Under Windows, the situation is more complicated.
+The vectored equivalents to the generic descriptor functions, <a href="https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-readfilescatter"><code>ReadFileScatter</code></a> and <a href="https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-writefilegather"><code>WriteFileGather</code></a>, are exclusive to file handles and will not function with sockets or pipes.
+The functions <a href="https://docs.microsoft.com/en-us/windows/win32/api/mswsock/nc-mswsock-lpfn_wsarecvmsg"><code>WSARecvMsg</code></a> and <a href="https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsasendmsg"><code>WSASendMsg</code></a> are the most direct equivalents to <code>recvmsg</code> and <code>sendmsg</code>; however, they only work on raw (<code>SOCK_RAW</code>) and datagram (<code>SOCK_DGRAM</code>) sockets.
+Further, <code>WSARecvMsg</code> is not exported by <code>ws2_32.dll</code> and needs to be retrieved using <a href="https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsaioctl"><code>WSAIoctl</code></a>.</p>
+<p>The functions <a href="https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsarecv"><code>WSARecv</code></a> and <a href="https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsasend"><code>WSASend</code></a> are intermediate in behavior between <code>recvmsg</code>/<code>sendmsg</code> and <code>readv</code>/<code>writev</code>.
+The types <a href="https://docs.microsoft.com/en-us/windows/win32/api/ws2def/ns-ws2def-wsabuf"><code>WSABUF</code></a> and <a href="https://docs.microsoft.com/en-us/windows/desktop/api/ws2def/ns-ws2def-wsamsg"><code>WSAMSG</code></a> serve as the equivalents to <code>struct iovec</code> and <code>struct msghdr</code>.
+Unfortunately, while Microsoft copied the conventions of <code>struct iovec</code> and <code>struct msghdr</code>, they changed the name of the members to reflect Win32 conventions.
+This means we either need to write translation functions or abuse the ABI stability Windows provides and cast from custom types.</p>
+<p>Due to this difference, it&rsquo;s recommended that <code>sendmsg</code> and <code>recvmsg</code> only be used when their specific functionality is required and a separate wrapper function is introduced for vectored operation on stream sockets.</p>
+<h2 id="socket-multiplexing">Socket Multiplexing</h2>
+<p>The classic socket multiplexing functions are <a href="https://www.freebsd.org/cgi/man.cgi?query=select&amp;sektion=2"><code>select</code></a> and <a href="https://www.freebsd.org/cgi/man.cgi?query=poll&amp;sektion=2"><code>poll</code></a>, which are now available on all relevant platforms.</p>
+<p>Since <code>select</code> is the inferior function, there is little point to using it (outside of some <a href="https://code.saghul.net/2016/05/libuv-internals-the-osx-select2-trick/">dumb designs by Apple</a> or compatibility with old versions of Windows).
+If you need to use it, the largest problem is going to be the number of descriptors that can be represented by <code>fd_set</code>.
+On all platforms, this can be tuned by setting <code>FD_SETSIZE</code> <em>before</em> including the socket headers.
+Due to the different nature in socket representation, the interpretation of the constant is slightly different.
+On Windows, <code>fd_set</code> is implemented as an array and <code>FD_SETSIZE</code> determines the <em>number</em> of sockets that can be stored in the array (defaulting to 64).
+On Unix, <code>fd_set</code> is implemented as a bitfield and <code>FD_SETSIZE</code> impacts the <em>highest</em> descriptor number that can be saved in the structure (typically defaulting to 1024).</p>
+<p>The superior option, <code>poll</code>, is available on all currently <em>supported</em> platforms, introduced by Microsoft in Windows 8.1 under the name <a href="https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsapoll"><code>WSAPoll</code></a>.
+Its absence from Windows 7 may cause issues for some developers despite that system no longer being supported by Microsoft.
+The only notable difference is that <code>WSAPoll</code> is very picky about the values placed in the <code>events</code> field: including <code>POLLHUP</code>, <code>POLLERR</code>, or <code>POLLNVAL</code> will cause the function to fail.
+As these conditions are checked regardless, this doesn&rsquo;t introduce any meaningful compatibility issue.</p>
+<p>For applications dealing with a larger number of simultaneous connections, it is generally necessary to move onto the more modern systems, such as <a href="https://man7.org/linux/man-pages/man7/epoll.7.html">epoll</a> on Linux, <a href="https://www.freebsd.org/cgi/man.cgi?query=kqueue&amp;sektion=2">kqueue</a> on BSD derivatives (including macOS), and <a href="https://docs.microsoft.com/en-us/windows/win32/fileio/i-o-completion-ports">I/O Completion Ports</a> or <a href="https://docs.microsoft.com/en-us/windows/win32/api/mswsock/ns-mswsock-rio_extension_function_table">Registered I/O</a> on Windows.
+Commercial Unices (AIX, Solaris) have adopted the IOCP model from Windows.
+Due to the complexity of these interfaces and significant differences in their conceptual models, greater levels of abstraction are required to provide source compatibility.
+At this point, libraries like <a href="https://libuv.org/">libuv</a> or <a href="https://think-async.com/">asio</a> become attractive.</p>
+<h2 id="missing-functionality">Missing Functionality</h2>
+<p>Windows has no equivalent for the <a href="https://www.freebsd.org/cgi/man.cgi?query=socketpair&amp;sektion=2"><code>socketpair</code></a> function.
+While it can be emulated by the creation and manipulation of multiple sockets, one needs to consider its utility under Windows.
+The primary purpose in Unix is provide a channel for communication with a subprocess, especially for purposes of exchanging file descriptors over a Unix domain socket.
+Given the radically different paradigms regarding the creation of subprocesses and exchanging handles across process boundaries, there is little need to fully abstract this function.</p>
+<p>In order to transmit handles to another process in Windows, the process is more akin to serialization.
+The sending process will serialize a socket descriptor using <a href="https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsaduplicatesocketw"><code>WSADuplicateSocketW</code></a>, dump the contents of <code>WSAPROTOCOL_INFO</code> on the wire, and deserialize in the receiving process by calling <a href="https://docs.microsoft.com/en-us/windows/desktop/api/winsock2/nf-winsock2-wsasocketw"><code>WSASocketW</code></a>.
+Other kernel objects can be transferred using the <a href="https://docs.microsoft.com/en-us/windows/win32/api/handleapi/nf-handleapi-duplicatehandle"><code>DuplicateHandle</code></a> function.
+By contrast, Unix can exchange file descriptors using the ancillary data buffer in <code>recvmsg</code> and <code>sendmsg</code>.</p>
+<h2 id="example-headers">Example Headers</h2>
+<p>Combining all the previous information, we can produce a very basic library to provide us transparent source compatibility.
+First, we declare a header that lets us stash socket handles inside structures and classes without pulling on the entire API.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">// socket-fwd.h
+</span><span style="color:#75715e"></span><span style="color:#75715e">#ifndef SOCKET_FWD_H_
+</span><span style="color:#75715e">#define SOCKET_FWD_H_
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdint.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e"></span>
+<span style="color:#75715e">// Declare Structures
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">struct</span> iovec;
+<span style="color:#66d9ef">struct</span> msghdr;
+
+<span style="color:#75715e">// Platform Specific Types
+</span><span style="color:#75715e"></span><span style="color:#75715e">#ifndef _WIN32
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">int</span> socket_t;
+<span style="color:#75715e">#else
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">typedef</span> uintptr_t socket_t;
+<span style="color:#75715e">// These types are missing from WinSock
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">int</span> socklen_t;
+<span style="color:#66d9ef">typedef</span> intptr_t ssize_t;
+<span style="color:#75715e">#endif
+</span><span style="color:#75715e"></span>
+<span style="color:#75715e">#endif  </span><span style="color:#75715e">// SOCKET_FWD_H_
+</span></code></pre></div><p>Second, we declare a header that provides the compatibility shims between the various APIs.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">// socket.h
+</span><span style="color:#75715e"></span><span style="color:#75715e">#ifndef SOCKET_H_
+</span><span style="color:#75715e">#define SOCKET_H_
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&#34;socket-fwd.h&#34;</span><span style="color:#75715e">
+</span><span style="color:#75715e"></span>
+<span style="color:#75715e">#ifdef _WIN32
+</span><span style="color:#75715e">#ifndef WIN32_LEAN_AND_MEAN
+</span><span style="color:#75715e">#define WIN32_LEAN_AND_MEAN
+</span><span style="color:#75715e">#endif
+</span><span style="color:#75715e">#ifndef NOMINMAX
+</span><span style="color:#75715e">#define NOMINMAX
+</span><span style="color:#75715e">#endif
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;WinSock2.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;Ws2tcpip.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#else
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;sys/types.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;sys/select.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;sys/socket.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;sys/uio.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;arpa/inet.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;netinet/in.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;errno.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;fcntl.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;netdb.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;poll.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;unistd.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#endif
+</span><span style="color:#75715e"></span>
+<span style="color:#75715e">#ifdef __cplusplus
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">extern</span> <span style="color:#e6db74">&#34;C&#34;</span> {
+<span style="color:#75715e">#endif
+</span><span style="color:#75715e"></span>
+<span style="color:#75715e">// Constants
+</span><span style="color:#75715e"></span><span style="color:#75715e">#ifndef _WIN32
+</span><span style="color:#75715e">#define INVALID_SOCKET (-1)
+</span><span style="color:#75715e">#define SOCKET_ERROR   (-1)
+</span><span style="color:#75715e">#else
+</span><span style="color:#75715e">#define SOCK_CLOEXEC   WSA_FLAG_NO_HANDLE_INHERIT
+</span><span style="color:#75715e">#define SOCK_NONBLOCK  (+1)  </span><span style="color:#75715e">// Arbitrary Value
+</span><span style="color:#75715e"></span><span style="color:#75715e">#define SHUT_WR        SD_SEND
+</span><span style="color:#75715e">#define SHUT_RD        SD_RECV
+</span><span style="color:#75715e">#define SHUT_RDWR      SD_BOTH
+</span><span style="color:#75715e">#endif
+</span><span style="color:#75715e"></span>
+<span style="color:#75715e">// Types
+</span><span style="color:#75715e"></span><span style="color:#75715e">#ifdef _WIN32
+</span><span style="color:#75715e"></span><span style="color:#75715e">// Layout compatible with WSABUF
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">struct</span> iovec {
+  ULONG iov_len;
+  <span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>iov_base;
+};
+
+<span style="color:#75715e">// Layout compatible with WSAMSG
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">struct</span> msghdr {
+  <span style="color:#66d9ef">void</span>         <span style="color:#f92672">*</span>msg_name;
+  socklen_t     msg_namelen;
+  <span style="color:#66d9ef">struct</span> iovec <span style="color:#f92672">*</span>msg_iov;
+  ULONG         msg_iovlen;
+  ULONG         msg_controllen;
+  <span style="color:#66d9ef">void</span>         <span style="color:#f92672">*</span>msg_control;
+  ULONG         msg_flags;
+};
+<span style="color:#75715e">#endif
+</span><span style="color:#75715e"></span>
+<span style="color:#75715e">// External Functions
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">extern</span> <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">socket_startup</span>(<span style="color:#66d9ef">void</span>);
+<span style="color:#66d9ef">extern</span> <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">socket_strerror</span>(<span style="color:#66d9ef">int</span> error, <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>buffer, size_t buflen);
+
+<span style="color:#75715e">// Name-Translating Wrappers
+</span><span style="color:#75715e"></span><span style="color:#75715e">#ifndef _WIN32
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">inline</span> <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">closesocket</span>(socket_t sock) {
+  <span style="color:#66d9ef">return</span> close(sock);
+}
+<span style="color:#75715e">#endif
+</span><span style="color:#75715e"></span>
+<span style="color:#66d9ef">inline</span> <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">last_socket_error</span>(<span style="color:#66d9ef">void</span>) {
+<span style="color:#75715e">#ifdef _WIN32
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">return</span> WSAGetLastError();
+<span style="color:#75715e">#else
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">return</span> errno;
+<span style="color:#75715e">#endif
+</span><span style="color:#75715e"></span>}
+
+<span style="color:#66d9ef">inline</span> <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">inprogress</span>(<span style="color:#66d9ef">int</span> error) {
+<span style="color:#75715e">#ifdef _WIN32
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">return</span> (error <span style="color:#f92672">==</span> WSAEWOULDBLOCK);
+<span style="color:#75715e">#else
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">return</span> (error <span style="color:#f92672">==</span> EWOULDBLOCK) <span style="color:#f92672">||</span> (error <span style="color:#f92672">==</span> EAGAIN)
+      <span style="color:#f92672">||</span> (error <span style="color:#f92672">==</span> EINPROGRESS);
+<span style="color:#75715e">#endif
+</span><span style="color:#75715e"></span>}
+
+<span style="color:#66d9ef">inline</span> <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">get_cloexec</span>(socket_t sock) {
+<span style="color:#75715e">#ifndef _WIN32
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">return</span> fcntl(sock, F_GETFD);
+<span style="color:#75715e">#else
+</span><span style="color:#75715e"></span>  DWORD flags <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+  <span style="color:#66d9ef">return</span> GetHandleInformation((HANDLE)sock, <span style="color:#f92672">&amp;</span> flags)
+      <span style="color:#f92672">?</span> (flags <span style="color:#f92672">&amp;</span> HANDLE_FLAG_INHERIT) <span style="color:#f92672">:</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>;
+<span style="color:#75715e">#endif
+</span><span style="color:#75715e"></span>}
+
+<span style="color:#66d9ef">inline</span> <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">set_cloexec</span>(socket_t sock, <span style="color:#66d9ef">int</span> value) {
+<span style="color:#75715e">#ifndef _WIN32
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">return</span> fcntl(sock, F_SETFD, value <span style="color:#f92672">?</span> FD_CLOEXEC : <span style="color:#ae81ff">0</span>);
+<span style="color:#75715e">#else
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">return</span> SetHandleInformation((HANDLE)sock, HANDLE_FLAG_INHERIT,
+                              value <span style="color:#f92672">?</span> HANDLE_FLAG_INHERIT : <span style="color:#ae81ff">0</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">:</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>;
+<span style="color:#75715e">#endif
+</span><span style="color:#75715e"></span>}
+
+<span style="color:#75715e">#ifndef _WIN32
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">inline</span> <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">set_nonblock</span>(socket_t sock, <span style="color:#66d9ef">int</span> value) {
+  <span style="color:#66d9ef">int</span> oflags <span style="color:#f92672">=</span> fcntl(sock, F_GETFL);
+  <span style="color:#66d9ef">if</span> (oflags <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">return</span> oflags;
+  <span style="color:#66d9ef">int</span> nflags <span style="color:#f92672">=</span> value <span style="color:#f92672">?</span> (oflags <span style="color:#f92672">|</span> O_NONBLOCK) <span style="color:#f92672">:</span> (oflags <span style="color:#f92672">&amp;</span> <span style="color:#f92672">~</span>O_NONBLOCK);
+  <span style="color:#66d9ef">return</span> (oflags <span style="color:#f92672">!=</span> nflags) <span style="color:#f92672">?</span> fcntl(sock, F_SETFL, nflags) <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
+}
+<span style="color:#75715e">#else
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">inline</span> <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">set_nonblock</span>(socket_t sock, u_long value) {
+  <span style="color:#66d9ef">return</span> ioctlsocket(sock, FIONBIO, <span style="color:#f92672">&amp;</span>value);
+}
+<span style="color:#75715e">#endif
+</span><span style="color:#75715e"></span>
+<span style="color:#66d9ef">inline</span> socket_t <span style="color:#a6e22e">socket4</span>(<span style="color:#66d9ef">int</span> domain, <span style="color:#66d9ef">int</span> type, <span style="color:#66d9ef">int</span> protocol, <span style="color:#66d9ef">int</span> flags) {
+<span style="color:#75715e">#ifndef _WIN32
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">return</span> socket(domain, type <span style="color:#f92672">|</span> flags, protocol);
+<span style="color:#75715e">#else
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">// Create socket
+</span><span style="color:#75715e"></span>  socket_t sock <span style="color:#f92672">=</span> WSASocketW(domain, type, protocol, NULL, <span style="color:#ae81ff">0</span>,
+      WSA_FLAG_OVERLAPPED <span style="color:#f92672">|</span> (flags <span style="color:#f92672">&amp;</span> SOCK_CLOEXEC));
+  <span style="color:#66d9ef">if</span> (sock <span style="color:#f92672">==</span> INVALID_SOCKET) <span style="color:#66d9ef">return</span> sock;
+  <span style="color:#75715e">// Apply remaining flags
+</span><span style="color:#75715e"></span>  u_long arg <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
+  <span style="color:#66d9ef">if</span> (flags <span style="color:#f92672">&amp;</span> SOCK_NONBLOCK) ioctlsocket(sock, FIONBIO, <span style="color:#f92672">&amp;</span>arg);
+  <span style="color:#66d9ef">return</span> sock;
+<span style="color:#75715e">#endif
+</span><span style="color:#75715e"></span>}
+
+<span style="color:#66d9ef">inline</span> <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">socket_cleanup</span>(<span style="color:#66d9ef">void</span>) {
+<span style="color:#75715e">#ifdef _WIN32
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">return</span> WSACleanup();
+<span style="color:#75715e">#else
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+<span style="color:#75715e">#endif
+</span><span style="color:#75715e"></span>}
+
+<span style="color:#75715e">#ifdef _WIN32
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">inline</span> <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">poll</span>(<span style="color:#66d9ef">struct</span> pollfd <span style="color:#f92672">*</span>fds, <span style="color:#66d9ef">int</span> nfds, <span style="color:#66d9ef">int</span> timeout) {
+  <span style="color:#66d9ef">return</span> WSAPoll(fds, nfds, timeout);
+}
+
+<span style="color:#66d9ef">inline</span> ssize_t <span style="color:#a6e22e">recvmsg</span>(socket_t sock, <span style="color:#66d9ef">struct</span> msghdr <span style="color:#f92672">*</span>msg, DWORD flags) {
+  <span style="color:#75715e">// NOTE: This does not implement the ancillary data feature
+</span><span style="color:#75715e"></span>  DWORD bytes <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+  <span style="color:#66d9ef">int</span> result <span style="color:#f92672">=</span> WSARecvFrom(sock, (WSABUF<span style="color:#f92672">*</span>)msg<span style="color:#f92672">-&gt;</span>msg_iov, msg<span style="color:#f92672">-&gt;</span>msg_iovlen,
+                           <span style="color:#f92672">&amp;</span>bytes, <span style="color:#f92672">&amp;</span>flags, (<span style="color:#66d9ef">struct</span> sockaddr<span style="color:#f92672">*</span>)msg<span style="color:#f92672">-&gt;</span>msg_name,
+                           <span style="color:#f92672">&amp;</span>msg<span style="color:#f92672">-&gt;</span>msg_namelen, NULL, NULL);
+  <span style="color:#66d9ef">if</span> (result <span style="color:#f92672">==</span> SOCKET_ERROR) <span style="color:#66d9ef">return</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>;
+  msg<span style="color:#f92672">-&gt;</span>msg_flags <span style="color:#f92672">=</span> flags;
+  msg<span style="color:#f92672">-&gt;</span>msg_controllen <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+  <span style="color:#66d9ef">return</span> (ssize_t)bytes;
+}
+
+<span style="color:#66d9ef">inline</span> ssize_t <span style="color:#a6e22e">sendmsg</span>(socket_t sock, <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> msghdr <span style="color:#f92672">*</span>msg, DWORD flags) {
+  <span style="color:#75715e">// NOTE: This does not implement the ancillary data feature
+</span><span style="color:#75715e"></span>  DWORD bytes <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+  <span style="color:#66d9ef">int</span> result <span style="color:#f92672">=</span> WSASendTo(sock, (WSABUF<span style="color:#f92672">*</span>)msg<span style="color:#f92672">-&gt;</span>msg_iov, msg<span style="color:#f92672">-&gt;</span>msg_iovlen,
+                         <span style="color:#f92672">&amp;</span>bytes, flags, (<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> sockaddr<span style="color:#f92672">*</span>)msg<span style="color:#f92672">-&gt;</span>msg_name,
+                         msg<span style="color:#f92672">-&gt;</span>msg_namelen, NULL, NULL);
+  <span style="color:#66d9ef">if</span> (result <span style="color:#f92672">==</span> SOCKET_ERROR) <span style="color:#66d9ef">return</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>;
+  <span style="color:#66d9ef">return</span> (ssize_t)bytes;
+}
+<span style="color:#75715e">#endif
+</span><span style="color:#75715e"></span>
+<span style="color:#75715e">#ifdef __cplusplus
+</span><span style="color:#75715e"></span>}  <span style="color:#75715e">// extern &#34;C&#34;
+</span><span style="color:#75715e"></span><span style="color:#75715e">#endif
+</span><span style="color:#75715e">#endif  </span><span style="color:#75715e">// SOCKET_H_
+</span></code></pre></div><p>Finally, we create a file that addresses the more involved functions and forces instantiation of the inline functions.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">// socket.c
+</span><span style="color:#75715e"></span><span style="color:#75715e">#include</span> <span style="color:#75715e">&#34;socket.h&#34;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;string.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e"></span>
+<span style="color:#75715e">#ifdef _WIN32
+</span><span style="color:#75715e">#pragma comment(lib, &#34;Ws2_32.lib&#34;)
+</span><span style="color:#75715e">#endif
+</span><span style="color:#75715e"></span>
+<span style="color:#66d9ef">int</span> <span style="color:#a6e22e">socket_startup</span>() {
+<span style="color:#75715e">#ifdef _WIN32
+</span><span style="color:#75715e"></span>  WSADATA wsadata;
+  <span style="color:#66d9ef">int</span> error <span style="color:#f92672">=</span> WSAStartup(MAKEWORD(<span style="color:#ae81ff">2</span>, <span style="color:#ae81ff">2</span>), <span style="color:#f92672">&amp;</span>wsadata);
+  <span style="color:#66d9ef">if</span> (error) <span style="color:#66d9ef">return</span> error;
+
+  <span style="color:#66d9ef">if</span> (wsadata.wVersion <span style="color:#f92672">&lt;</span> MAKEWORD(<span style="color:#ae81ff">2</span>, <span style="color:#ae81ff">2</span>)) {
+    WSACleanup();
+    <span style="color:#66d9ef">return</span> WSAVERNOTSUPPORTED;
+  }
+<span style="color:#75715e">#endif
+</span><span style="color:#75715e"></span>
+  <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+}
+
+<span style="color:#66d9ef">int</span> <span style="color:#a6e22e">socket_strerror</span>(<span style="color:#66d9ef">int</span> error, <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>buffer, size_t buflen) {
+<span style="color:#75715e">#if _WIN32
+</span><span style="color:#75715e"></span>  DWORD length <span style="color:#f92672">=</span> FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM, NULL,
+                                error, <span style="color:#ae81ff">0</span>, buffer, buflen, NULL);
+  <span style="color:#66d9ef">if</span> (length <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">return</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>;
+  <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>eol <span style="color:#f92672">=</span> strchr(buffer, <span style="color:#e6db74">&#39;\n&#39;</span>);
+  <span style="color:#66d9ef">if</span> (eol <span style="color:#f92672">!=</span> NULL) <span style="color:#f92672">*</span>eol <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;\0&#39;</span>;
+  <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+<span style="color:#75715e">#else
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">// Can be replaced with strlcpy if known to be available
+</span><span style="color:#75715e"></span>  snprintf(buffer, buflen, <span style="color:#e6db74">&#34;%s&#34;</span>, strerror(error));
+  <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+<span style="color:#75715e">#endif
+</span><span style="color:#75715e"></span>}
+
+<span style="color:#75715e">// Instantiate Inline Functions.
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">inprogress</span>(<span style="color:#66d9ef">int</span> error);
+<span style="color:#66d9ef">int</span> <span style="color:#a6e22e">last_socket_error</span>(<span style="color:#66d9ef">void</span>);
+<span style="color:#66d9ef">int</span> <span style="color:#a6e22e">get_cloexec</span>(socket_t sock);
+<span style="color:#66d9ef">int</span> <span style="color:#a6e22e">set_cloexec</span>(socket_t sock, <span style="color:#66d9ef">int</span> value);
+<span style="color:#66d9ef">int</span> <span style="color:#a6e22e">socket_cleanup</span>(<span style="color:#66d9ef">void</span>);
+socket_t <span style="color:#a6e22e">socket4</span>(<span style="color:#66d9ef">int</span> domain, <span style="color:#66d9ef">int</span> type, <span style="color:#66d9ef">int</span> protocol, <span style="color:#66d9ef">int</span> flags);
+<span style="color:#75715e">#ifndef _WIN32
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">closesocket</span>(<span style="color:#66d9ef">int</span> sock);
+<span style="color:#66d9ef">int</span> <span style="color:#a6e22e">get_nonblock</span>(socket_t sock);
+<span style="color:#66d9ef">int</span> <span style="color:#a6e22e">set_nonblock</span>(socket_t sock, <span style="color:#66d9ef">int</span> value);
+<span style="color:#75715e">#else
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">poll</span>(<span style="color:#66d9ef">struct</span> pollfd <span style="color:#f92672">*</span>fds, <span style="color:#66d9ef">int</span> nfds, <span style="color:#66d9ef">int</span> timeout);
+<span style="color:#66d9ef">int</span> <span style="color:#a6e22e">set_nonblock</span>(socket_t sock, u_long value);
+ssize_t <span style="color:#a6e22e">recvmsg</span>(socket_t sock, <span style="color:#66d9ef">struct</span> msghdr <span style="color:#f92672">*</span>msg, DWORD flags);
+ssize_t <span style="color:#a6e22e">sendmsg</span>(socket_t sock, <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> msghdr <span style="color:#f92672">*</span>msg, DWORD flags);
+<span style="color:#75715e">#endif
+</span></code></pre></div><h3 id="example-program">Example Program</h3>
+<p>Using this library, we can construct a basic application that doesn&rsquo;t need to perform any platform-specific checks in order to make use of the sockets library.
+Here, we only perform a check on <code>_WIN32</code> for purposes of outputing a diagnostic message regarding the current platform.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">// example.c
+</span><span style="color:#75715e"></span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdlib.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;string.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&#34;socket.h&#34;</span><span style="color:#75715e">
+</span><span style="color:#75715e"></span>
+<span style="color:#66d9ef">static</span> <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> prefix[] <span style="color:#f92672">=</span>
+    <span style="color:#e6db74">&#34;GET / HTTP/1.1</span><span style="color:#ae81ff">\r\n</span><span style="color:#e6db74">&#34;</span>
+    <span style="color:#e6db74">&#34;Host: &#34;</span>;
+<span style="color:#66d9ef">static</span> <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> suffix[] <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\r\n</span><span style="color:#e6db74">&#34;</span>
+    <span style="color:#e6db74">&#34;Connection: close</span><span style="color:#ae81ff">\r\n</span><span style="color:#e6db74">&#34;</span>
+    <span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\r\n</span><span style="color:#e6db74">&#34;</span>;
+
+<span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span>(<span style="color:#66d9ef">int</span> argc, <span style="color:#66d9ef">char</span> <span style="color:#f92672">**</span>argv) {
+  <span style="color:#66d9ef">int</span> init <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+  socket_t sock <span style="color:#f92672">=</span> INVALID_SOCKET;
+  <span style="color:#66d9ef">struct</span> addrinfo <span style="color:#f92672">*</span>addr <span style="color:#f92672">=</span> NULL;
+  <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>func <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;unknown&#34;</span>;
+  <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>hostname <span style="color:#f92672">=</span> (argc <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">1</span>) <span style="color:#f92672">?</span> argv[<span style="color:#ae81ff">1</span>] <span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;google.com&#34;</span>;
+  <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>servname <span style="color:#f92672">=</span> (argc <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">2</span>) <span style="color:#f92672">?</span> argv[<span style="color:#ae81ff">2</span>] <span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;www&#34;</span>;
+
+  printf(<span style="color:#e6db74">&#34;Running on &#34;</span>);
+<span style="color:#75715e">#ifdef _WIN32
+</span><span style="color:#75715e"></span>  printf(<span style="color:#e6db74">&#34;Windows %zd-Bit</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, <span style="color:#66d9ef">sizeof</span>(<span style="color:#66d9ef">void</span><span style="color:#f92672">*</span>) <span style="color:#f92672">*</span> <span style="color:#ae81ff">8</span>);
+<span style="color:#75715e">#else
+</span><span style="color:#75715e"></span>  fflush(stdout);
+  system(<span style="color:#e6db74">&#34;uname -o&#34;</span>);
+<span style="color:#75715e">#endif
+</span><span style="color:#75715e"></span>
+  <span style="color:#66d9ef">int</span> error <span style="color:#f92672">=</span> socket_startup();
+  <span style="color:#66d9ef">if</span> (error) {
+    func <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;socket_startup&#34;</span>;
+    <span style="color:#66d9ef">goto</span> haveerror;
+  }
+  <span style="color:#f92672">++</span>init;
+
+  printf(<span style="color:#e6db74">&#34;Looking up %s:%s</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, hostname, servname);
+  <span style="color:#66d9ef">struct</span> addrinfo hints <span style="color:#f92672">=</span> {};
+  hints.ai_socktype <span style="color:#f92672">=</span> SOCK_STREAM;
+  error <span style="color:#f92672">=</span> getaddrinfo(hostname, servname, <span style="color:#f92672">&amp;</span>hints, <span style="color:#f92672">&amp;</span>addr);
+  <span style="color:#66d9ef">if</span> (error) {
+    fprintf(stderr, <span style="color:#e6db74">&#34;getaddrinfo: %s</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, gai_strerror(error));
+    <span style="color:#66d9ef">return</span> EXIT_FAILURE;
+  }
+
+  printf(<span style="color:#e6db74">&#34;Creating socket.</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+  sock <span style="color:#f92672">=</span> socket4(addr<span style="color:#f92672">-&gt;</span>ai_family, addr<span style="color:#f92672">-&gt;</span>ai_socktype, addr<span style="color:#f92672">-&gt;</span>ai_protocol,
+                 SOCK_CLOEXEC <span style="color:#f92672">|</span> SOCK_NONBLOCK);
+  <span style="color:#66d9ef">if</span> (sock <span style="color:#f92672">==</span> INVALID_SOCKET) {
+    func <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;socket&#34;</span>;
+    <span style="color:#66d9ef">goto</span> fail;
+  }
+
+  printf(<span style="color:#e6db74">&#34;Connecting to %s:%s.</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, hostname, servname);
+  error <span style="color:#f92672">=</span> connect(sock, addr<span style="color:#f92672">-&gt;</span>ai_addr, addr<span style="color:#f92672">-&gt;</span>ai_addrlen);
+  <span style="color:#66d9ef">if</span> ((error <span style="color:#f92672">==</span> SOCKET_ERROR) <span style="color:#f92672">&amp;&amp;</span> <span style="color:#f92672">!</span>inprogress(last_socket_error())) {
+    func <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;connect&#34;</span>;
+    <span style="color:#66d9ef">goto</span> fail;
+  }
+
+  printf(<span style="color:#e6db74">&#34;Waiting for connection.</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+  <span style="color:#66d9ef">struct</span> pollfd fds;
+  fds.fd <span style="color:#f92672">=</span> sock;
+  fds.events <span style="color:#f92672">=</span> POLLWRNORM;
+  <span style="color:#66d9ef">if</span> (poll(<span style="color:#f92672">&amp;</span>fds, <span style="color:#ae81ff">1</span>, <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#f92672">==</span> SOCKET_ERROR) {
+    func <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;poll&#34;</span>;
+    <span style="color:#66d9ef">goto</span> fail;
+  }
+
+  <span style="color:#66d9ef">struct</span> iovec iov[<span style="color:#ae81ff">3</span>];
+  iov[<span style="color:#ae81ff">0</span>].iov_base <span style="color:#f92672">=</span> (<span style="color:#66d9ef">char</span><span style="color:#f92672">*</span>)prefix;
+  iov[<span style="color:#ae81ff">0</span>].iov_len <span style="color:#f92672">=</span> strlen(prefix);
+  iov[<span style="color:#ae81ff">1</span>].iov_base <span style="color:#f92672">=</span> (<span style="color:#66d9ef">char</span><span style="color:#f92672">*</span>)hostname;
+  iov[<span style="color:#ae81ff">1</span>].iov_len <span style="color:#f92672">=</span> strlen(hostname);
+  iov[<span style="color:#ae81ff">2</span>].iov_base <span style="color:#f92672">=</span> (<span style="color:#66d9ef">char</span><span style="color:#f92672">*</span>)suffix;
+  iov[<span style="color:#ae81ff">2</span>].iov_len <span style="color:#f92672">=</span> strlen(suffix);
+  <span style="color:#66d9ef">struct</span> msghdr hdr <span style="color:#f92672">=</span> {};
+  hdr.msg_iov <span style="color:#f92672">=</span> iov;
+  hdr.msg_iovlen <span style="color:#f92672">=</span> <span style="color:#ae81ff">3</span>;
+
+  printf(<span style="color:#e6db74">&#34;Sending request to %s:%s.</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, hostname, servname);
+  ssize_t bytes <span style="color:#f92672">=</span> sendmsg(sock, <span style="color:#f92672">&amp;</span>hdr, <span style="color:#ae81ff">0</span>);
+  <span style="color:#66d9ef">if</span> (bytes <span style="color:#f92672">==</span> SOCKET_ERROR) {
+    func <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;sendmsg&#34;</span>;
+    <span style="color:#66d9ef">goto</span> fail;
+  }
+  printf(<span style="color:#e6db74">&#34;Sent %zd bytes.</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, bytes);
+
+  <span style="color:#66d9ef">if</span> (shutdown(sock, SHUT_WR) <span style="color:#f92672">==</span> SOCKET_ERROR) {
+    func <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;shutdown&#34;</span>;
+    <span style="color:#66d9ef">goto</span> fail;
+  }
+
+  <span style="color:#66d9ef">char</span> buffer[<span style="color:#ae81ff">4096</span>];
+  iov[<span style="color:#ae81ff">0</span>].iov_base <span style="color:#f92672">=</span> buffer;
+  iov[<span style="color:#ae81ff">1</span>].iov_len <span style="color:#f92672">=</span> <span style="color:#66d9ef">sizeof</span>(buffer);
+  hdr.msg_iovlen <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
+  printf(<span style="color:#e6db74">&#34;Receiving response from %s:%s.</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, hostname, servname);
+  size_t total <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+  <span style="color:#66d9ef">while</span> ((bytes <span style="color:#f92672">=</span> recvmsg(sock, <span style="color:#f92672">&amp;</span>hdr, <span style="color:#ae81ff">0</span>)) <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) {
+    <span style="color:#66d9ef">if</span> (bytes <span style="color:#f92672">==</span> SOCKET_ERROR) {
+      <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>inprogress(last_socket_error())) {
+        func <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;recvmsg&#34;</span>;
+        <span style="color:#66d9ef">goto</span> fail;
+      } <span style="color:#66d9ef">else</span> {
+        fds.events <span style="color:#f92672">=</span> POLLRDNORM;
+        <span style="color:#66d9ef">if</span> (poll(<span style="color:#f92672">&amp;</span>fds, <span style="color:#ae81ff">1</span>, <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#f92672">==</span> SOCKET_ERROR) {
+          func <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;poll&#34;</span>;
+          <span style="color:#66d9ef">goto</span> fail;
+        }
+      }
+    } <span style="color:#66d9ef">else</span> {
+      fwrite(buffer, <span style="color:#ae81ff">1</span>, bytes, stdout);
+      total <span style="color:#f92672">+=</span> bytes;
+    }
+  }
+
+  printf(<span style="color:#e6db74">&#34;Received %zu bytes from %s:%s.</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, total, hostname, servname);
+  freeaddrinfo(addr);
+  closesocket(sock);
+  socket_cleanup();
+  <span style="color:#66d9ef">return</span> EXIT_SUCCESS;
+
+fail:
+  error <span style="color:#f92672">=</span> last_socket_error();
+haveerror:
+  socket_strerror(error, buffer, <span style="color:#66d9ef">sizeof</span>(buffer));
+  fprintf(stderr, <span style="color:#e6db74">&#34;%s: %s</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, func, buffer);
+
+  <span style="color:#66d9ef">if</span> (addr <span style="color:#f92672">!=</span> NULL) {
+    freeaddrinfo(addr);
+  }
+  <span style="color:#66d9ef">if</span> (sock <span style="color:#f92672">!=</span> INVALID_SOCKET) {
+    closesocket(sock);
+  }
+  <span style="color:#66d9ef">if</span> (init) {
+    socket_cleanup();
+  }
+  <span style="color:#66d9ef">return</span> EXIT_FAILURE;
+}
+</code></pre></div><h3 id="unix-results">Unix Results</h3>
+<pre><code>Running on FreeBSD
+Looking up google.com:www
+Creating socket.
+Connecting to google.com:www.
+Waiting for connection.
+Sending request to google.com:www.
+Sent 55 bytes.
+Receiving response from google.com:www.
+HTTP/1.1 301 Moved Permanently
+Location: http://www.google.com/
+Content-Type: text/html; charset=UTF-8
+Date: Wed, 13 Jan 2021 08:29:45 GMT
+Expires: Fri, 12 Feb 2021 08:29:45 GMT
+Cache-Control: public, max-age=2592000
+Server: gws
+Content-Length: 219
+X-XSS-Protection: 0
+X-Frame-Options: SAMEORIGIN
+Connection: close
+
+&lt;HTML&gt;&lt;HEAD&gt;&lt;meta http-equiv=&quot;content-type&quot; content=&quot;text/html;charset=utf-8&quot;&gt;
+&lt;TITLE&gt;301 Moved&lt;/TITLE&gt;&lt;/HEAD&gt;&lt;BODY&gt;
+&lt;H1&gt;301 Moved&lt;/H1&gt;
+The document has moved
+&lt;A HREF=&quot;http://www.google.com/&quot;&gt;here&lt;/A&gt;.
+&lt;/BODY&gt;&lt;/HTML&gt;
+Received 547 bytes from google.com:www.
+</code></pre><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plain" data-lang="plain">Running on GNU/Linux
+Looking up google.com:www
+Creating socket.
+Connecting to google.com:www.
+Waiting for connection.
+Sending request to google.com:www.
+Sent 55 bytes.
+Receiving response from google.com:www.
+HTTP/1.1 301 Moved Permanently
+Location: http://www.google.com/
+Content-Type: text/html; charset=UTF-8
+Date: Wed, 13 Jan 2021 07:48:24 GMT
+Expires: Fri, 12 Feb 2021 07:48:24 GMT
+Cache-Control: public, max-age=2592000
+Server: gws
+Content-Length: 219
+X-XSS-Protection: 0
+X-Frame-Options: SAMEORIGIN
+Connection: close
+
+&lt;HTML&gt;&lt;HEAD&gt;&lt;meta http-equiv=&#34;content-type&#34; content=&#34;text/html;charset=utf-8&#34;&gt;
+&lt;TITLE&gt;301 Moved&lt;/TITLE&gt;&lt;/HEAD&gt;&lt;BODY&gt;
+&lt;H1&gt;301 Moved&lt;/H1&gt;
+The document has moved
+&lt;A HREF=&#34;http://www.google.com/&#34;&gt;here&lt;/A&gt;.
+&lt;/BODY&gt;&lt;/HTML&gt;
+Received 547 bytes from google.com:www.
+</code></pre></div><h3 id="windows-results">Windows Results</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plain" data-lang="plain">Running on Windows 32-Bit
+Looking up google.com:www
+Creating socket.
+Connecting to google.com:www.
+Waiting for connection.
+Sending request to google.com:www.
+Sent 55 bytes.
+Receiving response from google.com:www.
+HTTP/1.1 301 Moved Permanently
+Location: http://www.google.com/
+Content-Type: text/html; charset=UTF-8
+Date: Wed, 13 Jan 2021 08:01:05 GMT
+Expires: Fri, 12 Feb 2021 08:01:05 GMT
+Cache-Control: public, max-age=2592000
+Server: gws
+Content-Length: 219
+X-XSS-Protection: 0
+X-Frame-Options: SAMEORIGIN
+Connection: close
+
+&lt;HTML&gt;&lt;HEAD&gt;&lt;meta http-equiv=&#34;content-type&#34; content=&#34;text/html;charset=utf-8&#34;&gt;
+&lt;TITLE&gt;301 Moved&lt;/TITLE&gt;&lt;/HEAD&gt;&lt;BODY&gt;
+&lt;H1&gt;301 Moved&lt;/H1&gt;
+The document has moved
+&lt;A HREF=&#34;http://www.google.com/&#34;&gt;here&lt;/A&gt;.
+&lt;/BODY&gt;&lt;/HTML&gt;
+Received 547 bytes from google.com:www.
+</code></pre></div><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plain" data-lang="plain">Running on Windows 64-Bit
+Looking up google.com:www
+Creating socket.
+Waiting for connection.
+Connecting to google.com:www.
+Sending request to google.com:www.
+Sent 55 bytes.
+Receiving response from google.com:www.
+HTTP/1.1 301 Moved Permanently
+Location: http://www.google.com/
+Content-Type: text/html; charset=UTF-8
+Date: Wed, 13 Jan 2021 07:59:30 GMT
+Expires: Fri, 12 Feb 2021 07:59:30 GMT
+Cache-Control: public, max-age=2592000
+Server: gws
+Content-Length: 219
+X-XSS-Protection: 0
+X-Frame-Options: SAMEORIGIN
+Connection: close
+
+&lt;HTML&gt;&lt;HEAD&gt;&lt;meta http-equiv=&#34;content-type&#34; content=&#34;text/html;charset=utf-8&#34;&gt;
+&lt;TITLE&gt;301 Moved&lt;/TITLE&gt;&lt;/HEAD&gt;&lt;BODY&gt;
+&lt;H1&gt;301 Moved&lt;/H1&gt;
+The document has moved
+&lt;A HREF=&#34;http://www.google.com/&#34;&gt;here&lt;/A&gt;.
+&lt;/BODY&gt;&lt;/HTML&gt;
+Received 547 bytes from google.com:www.
+</code></pre></div>]]></atom:content>
+    </item>
+    <item>
+      <title>Inline Functions in C and C&#43;&#43;</title>
+      <link>https://etherealwake.com/2020/12/inline-functions-c-cpp/</link>
+      <pubDate>Wed, 30 Dec 2020 17:30:00 -0800</pubDate>
+      <guid>https://etherealwake.com/2020/12/inline-functions-c-cpp/</guid>
+      <description>Inline functions are a notable feature of both C and C&#43;&#43;. By exposing the source file to the implementation of a function, they allow a variety of optimization techniques that wouldn&amp;rsquo;t be possible if it had to call out to a subroutine in a different file (at least without link-time optimization).
+However, despite the common syntax, the C and C&#43;&#43; languages implement them in very different ways. While C&#43;&#43; takes a &amp;ldquo;user friendly&amp;rdquo; approach and automatically manages the manipulation of multiple implementations, C requires a more manual approach. As a result, inline functions are less common in C and mixed language code, generally using the nuclear option of declaring them static.
+/* test.h */ inline int test1(void) { return 12; } /* test.c or test.cpp */ int test2(void) { return test1(); } Sometimes, the easiest way to understand a rule is to see it in action. Let&amp;rsquo;s analyze how modern compilers deal with C and C&#43;&#43; inline functions in different situations.</description>
+      <atom:content type="html"><![CDATA[<p>Inline functions are a notable feature of both C and C++.
+By exposing the source file to the implementation of a function, they allow a variety of optimization techniques that wouldn&rsquo;t be possible if it had to call out to a subroutine in a different file (at least without link-time optimization).</p>
+<p>However, despite the common syntax, the C and C++ languages implement them in very different ways.
+While C++ takes a &ldquo;user friendly&rdquo; approach and automatically manages the manipulation of multiple implementations, C requires a more manual approach.
+As a result, inline functions are less common in C and mixed language code, generally using the nuclear option of declaring them <code>static</code>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">/* test.h */</span>
+<span style="color:#66d9ef">inline</span> <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">test1</span>(<span style="color:#66d9ef">void</span>) {
+  <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">12</span>;
+}
+
+<span style="color:#75715e">/* test.c or test.cpp */</span>
+<span style="color:#66d9ef">int</span> <span style="color:#a6e22e">test2</span>(<span style="color:#66d9ef">void</span>) {
+  <span style="color:#66d9ef">return</span> test1();
+}
+</code></pre></div><p>Sometimes, the easiest way to understand a rule is to see it in action.
+Let&rsquo;s analyze how modern compilers deal with C and C++ inline functions in different situations.</p>
+<h2 id="inline-functions-in-c">Inline Functions in C</h2>
+<p>C99 introduced inline functions to the language and it has the simplest implementation.
+It&rsquo;s best to think of an inline function not as being the actual implementation, but alternate implementation the compiler may <em>choose</em> to use.</p>
+<p>When compiled under C, our example program produces the following assembly output (stripped of anything related to debugging):</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-gas" data-lang="gas">        <span style="color:#a6e22e">.text</span>
+
+<span style="color:#75715e"># inline int test1(void)
+</span><span style="color:#75715e"></span>
+<span style="color:#75715e"># int test2(void)
+</span><span style="color:#75715e"></span>        <span style="color:#a6e22e">.globl</span>  <span style="color:#66d9ef">test2</span>
+test2:
+        <span style="color:#a6e22e">call</span>    <span style="color:#66d9ef">test1@PLT</span>
+        <span style="color:#a6e22e">ret</span>
+</code></pre></div><p>Our inline function is <em>gone</em>.
+As described by C99, the <code>inline</code> keyword by itself does not result in the actual generation of a function.
+If we tried to link this object, we would face an unresolved symbol error unless the function was exported by another translation unit.
+Only should the compiler choose to inline the function will the function exist and it only exists within that translation unit.</p>
+<p>If we want the compiler to generate the code for the function, we need to use <code>extern inline</code> (or remove the <code>inline</code> keyword entirely).</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-gas" data-lang="gas">        <span style="color:#a6e22e">.text</span>
+
+<span style="color:#75715e"># extern inline int test1(void)
+</span><span style="color:#75715e"></span>        <span style="color:#a6e22e">.globl</span>  <span style="color:#66d9ef">test1</span>
+test1:
+        <span style="color:#a6e22e">movl</span>    <span style="color:#66d9ef">$12</span>, %eax
+        <span style="color:#a6e22e">ret</span>
+
+<span style="color:#75715e"># int test2(void)
+</span><span style="color:#75715e"></span>        <span style="color:#a6e22e">.globl</span>  <span style="color:#66d9ef">test2</span>
+test2:
+        <span style="color:#a6e22e">call</span>    <span style="color:#66d9ef">test1</span>
+        <span style="color:#a6e22e">ret</span>
+</code></pre></div><p>Under <code>extern inline</code>, it behaves like a completely normal function.
+The <code>inline</code> keyword merely serves as an optimization hint and has no impact on the implementation of the function.
+In fact, it&rsquo;s often completely <em>ignored</em> while the optimizer makes its own decisions.</p>
+<p>However, by virtue of being a normal function, it means that should multiple source files try to implement the function, the linker will generate duplicate symbol errors.
+Unlike C++, C99 requires the programmer to ensure only a single copy is realized.</p>
+<p>The opposite linkage specifier from <code>extern</code> is <code>static</code> and it, too, can be used with <code>inline</code>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-gas" data-lang="gas">        <span style="color:#a6e22e">.text</span>
+
+<span style="color:#75715e"># static inline int test1(void)
+</span><span style="color:#75715e"></span>test1:
+        <span style="color:#a6e22e">movl</span>    <span style="color:#66d9ef">$12</span>, %eax
+        <span style="color:#a6e22e">ret</span>
+
+<span style="color:#75715e"># int test2(void)
+</span><span style="color:#75715e"></span>        <span style="color:#a6e22e">.globl</span>  <span style="color:#66d9ef">test2</span>
+test2:
+        <span style="color:#a6e22e">call</span>    <span style="color:#66d9ef">test1</span>
+        <span style="color:#a6e22e">ret</span>
+</code></pre></div><p>The output is very similar to that of <code>extern inline</code> with the notable difference being the lack of a <code>.globl</code> for the function symbol.
+This means that even though the function implementation exists, it won&rsquo;t be visible outside this object file.</p>
+<p>In a way, <code>static inline</code> acts like an intermediate step between <code>inline</code> and <code>extern inline</code>.
+Like <code>extern inline</code>, it doesn&rsquo;t require an external implementation and like <code>inline</code>, it won&rsquo;t interfere with implementations in other modules.
+However, this flexibility leads to code duplication as each source file will be using its own, private, implementation.</p>
+<h2 id="inline-functions-in-c-1">Inline Functions in C++</h2>
+<p>The <code>inline</code> keyword first showed up in C++ and, as a result, it sets the precedent for how the average person understands inline functions.
+One of the guarantees is not only do the multiple compilations of an inline function not conflict with each other, each module will share the same implication.
+Take the function pointer in source file A and you&rsquo;ll get the exact same result as taking the function pointer in source file B.</p>
+<p>Compiling our test program in gcc as a C++ program, we get the following output:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-gas" data-lang="gas"><span style="color:#75715e"># inline int test1(void)
+</span><span style="color:#75715e"></span>        <span style="color:#a6e22e">.section</span> <span style="color:#66d9ef">.text._Z5test1v</span>,<span style="color:#e6db74">&#34;axG&#34;</span>,<span style="color:#a6e22e">@progbits</span>,<span style="color:#66d9ef">_Z5test1v</span>,<span style="color:#66d9ef">comdat</span>
+        <span style="color:#a6e22e">.weak</span>   <span style="color:#66d9ef">_Z5test1v</span>
+_Z5test1v:
+        <span style="color:#a6e22e">movl</span>    <span style="color:#66d9ef">$12</span>, %eax
+        <span style="color:#a6e22e">ret</span>
+
+<span style="color:#75715e"># int test2(void)
+</span><span style="color:#75715e"></span>        <span style="color:#a6e22e">.text</span>
+        <span style="color:#a6e22e">.globl</span>  <span style="color:#66d9ef">_Z5test2v</span>
+_Z5test2v:
+        <span style="color:#a6e22e">call</span>    <span style="color:#66d9ef">_Z5test1v</span>
+        <span style="color:#a6e22e">ret</span>
+</code></pre></div><p>The output is similar to what we see for <code>extern inline</code> in C99.
+Sure, the function names are mangled, but there are two significant differences.
+First, the inline function is marked <em>weak</em>.
+After all, this object file could have its implementation replaced by that in another object files, which is the very reason for marking a weak symbol.</p>
+<p>Second, while our normal function is placed in the <code>.text</code> section, something interesting is happening with our inline function.
+Frankly, I&rsquo;m going to need to consult the <a href="https://sourceware.org/binutils/docs/as/Section.html#ELF-Version">GNU Assembler documentation</a> to make sense of it.</p>
+<p>We can extract a few pertinent details from the section declaration:</p>
+<ul>
+<li>The section is named <code>.text._Z5test1v</code>.
+Since we are creating a section with unique characteristics, it&rsquo;s going to need a unique name.
+Here, GCC just appends the mangled function name but a random name would be just as acceptable.</li>
+<li>The section is allocatable (&ldquo;a&rdquo;), executable (&ldquo;x&rdquo;), and a member of a section group (&ldquo;G&rdquo;).
+Executable is obvious and allocatable just means it gets loaded into the program&rsquo;s memory space.
+The group membership is clearly where the magic is starting to happen.</li>
+<li><code>@progbits</code> means that the section contains data that gets stored in the binary.
+This applies not just to code and data, but things like symbol tables and debugging information.
+This is in contrast to uninitialized sections like <code>.bss</code> which don&rsquo;t need to be stored on disk.</li>
+<li>The second appearance of <code>_Z5test1v</code> is the <em>group name</em>, which is how the linker will identify the multiple realizations.
+Here, it is set the managed function name.</li>
+<li>Finally, <code>comdat</code> instructs the linker to discard all but one copy of this section.
+The linker will need the group membership to determine the duplicate copies.</li>
+</ul>
+<p>If we want to understand how the resulting object file is put together, we can run <code>readelf</code> to see how the various file structures have changed.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plain" data-lang="plain">Section Headers:
+  [Nr] Name              Type             Address           Offset
+       Size              EntSize          Flags  Link  Info  Align
+  [ 1] .group            GROUP            0000000000000000  00000040
+       0000000000000008  0000000000000004          12    11     4
+  [ 6] .text._Z5test1v   PROGBITS         0000000000000000  00000057
+       000000000000000f  0000000000000000 AXG       0     0     1
+  [12] .symtab           SYMTAB           0000000000000000  00000110
+       0000000000000138  0000000000000018          13    11     8
+
+COMDAT group section [    1] `.group&#39; [_Z5test1v] contains 1 sections:
+   [Index]    Name
+   [    6]   .text._Z5test1v
+
+Symbol table &#39;.symtab&#39; contains 13 entries:
+   Num:    Value          Size Type    Bind   Vis      Ndx Name
+    11: 0000000000000000    15 FUNC    WEAK   DEFAULT    6 _Z5test1v
+    12: 0000000000000000    15 FUNC    GLOBAL DEFAULT    2 _Z5test2v
+</code></pre></div><p>The <code>.text._Z5test1v</code> section is marked as being a member of a group, which was clearly called out on the <code>.section</code> line, but we also have a new <code>.group</code> section with non-zero &ldquo;link&rdquo; and &ldquo;info&rdquo; fields.
+Inside the group, we see it has a name (which comes from the &ldquo;info&rdquo; field) and lists the sections that are members of the group.
+Finally, the &ldquo;link&rdquo; field references the symbol table section containing the names it will be using.</p>
+<p>What happens if we have more than one inline function?</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plain" data-lang="plain">Section Headers:
+  [Nr] Name              Type             Address           Offset
+       Size              EntSize          Flags  Link  Info  Align
+  [ 1] .group            GROUP            0000000000000000  00000040
+       0000000000000008  0000000000000004          14    13     4
+  [ 2] .group            GROUP            0000000000000000  00000048
+       0000000000000008  0000000000000004          14    14     4
+  [ 7] .text._Z5test1v   PROGBITS         0000000000000000  00000064
+       000000000000000f  0000000000000000 AXG       0     0     1
+  [ 8] .text._Z5test3v   PROGBITS         0000000000000000  00000073
+       000000000000000f  0000000000000000 AXG       0     0     1
+  [14] .symtab           SYMTAB           0000000000000000  00000148
+       0000000000000180  0000000000000018          15    13     8
+
+COMDAT group section [    1] `.group&#39; [_Z5test1v] contains 1 sections:
+   [Index]    Name
+   [    7]   .text._Z5test1v
+
+COMDAT group section [    2] `.group&#39; [_Z5test3v] contains 1 sections:
+   [Index]    Name
+   [    8]   .text._Z5test3v
+
+Symbol table &#39;.symtab&#39; contains 16 entries:
+   Num:    Value          Size Type    Bind   Vis      Ndx Name
+    13: 0000000000000000    15 FUNC    WEAK   DEFAULT    7 _Z5test1v
+    14: 0000000000000000    15 FUNC    WEAK   DEFAULT    8 _Z5test3v
+    15: 0000000000000000    20 FUNC    GLOBAL DEFAULT    3 _Z5test2v
+</code></pre></div><p>Each is placed in its own separate individual section and group.</p>
+<p>If the inline function makes use of its own static variables they, too, end up in individual sections and groups.</p>
+<h2 id="mixing-c-and-c">Mixing C and C++</h2>
+<p>What happens if we use the same header file in both C and C++?
+Well, without any additional changes&hellip;nothing.
+By default, C++ will mangle the name, making the two languages fully independent.</p>
+<p>So, what happens if we use <code>extern &quot;C&quot;</code> to force them to share an implementation?
+Officially, I think we&rsquo;re getting into undefined behavior.
+In effect, the two separate languages are violating the one implementation rule.
+Setting that aside, what happens in practice?</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++"><span style="color:#75715e">/* common.h */</span>
+<span style="color:#75715e">#ifdef __cplusplus
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">extern</span> <span style="color:#e6db74">&#34;C&#34;</span> {
+<span style="color:#75715e">#endif
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">inline</span> <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">common</span>(<span style="color:#66d9ef">void</span>) {
+<span style="color:#75715e">#ifdef __cplusplus
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">return</span> <span style="color:#e6db74">&#34;C++&#34;</span>;
+<span style="color:#75715e">#else
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">return</span> <span style="color:#e6db74">&#34;C&#34;</span>;
+<span style="color:#75715e">#endif
+</span><span style="color:#75715e"></span>}
+
+<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">test_c</span>(<span style="color:#66d9ef">void</span>);
+<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">test_cpp</span>(<span style="color:#66d9ef">void</span>);
+
+<span style="color:#75715e">#ifdef __cplusplus
+</span><span style="color:#75715e"></span>}
+<span style="color:#75715e">#endif
+</span></code></pre></div><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">/* common.c */</span>
+<span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&#34;common.h&#34;</span><span style="color:#75715e">
+</span><span style="color:#75715e"></span>
+<span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span>() {
+  printf(<span style="color:#e6db74">&#34;test_c = %s</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, test_c());
+  printf(<span style="color:#e6db74">&#34;test_cpp = %s</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, test_cpp());
+}
+</code></pre></div><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">/* inline.c */</span>
+<span style="color:#75715e">#include</span> <span style="color:#75715e">&#34;common.h&#34;</span><span style="color:#75715e">
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">test_c</span>() {
+  <span style="color:#66d9ef">return</span> common();
+}
+</code></pre></div><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++"><span style="color:#75715e">/* inline.cpp */</span>
+<span style="color:#75715e">#include</span> <span style="color:#75715e">&#34;common.h&#34;</span><span style="color:#75715e">
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">test_cpp</span>() {
+  <span style="color:#66d9ef">return</span> common();
+}
+</code></pre></div><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plain" data-lang="plain">~/source/test$ cc -o test -Wall -Wextra -Werror \
+  -fsanitize=undefined common.c inline.c inline.cpp
+
+~/source/test$ ./test
+test_c = C++
+test_cpp = C++
+</code></pre></div><p>Since we never declared an <code>extern</code> version of the function in C, it needs to pull an implementation from somewhere and it&rsquo;s clearly pulling it from the shared copy created by the C++ file.
+While this works, it&rsquo;s very brittle.
+If there isn&rsquo;t a C++ source file referencing the symbol, nothing will be emitted and the C file will fail to link.
+We need to force an implementation to allow the C code to function reliably.</p>
+<p>So, what happens to C++ if we force the implementation in C?</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">/* inline2.c */</span>
+<span style="color:#75715e">#include</span> <span style="color:#75715e">&#34;common.h&#34;</span><span style="color:#75715e">
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">common</span>(<span style="color:#66d9ef">void</span>);
+
+<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">test_c</span>() {
+  <span style="color:#66d9ef">return</span> common();
+}
+</code></pre></div><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plain" data-lang="plain">~/source/test$ cc -o test -Wall -Wextra -Werror \
+  -fsanitize=undefined common.c inline2.c inline.cpp
+
+~/source/test$ ./test
+test_c = C
+test_cpp = C
+</code></pre></div><p>In this case, the <em>weak</em> symbol emitted by the C++ implementation is being overridden by the C implementation.
+So, while I&rsquo;m sure it&rsquo;s a gross violation of the standards, it seems to work.</p>
+<p>And yes, it even works with MSVC (or, in this case, <a href="https://clang.llvm.org/docs/MSVCCompatibility.html">clang-cl</a> on top of WSL2):</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plain" data-lang="plain">~/source/test$ cl -o test.exe -Wall -Wextra -Werror \
+  common.c inline.c inline.cpp
+
+~/source/test$ ./test.exe
+test_c = C
+test_cpp = C
+
+~/source/test$ file test.exe
+test.exe: PE32+ executable (console) x86-64, for MS Windows
+</code></pre></div>]]></atom:content>
+    </item>
+    <item>
+      <title>FreeBSD Jail Startup Sequence</title>
+      <link>https://etherealwake.com/2020/12/freebsd-jail-startup/</link>
+      <pubDate>Sun, 27 Dec 2020 20:15:00 -0800</pubDate>
+      <guid>https://etherealwake.com/2020/12/freebsd-jail-startup/</guid>
+      <description>On my home server, I use FreeBSD. While FreeBSD beat Linux to the containers by nearly a decade (comparing jails to cgroups), I have to acknowledge that cgroups are the superior design. Whereas jails are a bunch of hacks piled on top of chroot, cgroups are a much cleaner abstraction of the kernel&amp;rsquo;s namespaces. But even beyond the elegance of the design, software like Docker makes it much easier to run your tools in containers, even if the offloading of sysadmin responsibilities it encourages triggers my OCD.
+One of the things Docker does differently than most people&amp;rsquo;s usage of jails (at least from my limited understanding) is that a docker instance is ephemeral. The last time I touched iocage (years ago, granted), it was still focused on modeling jails like pets, not cattle. So I wanted my jails to go through the closest analog I could to Docker without porting over a massive ecosystem. That means if I&amp;rsquo;m going to write my own scripts, I need to understand how the FreeBSD jail system is put together.
+ Note: Jail functionality has improved a lot in the past two years. I had started this essay with a lot of frustration over things I had to work around only to find things much improved during my research.</description>
+      <atom:content type="html"><![CDATA[<p>On my home server, I use <a href="https://www.freebsd.org/">FreeBSD</a>.
+While FreeBSD beat Linux to the containers by nearly a decade (comparing jails to cgroups), I have to acknowledge that cgroups are the superior design.
+Whereas jails are a bunch of hacks piled on top of chroot, cgroups are a much cleaner abstraction of the kernel&rsquo;s namespaces.
+But even beyond the elegance of the design, software like <a href="https://www.docker.com/">Docker</a> makes it much easier to run your tools in containers, even if the offloading of sysadmin responsibilities it encourages triggers my OCD.</p>
+<p>One of the things Docker does differently than most people&rsquo;s usage of jails (at least from my limited understanding) is that a docker instance is <a href="https://docs.docker.com/develop/develop-images/dockerfile_best-practices/">ephemeral</a>.
+The last time I touched <a href="https://iocage.io/">iocage</a> (years ago, granted), it was still focused on modeling jails like <a href="http://cloudscaling.com/blog/cloud-computing/the-history-of-pets-vs-cattle/">pets, not cattle</a>.
+So I wanted my jails to go through the closest analog I could to Docker without porting over a massive ecosystem.
+That means if I&rsquo;m going to write my own scripts, I need to understand how the FreeBSD jail system is put together.</p>
+<blockquote>
+<p><strong>Note:</strong> Jail functionality has improved <em>a lot</em> in the past two years.
+I had started this essay with a lot of frustration over things I had to work around only to find things much improved during my research.</p>
+</blockquote>
+<h2 id="jail-startup-sequence">Jail Startup Sequence</h2>
+<p>While jails are a kernel feature, most of the magic is actually implemented by the <a href="https://www.freebsd.org/cgi/man.cgi?query=jail&amp;sektion=8"><code>jail(8)</code></a> command.
+Unfortunately, the documentation follows a pattern common in software documentation: they describe things in regards to how the software represents it, not what it <em>actually means</em>.</p>
+<p>The actual core of creating a new jail comes from the <a href="https://www.freebsd.org/cgi/man.cgi?query=jail_set&amp;sektion=2"><code>jail_set(2)</code></a> syscall (which, as expected, can also modify an existing jail).
+But this merely constructs a new kernel namespace.
+It doesn&rsquo;t mount any file systems, manipulate network devices, or run any programs.
+All of that is handled by the previously mentioned <a href="https://www.freebsd.org/cgi/man.cgi?query=jail&amp;sektion=8"><code>jail(8)</code></a>.</p>
+<p>Thankfully, the <a href="https://github.com/freebsd/freebsd/tree/stable/12/usr.sbin/jail">source code for <code>jail</code></a> spells it out as a handy, easy-to-follow <a href="https://github.com/freebsd/freebsd/blob/stable/12/usr.sbin/jail/jail.c#L88">set of instructions</a>:</p>
+<ol>
+<li>Execute the <code>exec.prepare</code> script. (New in FreeBSD 12.2)
+<ul>
+<li>This is where you could clone off a new filesystem, for example.</li>
+</ul>
+</li>
+<li>Create network aliases.
+<ol>
+<li>Create the IPv4 aliases listed in <code>ip4.addr</code>.</li>
+<li>Create the IPv6 aliases listed in <code>ip6.addr</code>.</li>
+</ol>
+<ul>
+<li><strong>Note:</strong> <code>jail(8)</code> simply shells out to <code>/sbin/ifconfig</code>.</li>
+</ul>
+</li>
+<li>Mount File Systems.
+<ol>
+<li>Mount the file systems listed in <code>mount</code>.</li>
+<li>Mount the file systems listed in <code>mount.fstab</code>.</li>
+<li>Mount <code>/dev</code> (if enabled by <code>mount.devfs</code>).</li>
+<li>Mount <code>/dev/fd</code> (if enabled by <code>mount.fdescfs</code>).</li>
+<li>Mount <code>/proc</code> (if enabled by <code>mount.procfs</code>).</li>
+</ol>
+<ul>
+<li><strong>Note:</strong> <code>jail(8)</code> simply shells out to <code>/sbin/mount</code>.</li>
+</ul>
+</li>
+<li>Execute the <code>exec.prestart</code> scripts.
+<ul>
+<li>This is where people would traditionally create their bridged interfaces, copy files into the filesystem, and other <em>last chance</em> actions.
+Some of these actions are better relegated to <code>exec.created</code> or <code>exec.prepare</code> now that those options exist.</li>
+</ul>
+</li>
+<li>Create the jail (actual call to <a href="https://www.freebsd.org/cgi/man.cgi?query=jail_set&amp;sektion=2"><code>jail_set(2)</code></a>).</li>
+<li>Execute the <code>exec.created</code> scripts.  (New in FreeBSD 12.0)
+<ul>
+<li>This is where you could delegate ZFS datasets using <code>zfs jail</code>, for example.</li>
+</ul>
+</li>
+<li>Jail the interfaces listed in <code>vnet.interface</code>
+<ul>
+<li><strong>Note:</strong> <code>jail(8)</code> simply shells out to <code>/sbin/ifconfig ${intf} vnet ${jid}</code></li>
+</ul>
+</li>
+<li>Execute the <code>exec.start</code> scripts <em>inside the jail</em>
+<ul>
+<li>Most people will execute <code>/bin/sh /etc/rc</code></li>
+</ul>
+</li>
+<li>Execute the <code>command</code> command line <em>inside the jail</em></li>
+<li>Execute the <code>exec.poststart</code> scripts.
+<ul>
+<li>This is where I normally update my firewall rules.</li>
+</ul>
+</li>
+</ol>
+<p>The obvious question is what happens when when one of these steps fails?
+Well, the sequence just rolls up in reverse to undo the actions which have already occurred.
+Unfortunately, it simply skips over the script execution.
+If your <code>exec.prepare</code> or <code>exec.prestart</code> script allocate some expensive resources and <code>exec.start</code> fails due to some silly transient issue, you&rsquo;re not going to have a chance to clean it up, so make sure you squash any exit codes after that point.</p>
+<h2 id="jail-shutdown-sequence">Jail Shutdown Sequence</h2>
+<p>Just like the startup sequence, the shutdown sequence is a handy <a href="https://github.com/freebsd/freebsd/blob/stable/12/usr.sbin/jail/jail.c#L112">table of instructions</a>, which largely just goes in reverse order of the creation steps:</p>
+<ol>
+<li>Execute the <code>exec.prestop</code> scripts.
+<ul>
+<li>This is normally where I remove my firewall additions.</li>
+</ul>
+</li>
+<li>Execute the <code>exec.stop</code> scripts <em>inside the jail</em>
+<ul>
+<li>Most people will execute <code>/bin/sh /etc/rc.shutdown jail</code>.</li>
+</ul>
+</li>
+<li>Send <code>SIGTERM</code> to all processes still running inside the jail and wait up to <code>stop.timeout</code> seconds.</li>
+<li>Destroy the jail (actual call to <a href="https://www.freebsd.org/cgi/man.cgi?query=jail_remove&amp;sektion=2"><code>jail_remove(2)</code></a>).
+<ul>
+<li>If you notice, it never reverses <code>vnet.interface</code> before this point.
+The kernel will simply release the interfaces back to the base system&hellip;once all the TCP timed waits are over.</li>
+</ul>
+</li>
+<li>Execute the <code>exec.poststop</code> scripts.
+<ul>
+<li>This is where you could copy data out of the filesystem, for example.</li>
+</ul>
+</li>
+<li>Unmount File Systems.
+<ol>
+<li>Unmount <code>/proc</code> (if enabled by <code>mount.procfs</code>).</li>
+<li>Unmount <code>/dev/fs</code> (if enabled by <code>mount.fdescfs</code>).</li>
+<li>Unmount <code>/dev</code> (if enabled by <code>mount.devfs</code>).</li>
+<li>Unmount the file systems listed in <code>mount.fstab</code>.</li>
+<li>Unmount the file systems listed in <code>mount</code>.</li>
+</ol>
+</li>
+<li>Delete network alises.
+<ol>
+<li>Remove the IPv6 aliases listed in <code>ip6.addr</code>.</li>
+<li>Remove the IPv4 aliases listed in <code>ip4.addr</code>.</li>
+</ol>
+</li>
+<li>Execute the <code>exec.release</code> scripts.
+<ul>
+<li>This is where you could destroy the file system you created at the very beginning.</li>
+</ul>
+</li>
+</ol>
+<p>What happens when one of these steps fails?
+According to the documentation, <q cite="https://www.freebsd.org/cgi/man.cgi?query=jail&sektion=8">all commands must succeed&hellip;or the jail will not be created or removed</q>.
+But unlike jail creation, you can&rsquo;t simply <em>undo</em> a teardown action.</p>
+<p>As far as <code>jail(8)</code> is concerned, everything up to destroying the jail (step 4) doesn&rsquo;t matter.
+Should your <code>exec.prestop</code> or <code>exec.stop</code> scripts fail, <code>jail(8)</code> will simply leave the jail in that zombie state.
+After the jail is destroyed, it will simply run through the rest of the script, reporting but otherwise ignoring any failures that occur.</p>
+<p>It&rsquo;s important to realize that all of these tasks are being done by <code>jail(8)</code>, not the kernel.
+This means that <code>jail(8)</code> has only the contents of <code>/etc/jail.conf</code> to go on.
+If you&rsquo;ve modified your configuration after starting the jail, it&rsquo;s going to use the <em>new</em> configuration to shut down the previously constructed jail.
+That means file systems left mounted and IP aliases left in place.</p>
+<h2 id="what-comes-next">What Comes Next?</h2>
+<p>My goal was to move closer to the goal of system as cattle.
+Of course, with a single machine sitting in my cabinet, it&rsquo;s always going to be a bit of a special snowflake, but I can try to get my containers to function as commodities.</p>
+<p>Right now, I maintain a number of <em>templates</em> that get cloned into an ephemeral dataset prior to starting up.
+ZFS makes this an extremely cheap operation.
+These templates are constructed by makefiles as a sort of jerry-rigged Dockerfile, but I can blow them away and recreated them even while the jail is still running.
+But as it stands, there is a lot of jail-specific state buried in the configuration: IP addresses, hostnames, network interface names, etc.
+There is still a one-to-one correspondence between a configuration and an instance.
+I can&rsquo;t load up multiple instances of a container (e.g. seamless upgrades and testing) or simply roll out one-offs for experiments, let alone migrate them between machines.</p>
+<p>Things I&rsquo;ve been putting off:</p>
+<ul>
+<li>Move away from <a href="https://www.freebsd.org/cgi/man.cgi?query=if_bridge&amp;sektion=4"><code>if_bridge(4)</code></a> + <a href="https://www.freebsd.org/cgi/man.cgi?query=if_epair&amp;sektion=4"><code>if_epair(4)</code></a> to something like <a href="https://www.freebsd.org/cgi/man.cgi?query=netgraph&amp;sektion=4"><code>netgraph(4)</code></a> or <a href="https://www.freebsd.org/cgi/man.cgi?query=netmap&amp;sektion=4"><code>netmap(4)</code></a>.
+The first two are not scalable and make an absolute mess of the network configuration while the later two are specifically designed for large software-defined networks.
+Even <code>bhyve(8)</code> will be able to interface directly with <code>netgraph(4)</code> in <a href="https://www.freebsd.org/cgi/man.cgi?query=bhyve&amp;sektion=8&amp;manpath=FreeBSD+13.0-current">FreeBSD 13.0</a>.</li>
+<li><em>Automatic allocation of network devices, addresses, and other configuration.</em>
+While much of it can be handled using existing techniques like DHCP, we need to find the network applications <em>somehow</em>.
+This means the jail needs to either communicate its address allotment to the host (for setting up redirects and DNS entries) or use an IP sharing protocol like <a href="https://www.freebsd.org/cgi/man.cgi?query=carp&amp;sektion=4"><code>carp(4)</code></a>.</li>
+<li><em>Cloning a template into a unique dataset when launching a new instance.</em>
+Right now, <code>templates/nginx</code> gets cloned into <code>jail/nginx</code> prior to execution.
+It should get cloned into <code>jail/f85ff265-48b9-11eb-9aa9-0cc47a32cf0c</code> or some other randomly-generated series of characters.
+I should be able to quickly spin off variants of templates so if I need an instance of nginx for testing, it&rsquo;s not going to pull in all my mount points, configuration files, and TLS certificates from the &ldquo;production&rdquo; server.</li>
+</ul>
+<p>In retrospect, I should probably learn something like Kubernetes or Docker, but my eyes always glaze over when I get tarred up by the business speak.
+I&rsquo;m an engineer who spends his day designing circuits and firmware, not a sysadmin managing thousand-node clusters.</p>]]></atom:content>
+    </item>
+    <item>
+      <title>wsgiref and Unix Domain Sockets</title>
+      <link>https://etherealwake.com/2020/12/wsgiref-unix-domain-sockets/</link>
+      <pubDate>Sat, 26 Dec 2020 11:15:00 -0800</pubDate>
+      <guid>https://etherealwake.com/2020/12/wsgiref-unix-domain-sockets/</guid>
+      <description>Recently, I needed to hack together a quick server-side application for a test page. When it comes to quick and dirty, most people turn to Python. While Python is hardly my favorite language, it is certainly suited for the task.
+One of my requirements was that I wanted to minimize the number of dependencies. Installing Python is bad enough (my nginx container is extremely bare bones), but installing a massive framework for what was effectively a wrapper around a system command would make things even worse. So I decided to make due with wsgiref.simple_server that ships with CPython.
+Unfortunately, when it came time to installing the script on the server, I discovered that simple_server only supports IPv4 and that is baked in. For security purposes, I like to use unix domain sockets whenever possible. It guarantees the endpoint can only be access from the local host and I can even configure permissions based on the user. Fortunately, it isn&amp;rsquo;t that hard to modify simple_server to support other protocols.</description>
+      <atom:content type="html"><![CDATA[<p>Recently, I needed to hack together a quick server-side application for a test page.
+When it comes to quick and dirty, most people turn to <a href="https://www.python.org/">Python</a>.
+While Python is hardly my <em>favorite</em> language, it is certainly suited for the task.</p>
+<p>One of my requirements was that I wanted to minimize the number of dependencies.
+Installing Python is bad enough (my nginx container is <em>extremely</em> bare bones), but installing a massive framework for what was effectively a wrapper around a system command would make things even worse.
+So I decided to make due with <code>wsgiref.simple_server</code> that ships with CPython.</p>
+<p>Unfortunately, when it came time to installing the script on the server, I discovered that <code>simple_server</code> only supports IPv4 and that is baked in.
+For security purposes, I like to use unix domain sockets whenever possible.
+It guarantees the endpoint can only be access from the local host and I can even configure permissions based on the <em>user</em>.
+Fortunately, it isn&rsquo;t that hard to modify <code>simple_server</code> to support other protocols.</p>
+<h2 id="socket-families-and-python">Socket Families and Python</h2>
+<p>Each protocol family has its own unique representation for an address.
+Most people are familiar with IPv4 (<code>AF_INET</code>), which uses a 32-bit IP address and a 16-bit port.
+Related to IPV4 is IPv6 (<code>AF_INET6</code>), which extends the address to 128 bits and adds two more fields: scope id and flow id.
+These later two are ignored by most people, but are used to handle link local addresses (scope id) and multicast (flow id).
+But simplest of all are unix domain sockets (<code>AF_UNIX</code>), which need only a string.</p>
+<p>Whereas these address are represented with unique types in C, Python represents them all as tuples (except for <code>AF_UNIX</code> which is just the string).
+<code>AF_INET</code> addresses are a two element tuple.
+<code>AF_INET6</code> addresses can be either four elements (the full representation) or two elements (a compatibility hack with <code>AF_INET</code>).
+Unfortunately, throughout the <code>simple_server</code> code, it just naively assumes everything is <code>AF_INET</code>.
+There&rsquo;s some hand waving at <code>AF_INET6</code> support, but it fails miserably when faced with the bare string of <code>AF_UNIX</code>.</p>
+<h2 id="fixing-wsgiserver">Fixing <code>WSGIServer</code></h2>
+<p>The first problem we encounter can be found in the implementation of <code>WSGIServer</code>.
+More accurately, this is inherited from the <a href="https://github.com/python/cpython/blob/v3.9.1/Lib/http/server.py#L136">base implementation of <code>HTTPServer</code></a> itself:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">server_bind</span>(self):
+    <span style="color:#e6db74">&#34;&#34;&#34;Override server_bind to store the server name.&#34;&#34;&#34;</span>
+    socketserver<span style="color:#f92672">.</span>TCPServer<span style="color:#f92672">.</span>server_bind(self)
+    host, port <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>server_address[:<span style="color:#ae81ff">2</span>]
+    self<span style="color:#f92672">.</span>server_name <span style="color:#f92672">=</span> socket<span style="color:#f92672">.</span>getfqdn(host)
+    self<span style="color:#f92672">.</span>server_port <span style="color:#f92672">=</span> port
+</code></pre></div><p>Here, we see it just naively assumes the address is a tuple of two or more elements.
+While that will work for <code>AF_INET</code> and <code>AF_INET6</code>, it will fail for <code>AF_UNIX</code>.
+To fix this, we need to wholesale replace the implementation of <code>server_bind</code>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#f92672">from</span> wsgiref.simple_server <span style="color:#f92672">import</span> WSGIServer
+<span style="color:#f92672">import</span> socket
+<span style="color:#f92672">import</span> socketserver
+
+<span style="color:#66d9ef">class</span> <span style="color:#a6e22e">NewWSGISServer</span>(WSGIServer):
+    <span style="color:#66d9ef">def</span> __init__(self, server_address, RequestHandlerClass,
+                 address_family <span style="color:#f92672">=</span> socket<span style="color:#f92672">.</span>AF_INET):
+        <span style="color:#75715e"># Override Address Family</span>
+        self<span style="color:#f92672">.</span>address_family <span style="color:#f92672">=</span> address_family
+        WSGIServer<span style="color:#f92672">.</span>__init__(self, server_address, RequestHandler)
+
+    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">server_bind</span>(self):
+        <span style="color:#75715e"># Expand HTTPServer&#39;s handling of address families</span>
+        socketserver<span style="color:#f92672">.</span>TCPServer<span style="color:#f92672">.</span>server_bind(self)
+        <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>address_family <span style="color:#f92672">==</span> socket<span style="color:#f92672">.</span>AF_UNIX:
+            server_name <span style="color:#f92672">=</span> socket<span style="color:#f92672">.</span>gethostname()
+            self<span style="color:#f92672">.</span>server_port <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+        <span style="color:#66d9ef">else</span>:
+            server_name <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>server_address[<span style="color:#ae81ff">0</span>]
+            self<span style="color:#f92672">.</span>server_port <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>server_address[<span style="color:#ae81ff">1</span>]
+        self<span style="color:#f92672">.</span>server_name <span style="color:#f92672">=</span> socket<span style="color:#f92672">.</span>getfqdn(server_name)
+        self<span style="color:#f92672">.</span>setup_environ()
+</code></pre></div><p>The unresolved question is how best to fill out <code>server_name</code> and <code>server_port</code> for a <code>AF_UNIX</code> address.
+In this case, I simply used the local hostname and a zero.
+Assigning <code>None</code> to <code>server_port</code> ends up creating a problem later when it&rsquo;s inevitably converted to a string.</p>
+<h2 id="fixing-wsgirequesthandler">Fixing <code>WSGIRequestHandler</code></h2>
+<p>The next problem can be found in the implementation of <code>WSGIRequestHandler</code>.
+More accurately, it can be found throughout the implementation of <code>HTTPRequestHandler</code>.
+However, it&rsquo;s used purely for cosmetic purposes so we can simply inject a placeholder value.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#f92672">from</span> wsgiref.simple_server <span style="color:#f92672">import</span> WSGIRequestHandler
+<span style="color:#f92672">import</span> socket
+
+<span style="color:#66d9ef">class</span> <span style="color:#a6e22e">NewWSGIRequestHandler</span>(WSGIRequestHandler):
+    <span style="color:#66d9ef">def</span> __init__(self, request, client_address, server):
+        self<span style="color:#f92672">.</span>address_family <span style="color:#f92672">=</span> server<span style="color:#f92672">.</span>address_family
+        <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>address_family <span style="color:#f92672">==</span> socket<span style="color:#f92672">.</span>AF_UNIX:
+            client_address <span style="color:#f92672">=</span> (<span style="color:#e6db74">&#39;&lt;unix&gt;&#39;</span>, <span style="color:#ae81ff">0</span>)
+        WSGIRequestHandler<span style="color:#f92672">.</span>__init__(self, request, client_address, server)
+</code></pre></div><p>One of the problems with unix domain sockets is that the client generally has <em>no</em> address, so we just fill in <code>&lt;unix&gt;</code> so it has <em>something</em>.</p>
+<h2 id="putting-it-together">Putting It Together</h2>
+<p>There&rsquo;s one last problem to address with unix domain sockets.
+There is a file on the filesystem associated with the socket.
+If that file exists when we create the socket, the process will fail.
+When we close the socket, the file is not cleaned up for us.
+So, we&rsquo;re going to need a helper to manage this for us.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#f92672">import</span> os
+
+<span style="color:#66d9ef">class</span> <span style="color:#a6e22e">AddressManager</span>(object):
+    <span style="color:#66d9ef">def</span> __init__(self, family, addr<span style="color:#f92672">=</span><span style="color:#66d9ef">None</span>, path<span style="color:#f92672">=</span><span style="color:#66d9ef">None</span>):
+        self<span style="color:#f92672">.</span>family <span style="color:#f92672">=</span> family
+        self<span style="color:#f92672">.</span>addr <span style="color:#f92672">=</span> addr <span style="color:#f92672">or</span> path
+        self<span style="color:#f92672">.</span>path <span style="color:#f92672">=</span> path
+
+    <span style="color:#66d9ef">def</span> __enter__(self):
+        self<span style="color:#f92672">.</span>delete()
+        <span style="color:#66d9ef">return</span> (self<span style="color:#f92672">.</span>family, self<span style="color:#f92672">.</span>addr)
+
+    <span style="color:#66d9ef">def</span> __exit__(self, type, value, traceback):
+        <span style="color:#66d9ef">try</span>:
+            self<span style="color:#f92672">.</span>delete()
+        <span style="color:#66d9ef">except</span> <span style="color:#a6e22e">PermissionError</span>:
+            logging<span style="color:#f92672">.</span>warning(<span style="color:#e6db74">&#39;Failed to delete socket </span><span style="color:#e6db74">%s</span><span style="color:#e6db74">&#39;</span>, self<span style="color:#f92672">.</span>path)
+
+    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">delete</span>(self):
+        <span style="color:#66d9ef">if</span> <span style="color:#f92672">not</span> self<span style="color:#f92672">.</span>path:
+            <span style="color:#66d9ef">return</span>
+        <span style="color:#66d9ef">try</span>:
+            os<span style="color:#f92672">.</span>remove(self<span style="color:#f92672">.</span>path)
+        <span style="color:#66d9ef">except</span> <span style="color:#a6e22e">FileNotFoundError</span>:
+            <span style="color:#66d9ef">pass</span>
+</code></pre></div><p>Now, we can create our <code>simple_server</code> and start answering requests.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#66d9ef">with</span> AddressManager(socket<span style="color:#f92672">.</span>AF_UNIX, path<span style="color:#f92672">=</span>path) <span style="color:#66d9ef">as</span> (family, addr):
+    <span style="color:#66d9ef">with</span> NewWSGISServer(addr, NewWSGIRequestHandler, family) <span style="color:#66d9ef">as</span> httpd:
+        httpd<span style="color:#f92672">.</span>set_app(handler)
+        httpd<span style="color:#f92672">.</span>serve_forever()
+</code></pre></div><blockquote>
+<p><strong>Note:</strong> You&rsquo;ll probably want to fix the permissions on the socket after it is created.
+FreeBSD applies the file permissions when determining connection rights for the socket but this is system-dependent.</p>
+</blockquote>
+<h2 id="other-annoyances-initial-environment">Other Annoyances: Initial Environment</h2>
+<p><code>wsgiref</code> commits one of the greatest programmer sins possible: the use of <em>hidden</em> global state.
+When the module is <em>first loaded</em>, it makes <a href="https://github.com/python/cpython/blob/v3.9.1/Lib/wsgiref/handlers.py#L110">a copy of the global environment</a> and then uses it to populate every request handler.</p>
+<p>As part of our overhaul, we can stem this information leak, too.
+First, we need to write a replacement for <code>WSGIServerHandler</code>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#f92672">from</span> wsgiref.simple_server <span style="color:#f92672">import</span> WSGIServerHandler
+
+<span style="color:#66d9ef">class</span> <span style="color:#a6e22e">NewServerHandler</span>(WSGIServerHandler):
+    os_environ <span style="color:#f92672">=</span> {}
+</code></pre></div><p>And then we need to make our request handler use it.
+Unfortunately, <code>wsgiref</code> does not make this easy, so we&rsquo;re going to need to duplicate a lot of code.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#f92672">from</span> wsgiref.simple_server <span style="color:#f92672">import</span> WSGIRequestHandler
+<span style="color:#f92672">import</span> socket
+
+<span style="color:#66d9ef">class</span> <span style="color:#a6e22e">NewWSGIRequestHandler</span>(WSGIRequestHandler):
+    <span style="color:#66d9ef">def</span> __init__(self, request, client_address, server):
+        <span style="color:#75715e"># NOTE: This is unchanged from the previous example</span>
+        self<span style="color:#f92672">.</span>address_family <span style="color:#f92672">=</span> server<span style="color:#f92672">.</span>address_family
+        <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>address_family <span style="color:#f92672">==</span> socket<span style="color:#f92672">.</span>AF_UNIX:
+            client_address <span style="color:#f92672">=</span> (<span style="color:#e6db74">&#39;&lt;unix&gt;&#39;</span>, <span style="color:#66d9ef">None</span>)
+        WSGIRequestHandler<span style="color:#f92672">.</span>__init__(self, request, client_address, server)
+
+    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">handle</span>(self):
+        self<span style="color:#f92672">.</span>raw_requestline <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>rfile<span style="color:#f92672">.</span>readline(<span style="color:#ae81ff">65537</span>)
+        <span style="color:#66d9ef">if</span> len(self<span style="color:#f92672">.</span>raw_requestline) <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">65536</span>:
+            self<span style="color:#f92672">.</span>requestline <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;&#39;</span>
+            self<span style="color:#f92672">.</span>request_version <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;&#39;</span>
+            self<span style="color:#f92672">.</span>command <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;&#39;</span>
+            self<span style="color:#f92672">.</span>send_error(<span style="color:#ae81ff">414</span>)
+            <span style="color:#66d9ef">return</span>
+        <span style="color:#66d9ef">if</span> <span style="color:#f92672">not</span> self<span style="color:#f92672">.</span>parse_request():
+            <span style="color:#66d9ef">return</span>
+        handler <span style="color:#f92672">=</span> NewServerHandler(
+            self<span style="color:#f92672">.</span>rfile, self<span style="color:#f92672">.</span>wfile, self<span style="color:#f92672">.</span>get_stderr(), self<span style="color:#f92672">.</span>get_environ(),
+            multithread<span style="color:#f92672">=</span><span style="color:#66d9ef">False</span>,
+        )
+        handler<span style="color:#f92672">.</span>request_handler <span style="color:#f92672">=</span> self
+        handler<span style="color:#f92672">.</span>run(self<span style="color:#f92672">.</span>server<span style="color:#f92672">.</span>get_app())
+</code></pre></div><p>And there you have it: an implementation of <code>wsgiref</code> that lets you listen on unix domain sockets and won&rsquo;t leak your environment.</p>]]></atom:content>
+    </item>
+    <item>
+      <title>FreeBSD Encrypted ZFS Root on EFI</title>
+      <link>https://etherealwake.com/2020/12/freebsd-geli-zfs-root-efi/</link>
+      <pubDate>Fri, 25 Dec 2020 19:00:00 -0800</pubDate>
+      <guid>https://etherealwake.com/2020/12/freebsd-geli-zfs-root-efi/</guid>
+      <description>On my home server, I use FreeBSD. Sadly, the BSD&amp;rsquo;s have been falling behind Linux in the past decade but they still appeal to many people and even have a few tricks left in them. Most notably, as Linux has been struggling with next generation file systems for a few years now, FreeBSD has integrated ZFS for over a decade.
+While modern Linux distros become ever-more complex interplays of components, the BSD&amp;rsquo;s have remained relatively simple. Custom installation (by hand or script) is trivial when the system is distributed as a tarball or two versus a constellation of packages numbering in the thousands. Just boot into the live CD, format the file systems, unpack the tarballs, install the boot loader, and reboot into your new system.
+A custom installation allows you to fulfill your OCD tendencies, but it requires you to have a strong understanding of how the system is constructed. Unfortunately, FreeBSD&amp;rsquo;s documentation has not been keeping up with the evolution with the system&amp;rsquo;s capabilities. For example, the page on efi(8) is extremely short and does not address modern concerns like ZFS and full disk encryption. In fact, much of the limited information on that page is downright misleading. [NOTE: This has been fixed as of FreeBSD 13.]
+ NOTE: These instructions were written at the time of FreeBSD 12.2. They are still applicable as of FreeBSD 13.0, but recent updates to the documentation have fixed many of the complaints.</description>
+      <atom:content type="html"><![CDATA[<p>On my home server, I use <a href="https://www.freebsd.org/">FreeBSD</a>.
+Sadly, the BSD&rsquo;s have been falling behind Linux in the past decade but they still appeal to many people and even have a few tricks left in them.
+Most notably, as Linux has been struggling with next generation file systems for a few years now, FreeBSD has integrated <a href="https://en.wikipedia.org/wiki/ZFS">ZFS</a> <em>for over a decade</em>.</p>
+<p>While modern Linux distros become ever-more complex interplays of components, the BSD&rsquo;s have remained relatively simple.
+Custom installation (by hand or script) is trivial when the system is distributed as a tarball or two versus a constellation of packages numbering in the thousands.
+Just boot into the live CD, format the file systems, unpack the tarballs, install the boot loader, and reboot into your new system.</p>
+<p>A custom installation allows you to fulfill your OCD tendencies, but it requires you to have a strong understanding of how the system is constructed.
+Unfortunately, FreeBSD&rsquo;s documentation has not been keeping up with the evolution with the system&rsquo;s capabilities.
+For example, the page on <a href="https://www.freebsd.org/cgi/man.cgi?query=efi&amp;sektion=8"><code>efi(8)</code></a> is extremely short and does not address modern concerns like ZFS and full disk encryption.
+<del>In fact, much of the limited information on that page is downright misleading.</del>  [<strong>NOTE:</strong> This has been fixed as of FreeBSD 13.]</p>
+<blockquote>
+<p><strong>NOTE:</strong> These instructions were written at the time of FreeBSD 12.2.
+They are still applicable as of FreeBSD 13.0, but recent updates to the documentation have fixed many of the complaints.</p>
+</blockquote>
+<p>A traditional boot process comes in three phases:</p>
+<ol>
+<li>The system firmware loads the <em>first stage boot loader</em>.</li>
+<li>The <em>first stage boot loader</em> loads the <em>second stage boot loader</em>.</li>
+<li>The <em>second stage boot loader</em> loads the kernel.</li>
+</ol>
+<p>The use of two separate boot loaders seems unnecessarily complicated from a naive perspective, but it serves an essential purpose on many systems.
+The firmware&rsquo;s boot capabilities are limited so it may not be possible to fit all the functionality required to load a kernel into that space.
+As the most obvious example, the classic PC BIOS would only load 512 <em>bytes</em> into memory, clearly insufficient for reading a modern file system or configuring the CPU for protected mode.
+Many systems ended up with <em>three</em> boot loaders just to work around this limitation.</p>
+<p><del>Those EFI instructions are clearly written with this model in mind.</del>
+However, EFI is not a limited system.
+In fact, it&rsquo;s practically a <a href="https://en.wikipedia.org/wiki/Unified_Extensible_Firmware_Interface">full-fledged operating system</a>, capable of loading drivers and providing high-level services to the operating system or its boot loader.
+This means that not only is the first stage boot loader not required, the actual boot loader can be made much simpler since many of the things it&rsquo;s traditionally been required to do are now provided by the firmware.</p>
+<p>Going back to those instructions, the fundamental problem is that the EFI first stage boot loader does not support ZFS root with GELI (FreeBSD&rsquo;s full disk encryption module).
+Following those instructions would produce a system incapable of supporting such an arrangement, despite it being supported by the legacy <a href="https://www.freebsd.org/cgi/man.cgi?query=gptzfsboot&amp;sektion=8"><code>gptzfsboot(8)</code></a> first stage loader.
+But the work around is easy: EFI is perfectly capable of loading the second stage loader directly and the second stage loader supports both of these features.</p>
+<p>While FreeBSD 13 is going to shake things up with the transition to OpenZFS 2.0, that&rsquo;s still a few months away.
+In the meantime, I might as well share my notes as to how to get this system working.
+To keep things simple, I&rsquo;ve tried to eliminate many of the more complicated organization schemes to focus on the core details.</p>
+<h2 id="partitions">Partitions</h2>
+<p>The first thing we need to do is partition the disk using the <a href="https://www.freebsd.org/cgi/man.cgi?query=gpart&amp;sektion=8"><code>gpart(8)</code></a> command.
+As we are discussing the use of EFI, that usually means the <a href="https://en.wikipedia.org/wiki/GUID_Partition_Table">GPT</a> partition scheme.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh">gpart create -s gpt <span style="color:#e6db74">${</span>disk<span style="color:#e6db74">}</span>
+</code></pre></div><p>With that done, we can create the EFI system partition and any other partitions we need on the disk.
+Since most modern disks have 4k native sectors, that should be your minimum alignment.
+Larger alignments won&rsquo;t hurt anything beyond loosing an inconsequential amount of space in order to create the alignment.
+If it eases your conscience, Microsoft uses megabyte alignments by default.</p>
+<p>For later convenience, be sure to assign each partition a label which will be stored in the partition table.
+These labels are system-wide, so make sure the labels on each disk are unique (e.g. append the disk number).</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh">gpart add -t efi -a 4k -s 512M -l efi0 <span style="color:#e6db74">${</span>disk<span style="color:#e6db74">}</span>
+gpart add -t freebsd-zfs -a 4k -l zdata0 <span style="color:#e6db74">${</span>disk<span style="color:#e6db74">}</span>
+</code></pre></div><p>With the partitions created, we need to prepare the file systems.</p>
+<h2 id="zfs-pool">ZFS Pool</h2>
+<p>Since we&rsquo;re going to need some files from it anyway, let&rsquo;s start with the ZFS pool.</p>
+<p>First, we need to use the <a href="https://www.freebsd.org/cgi/man.cgi?query=geli&amp;sektion=8"><code>geli(8)</code></a> command on each partition to initialize the full disk encryption:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh">geli init -g -s 4k gpt/zdata0
+geli init -g -s 4k gpt/zdata1
+</code></pre></div><p>And once initialized, we need to attach the newly initialized GELI devices:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh">geli attach gpt/zdata0
+geli attach gpt/zdata1
+</code></pre></div><p>Finally, we can create our ZFS pool on the encrypted devices using <a href="https://www.freebsd.org/cgi/man.cgi?query=zpool&amp;sektion=8">zpool(8)</a>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh">zpool create zdata mirror gpt/zdata0.eli gpt/zdata1.eli
+</code></pre></div><p>If you&rsquo;re working from the live CD, you&rsquo;ll probably need to add something like <code>-o altroot=/tmp</code> since the system won&rsquo;t be able to create the mount point in the (read-only) root directory using.</p>
+<blockquote>
+<p><strong>Note:</strong> Notice the lack of worry regarding <code>ashift</code>.
+By initializing our GELI partitions to the native sector size of the disk, it&rsquo;s not even possible for ZFS to choose anything smaller.</p>
+</blockquote>
+<h2 id="freebsd-installation">FreeBSD Installation</h2>
+<p>With the pool created and imported, we can now create our root directory for FreeBSD.
+By tradition, these are direct children of <code>${zpool}/ROOT</code>.
+So let&rsquo;s create our first dataset using <a href="https://www.freebsd.org/cgi/man.cgi?query=zfs&amp;sektion=8"><code>zfs(8)</code></a>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh">zfs create -p zdata/ROOT/freebsd
+</code></pre></div><p>Installing the system is just a matter of unpacking the distribution tarballs.
+You can download these from the <a href="http://ftp.freebsd.org/pub/FreeBSD/releases/amd64/">FreeBSD website</a>.
+At a minimum we&rsquo;re going to need <code>base.txz</code> and <code>kernel.txz</code>, but you may find <code>lib32.txz</code> and <code>src.txz</code> to be useful.
+Before you install everything, ports are better sourced through <a href="https://www.freebsd.org/cgi/man.cgi?query=portsnap&amp;sektion=8"><code>portsnap(8)</code></a> while the rest are mainly for system development.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh">tar xfC base.txz <span style="color:#e6db74">${</span>altroot<span style="color:#e6db74">}</span>/zdata/ROOT/freebsd
+tar xfC kernel.txz <span style="color:#e6db74">${</span>altroot<span style="color:#e6db74">}</span>/zdata/ROOT/freebsd
+</code></pre></div><blockquote>
+<p><strong>Note:</strong> For those not familiar with the BSD <a href="https://www.freebsd.org/cgi/man.cgi?query=tar&amp;sektion=1"><code>tar(1)</code></a>, it can automatically determine the compression so there&rsquo;s no need to remember <code>z</code>, <code>J</code>, or the other silly options when extracting a tarball.
+In fact, the utility completely ignores those options when reading an archive.</p>
+</blockquote>
+<p>I typically use this installation as template from which I can <em>clone</em> not only the base system, but any jails I plan to operate.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh">zfs snap zdata/ROOT/freebsd@install
+zfs clone zdata/ROOT/freebsd@install zdata/ROOT/system
+</code></pre></div><p>Finally, we need to tell ZFS which dataset we want to boot from.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh">zpool set bootfs<span style="color:#f92672">=</span>zdata/ROOT/system zdata
+</code></pre></div><p>As a security measure, I like to reduce permissions on <code>ROOT</code> so users can&rsquo;t poison systems that aren&rsquo;t loaded.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh">chmod <span style="color:#ae81ff">700</span> <span style="color:#e6db74">${</span>altroot<span style="color:#e6db74">}</span>/zdata/ROOT
+</code></pre></div><h2 id="efi-system-partition">EFI System Partition</h2>
+<p>Now, we have everything we need to prepare our EFI system partition.
+First, we need to format the system with FAT using <a href="https://www.freebsd.org/cgi/man.cgi?query=newfs_msdos&amp;sektion=8"><code>newfs_msdos(8)</code></a>.
+Typically, we use FAT32 for this this, but some systems may be able to handle other FAT variants.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh">newfs_msdos -A -F <span style="color:#ae81ff">32</span> -b <span style="color:#ae81ff">4096</span> -L EFI /dev/gpt/efi
+</code></pre></div><p>Now, we simply need to copy the second stage boot loader from our FreeBSD installation into the appropriate location.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh">mount -t msdos /dev/gpt/efi /mnt
+mkdir -p /mnt/EFI/BOOT
+cp <span style="color:#e6db74">${</span>altroot<span style="color:#e6db74">}</span>/zdata/ROOT/freebsd/boot/loader.efi /mnt/EFI/BOOT/BOOTX64.EFI
+umount /mnt
+</code></pre></div><p>As described in the introduction, we are copying <code>loader.efi</code>~and not <code>boot1.efi</code> <del>as described in <a href="https://www.freebsd.org/cgi/man.cgi?query=uefi&amp;sektion=8"><code>uefi(8)</code></a>.
+This is intentional</del>.</p>
+<h2 id="preparing-for-first-boot">Preparing for First Boot</h2>
+<p>At this point, we can start installing whatever we want to install into our system.
+But there are some things we need to take care of.</p>
+<p>By default, the kernel will not have support for GELI or ZFS.
+Since these are part of the root file system, we need to make sure the bootloader loads these modules or the kernel will panic.
+To do this, we need to edit <a href="https://www.freebsd.org/cgi/man.cgi?query=loader.conf&amp;sektion=5">/boot/loader.conf</a>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh">aesni_load<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;YES&#34;</span>
+geom_eli_load<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;YES&#34;</span>
+zfs_load<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;YES&#34;</span>
+</code></pre></div><p><strong>NOTE:</strong> <code>aesni(4)</code> is included as part of <code>GENERIC</code> as of FreeBSD 13 and does not need to be included in <code>loader.conf</code>.
+In previous versions, this was required to enable hardware acceleration of cryptographic operations.</p>
+<p>We will probably need to have a minimal <a href="https://www.freebsd.org/cgi/man.cgi?query=rc.conf&amp;sektion=5">/etc/rc.conf</a> (adjust appropriately):</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh">hostname<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;something&#34;</span>
+<span style="color:#75715e"># Update to reflect whatever your actual hardware</span>
+ifconfig_igb0<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;DHCP&#34;</span>
+<span style="color:#75715e"># If you&#39;re not planning on using sendmail</span>
+sendmail_enable<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;NONE&#34;</span>
+<span style="color:#75715e"># Logs certain GPT-related events on boot</span>
+gptboot_enable<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;YES&#34;</span>
+<span style="color:#75715e"># ZFS fault management daemon</span>
+zfsd_enable<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;YES&#34;</span>
+</code></pre></div><p>And we might want a little more than the default <code>devfs</code> and our ZFS pool, so create an initial <a href="https://www.freebsd.org/cgi/man.cgi?query=fstab&amp;sektion=5">/etc/fstab</a>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh"><span style="color:#75715e"># Device        Mountpoint          FStype    Options         Dump    Pass#</span>
+/dev/gpt/efi0   /boot/efi           msdosfs   rw              <span style="color:#ae81ff">0</span>       <span style="color:#ae81ff">0</span>
+fdescfs         /dev/fd             fdescfs   rw              <span style="color:#ae81ff">0</span>       <span style="color:#ae81ff">0</span>
+procfs          /proc               procfs    rw              <span style="color:#ae81ff">0</span>       <span style="color:#ae81ff">0</span>
+</code></pre></div><p>Be sure to create directories for any mount points you list in <code>fstab</code>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh">mkdir <span style="color:#e6db74">${</span>altroot<span style="color:#e6db74">}</span>/zdata/ROOT/system/boot/efi
+</code></pre></div><h2 id="done">Done</h2>
+<p>With that, we can now export the ZFS pool and boot into our new system.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh">zpool export zdata
+shutdown -r now
+</code></pre></div><p>Inside our new system, we can run some basic checks:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plain" data-lang="plain">root@test:~ # geli status
+     Name  Status  Components
+da0p2.eli  ACTIVE  da0p2
+da1p2.eli  ACTIVE  da1p2
+
+root@test:~ # zpool status
+  pool: zdata
+ state: ONLINE
+  scan: none requested
+config:
+
+        NAME            STATE    READ WRITE CKSUM
+        zdata           ONLINE      0     0     0
+          mirror-0      ONLINE      0     0     0
+            da0p2.eli   ONLINE      0     0     0
+            da1p2.eli   ONLINE      0     0     0
+
+root@test:~ # bectl list
+BE      Active Mountpoint Space Created
+freebsd -      -          1.11G 2020-12-26 00:10
+system  NR     /          980K  2020-12-26 00:14
+
+root@test:~ # mount
+zdata/ROOT/system on / (zfs, local, nfsv4acls)
+devfs on /dev (devfs, local, multilabel)
+/dev/gpt/efi0 on /boot/efi (msdosfs, local)
+fdescfs on /dev/fd (fdescfs)
+procfs on /proc (procfs, local)
+</code></pre></div><p>From this point, make the system yours:</p>
+<ul>
+<li>Set the root password and create additional users.</li>
+<li>Override the default timezone.</li>
+<li>Install interesting packages.</li>
+<li>Register it with Ansible, Puppet, or whatever system management tool you are using.</li>
+</ul>
+<h2 id="variant-efi-mirror">Variant: EFI Mirror</h2>
+<p>If you are using multiple disks, you will probably partition each disk the same way.
+This means each of your disks would have space reserved for the EFI system partition.
+If you&rsquo;re doing that, you might as well set up a mirror so they all contain the same data and EFI can fall back to any of them in the event of a disk failure.</p>
+<p>We set up a mirror in a similar manner as we did with GELI, but instead use <a href="https://www.freebsd.org/cgi/man.cgi?query=gmirror&amp;sektion=8"><code>gmirror(8)</code></a>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh">gmirror label efi gpt/efi0 gpt/efi1
+</code></pre></div><p>And like GELI, we need to make sure the kernel loads the appropriate driver, so update <code>/boot/loader.conf</code> to read:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh">aesni_load<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;YES&#34;</span>
+geom_eli_load<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;YES&#34;</span>
+geom_mirror_load<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;YES&#34;</span>
+zfs_load<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;YES&#34;</span>
+</code></pre></div><p>Finally, revise the earlier instructions to use <code>mirror/efi</code> instead of <code>gpt/efi0</code> when dealing with the file system.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plain" data-lang="plain">root@test:~ # gmirror status
+      Name    Status  Components
+mirror/efi  COMPLETE  da0p1 (ACTIVE)
+                      da0p1 (ACTIVE)
+</code></pre></div>]]></atom:content>
+    </item>
+</channel>
+</rss>

@@ -1,0 +1,201 @@
+<!doctype html><html lang=en-us><head><meta charset=utf-8><title>FreeBSD Jails And Networking</title><link rel=stylesheet type=text/css href=/css/site.min.43a8091bfcf24b00a59a240c5087845072b0210f7ee047ab82de298097cfcef1.css integrity="sha256-Q6gJG/zySwClmiQMUIeEUHKwIQ9+4Eergt4pgJfPzvE="><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name=description content="When using FreeBSD, the most common method for virtualization and process isolation are jails.
+Introduced with FreeBSD 4.0 in March of 2000, they predate the closest Linux equivalent, cgroups (and, by extension, Docker), by nearly a decade.
+A core part of any virtualization technology is its interaction with the networking infrastructure.
+In this regard, I&rsquo;ve found much of the available documentation lacking, often deferring to third party tools which are no longer maintained.
+As such, I&rsquo;ve had to scrape multiple sources and reverse engineer system programs to figure out how it&rsquo;s put together.
+In today&rsquo;s article, I&rsquo;ll describe the results of my foray into FreeBSD jail networking.
+It&rsquo;s not the most cohesive piece, but I&rsquo;ll refine it over time and hopefully it will assist someone else in their efforts to deploy FreeBSD jails.
+
+Note: These instructions were written at the time of FreeBSD 13.0.
+"><meta name=generator content="Hugo 0.85.0"><link rel=canonical href=https://etherealwake.com/2021/08/freebsd-jail-networking/><meta property="og:title" content="FreeBSD Jails And Networking"><meta property="og:description" content="When using FreeBSD, the most common method for virtualization and process isolation are jails.
+Introduced with FreeBSD 4.0 in March of 2000, they predate the closest Linux equivalent, cgroups (and, by extension, Docker), by nearly a decade.
+A core part of any virtualization technology is its interaction with the networking infrastructure.
+In this regard, I&rsquo;ve found much of the available documentation lacking, often deferring to third party tools which are no longer maintained.
+As such, I&rsquo;ve had to scrape multiple sources and reverse engineer system programs to figure out how it&rsquo;s put together.
+In today&rsquo;s article, I&rsquo;ll describe the results of my foray into FreeBSD jail networking.
+It&rsquo;s not the most cohesive piece, but I&rsquo;ll refine it over time and hopefully it will assist someone else in their efforts to deploy FreeBSD jails.
+
+Note: These instructions were written at the time of FreeBSD 13.0.
+"><meta property="og:type" content="article"><meta property="og:url" content="https://etherealwake.com/2021/08/freebsd-jail-networking/"><meta property="article:section" content="article"><meta property="article:published_time" content="2021-08-24T00:00:00-07:00"><meta property="article:modified_time" content="2021-09-07T14:08:04-07:00"><meta name=twitter:card content="summary"><meta name=twitter:title content="FreeBSD Jails And Networking"><meta name=twitter:description content="When using FreeBSD, the most common method for virtualization and process isolation are jails.
+Introduced with FreeBSD 4.0 in March of 2000, they predate the closest Linux equivalent, cgroups (and, by extension, Docker), by nearly a decade.
+A core part of any virtualization technology is its interaction with the networking infrastructure.
+In this regard, I&rsquo;ve found much of the available documentation lacking, often deferring to third party tools which are no longer maintained.
+As such, I&rsquo;ve had to scrape multiple sources and reverse engineer system programs to figure out how it&rsquo;s put together.
+In today&rsquo;s article, I&rsquo;ll describe the results of my foray into FreeBSD jail networking.
+It&rsquo;s not the most cohesive piece, but I&rsquo;ll refine it over time and hopefully it will assist someone else in their efforts to deploy FreeBSD jails.
+
+Note: These instructions were written at the time of FreeBSD 13.0.
+"></head><body class="page article"><nav><div class=content><ul><li><a href=/>Home</a></li><li><a href=/resume/>Resume</a></li><li><a href=/blog/>Blog</a></li><li><a href=mailto:continuing.search@etherealwake.com>Email</a></li></ul></div></nav><header><div class=content><h1>Ethereal Wake</h1></div></header><main><div class=content><h1 class=title>FreeBSD Jails And Networking</h1><ul class=metadata><li><time datetime="2021-08-24 00:00:00 -0700 -0700">2021 Aug 24</time></li><li><a href=https://etherealwake.com/2021/08/freebsd-jail-networking/ rel=bookmark>Permalink</a></li><li>2253 words, 11 min read</li></ul><p>When using FreeBSD, the most common method for virtualization and process isolation are jails.
+Introduced with FreeBSD 4.0 in March of 2000, they predate the closest Linux equivalent, cgroups (and, by extension, Docker), by nearly a decade.</p><p>A core part of any virtualization technology is its interaction with the networking infrastructure.
+In this regard, I&rsquo;ve found much of the <a href=https://docs.freebsd.org/en/books/handbook/jails/>available documentation</a> lacking, often deferring to third party tools which are no longer maintained.
+As such, I&rsquo;ve had to scrape multiple sources and <a href=/2020/12/freebsd-jail-startup/>reverse engineer system programs</a> to figure out how it&rsquo;s put together.</p><p>In today&rsquo;s article, I&rsquo;ll describe the results of my foray into FreeBSD jail networking.
+It&rsquo;s not the most cohesive piece, but I&rsquo;ll refine it over time and hopefully it will assist someone else in their efforts to deploy FreeBSD jails.</p><blockquote><p><strong>Note:</strong> These instructions were written at the time of FreeBSD 13.0.</p></blockquote><h2 id=ip-sharing>IP Sharing</h2><p>When jails were first introduced, they were modeled as a variant of <a href="https://www.freebsd.org/cgi/man.cgi?query=chroot&sektion=4"><code>chroot(2)</code></a>, placing direct constraints on the superuser instead of creating a virtual machine.
+In this initial implementation, one of the objectives was to restrict access to the networking stack.
+Instead of having unfettered access, raw sockets are forbidden and socket activity is limited to a subset of the host&rsquo;s addresses.</p><p>There&rsquo;s multiple ways to implement this in practice.
+The most common mechanism is to load up a bunch of IPs on the loopback device <code>lo0</code> and use firewall translation rules to give it network access.
+For example:</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=color:#75715e># jail.conf</span>
+www <span style=color:#f92672>{</span>
+  ip4.addrs +<span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;lo0|192.168.0.5&#34;</span>;
+<span style=color:#f92672>}</span>
+</code></pre></div><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=color:#75715e># pf.conf</span>
+nat on $ext_if from 192.168.0.0/24 -&gt; $ext_if:0
+rdr on $ext_if to $ext_if:0 port <span style=color:#ae81ff>80</span> -&gt; 192.168.0.5
+</code></pre></div><p>Alternatively, the jail can be given addresses on the network device directly:</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=color:#75715e># jail.conf</span>
+www <span style=color:#f92672>{</span>
+  <span style=color:#75715e># The ordering of these addresses is significant</span>
+  ip4.addrs +<span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;lo0|127.0.0.2&#34;</span>;
+  ip4.addrs +<span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;igb0|1.2.3.4&#34;</span>;
+<span style=color:#f92672>}</span>
+</code></pre></div><p>The first caveat concerns the handling of loopback in general.
+As the addresses <code>127.0.0.1</code> and <code>::1</code> still belong to the host, those addresses are not available to jails.
+Instead, the jail will treat the first address listed under <code>ip4.addrs</code> and <code>ip6.addrs</code> as its loopback addresses and any attempt to bind to <code>127.0.0.1</code> or <code>::1</code> will bind to these addresses instead.
+This is why it&rsquo;s critical that the first address be an internal interface and protected using the system firewall.</p><p>The second caveat stems from the nature of addresses as a shared resource between the jail and the host.
+This means that even when binding jails to external IPs, all traffic between jails will occur over <code>lo0</code> instead of the expected interface, which is important when constructing firewall rules.
+And since these addresses are shared with the host, the host can freely use these addresses when communicating with jails and will be able to bind (commonly seen by <code>ntpd</code> and <code>sshd</code> in their default configurations).
+It is important to avoid wildcard bindings on a machine hosting jails, especially on interfaces shared with jails.</p><p>A common problem seen when using IPv6 with jails is that a given IPv6 address is not available in time for daemon startup, generating unexpected failures.
+This is a side-effect of the IPv6 Duplicate Address Detection (DAD) feature.
+There are two possible workarounds:</p><ul><li>Delay jail startup long enough for DAD to complete.</li><li>Set the sysctl <code>net.inet6.ip6.dad_count=0</code> to disable DAD entirely.</li></ul><h2 id=network-virtualization>Network Virtualization</h2><p>Over time, jails evolved from a refinement of <code>chroot(2)</code> to a more complete virtualization system.
+Kernel subsystems gained the ability to be virtualized, granting a unique namespace to jails, much like Linux&rsquo;s cgroups.
+One of the first examples of this was the System V IPC mechanisms (e.g. <code>sysvshm</code>).</p><p>For several releases, FreeBSD had a work-in-progress jail feature where the networking stack could be virtualized.
+Called <a href="https://www.freebsd.org/cgi/man.cgi?query=vnet&sektion=9">VNET</a>, it allowed jails to completely take over any number of interfaces (real or synthetic) and construct a proper networking stack.
+However, it was liable to induce kernel panics until it was finally brought to heel in the 12.0 release and became a standard part of the default kernel.</p><p>The simplest method is to simply grant a jail exclusive control of a hardware device.</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh>www <span style=color:#f92672>{</span>
+  vnet;
+  vnet.interface +<span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;igb2&#34;</span>;
+<span style=color:#f92672>}</span>
+</code></pre></div><p>When a jail marked as <code>vnet</code> is started, a new instance of the kernel&rsquo;s networking stack is brought up with its own, unique set of interfaces (including an <code>lo0</code>), addresses, routing tables, and firewall rules.
+The <code>jail(8)</code> utility will then take the listed interfaces and transfer ownership to the jail&rsquo;s networking stack.
+Once that&rsquo;s done, said interface completely disappears from the host and the jail can use it as a normal interface under its control.</p><p>From inside the jail, we&rsquo;ll see a completely normal set of network interfaces:</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plain data-lang=plain>&gt; ifconfig
+lo0: flags=8049&lt;UP,LOOPBACK,RUNNING,MULTICAST&gt; metric 0 mtu 16384
+        options=680003&lt;RXCSUM,TXCSUM,LINKSTATE,RXCSUM_IPV6,TXCSUM_IPV6&gt;
+        inet6 ::1 prefixlen 128
+        inet6 fe80::1%lo0 prefixlen 64 scopeid 0x1
+        inet 127.0.0.1 netmask 0xff000000
+        groups: lo
+        nd6 options=21&lt;PERFORMNUD,AUTO_LINKLOCAL&gt;
+pflog0: flags=0&lt;&gt; metric 0 mtu 33160
+        groups: pflog
+igb2: flags=8822&lt;BROADCAST,SIMPLEX,MULTICAST&gt; metric 0 mtu 1500
+        options=4e507bb&lt;RXCSUM,TXCSUM,VLAN_MTU,VLAN_HWTAGGING,JUMBO_MTU,VLAN_HWCSUM,TSO4,TSO6,LRO,VLAN_HWFILTER,VLAN_HWTSO,RXCSUM_IPV6,TXCSUM_IPV6,NOMAP&gt;
+        ether 90:e2:ba:74:ba:ec
+        media: Ethernet autoselect (1000baseT &lt;full-duplex&gt;)
+        status: active
+        nd6 options=29&lt;PERFORMNUD,IFDISABLED,AUTO_LINKLOCAL&gt;
+</code></pre></div><p>And we can configure it like any normal interface using <code>rc.conf</code>:</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=color:#75715e># /etc/rc.conf</span>
+ifconfig_igb2<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;DHCP&#34;</span>
+ifconfig_igb2_ipv6<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;inet6 accept_rtadv&#34;</span>
+</code></pre></div><p>When the jail is shutdown, the hardware device will be returned to the host&rsquo;s control&mldr;eventually.
+Any outstanding connections are closed and placed into the <code>TIME_WAIT</code> state.
+Only once these connections expire will the interface be returned to the host, which can be a massive annoyance when restarting a jail.
+Thus far, I haven&rsquo;t found an effective way to speed up the process.</p><h3 id=if_bridge-and-if_epair>if_bridge and if_epair</h3><p>While some people may be able to dedicate an ethernet device to each jail, most people are going to engage in some form of software-defined networking.
+The traditional technique for this involves the use of <a href="https://www.freebsd.org/cgi/man.cgi?query=if_bridge&sektion=4"><code>if_bridge(4)</code></a> and <a href="https://www.freebsd.org/cgi/man.cgi?query=if_epair&sektion=4"><code>if_epair(4)</code></a>.</p><p><code>if_epair</code> is a synthetic ethernet device that is the equivalent of a cross-over cable.
+When a new instance is cloned, you end up with a pair of interfaces, <code>epair&lt;num>a</code> and <code>epair&lt;num>b</code>.
+All traffic sent on one interface is received by the other.
+Using VNET, one end can be inserted into the jail to exchange traffic with the host.</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=color:#75715e># jail.conf</span>
+www <span style=color:#f92672>{</span>
+  vnet;
+  vnet.interface +<span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;epair0b&#34;</span>;
+<span style=color:#f92672>}</span>
+</code></pre></div><p>The administrator is left with two possible choices: either they can assign an IP to the host system&rsquo;s end and treat it as a point-to-point link, performing routing and translation as necessary, or they can <em>bridge</em> the endpoints with each other and a physical network.
+When using the <code>epair</code> as a point-to-point link, we need only give it an address on the host side.</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=color:#75715e># rc.conf</span>
+cloned_interfaces<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;epair0&#34;</span>
+ifconfig_epair0a<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;inet 1.2.3.4/30 up&#34;</span>
+</code></pre></div><p>More commonly, the host side of the <code>epairs</code> are all bundled together and (optionally) connected to an external interface.
+This uses the <code>if_bridge</code> interface, which behaves like a network switch.</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=color:#75715e># rc.conf</span>
+cloned_interfaces<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;bridge0 epair0&#34;</span>
+ifconfig_bridge0<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;addm igb0 addm epair0a up&#34;</span>
+ifconfig_igb0<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;up&#34;</span>
+ifconfig_epair0a<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;up&#34;</span>
+</code></pre></div><p>There&rsquo;s a few caveats to consider.
+First, this can result in a massive number of network devices on the host system.
+Second, this will disable any hardware features on a physical device like TCP overloading and checksum computation.
+Third, performance can be poor as the bridge is not thread-safe and will serialize all traffic through a single lock.</p><p>But most of all, firewall rules under this arrangement can be nightmarish.
+There are at least three network devices involved and it took me several readings through the <code>if_bridge</code> man page to even <em>begin</em> to understand how the firewall interacts with it all.
+In the end, I broke down to experimentation and fiddling with <code>sysctl</code> to make something I could handle.
+My final solution was to disable all the <code>net.link.bridge.pfil_*</code> sysctl&rsquo;s, place the host&rsquo;s addresses on the <code>if_bridge</code> interface, and let the owner of a given interface (<code>if_bridge</code> for the host, <code>if_epair</code> for the jails) control the associated firewall rules.</p><h3 id=netgraph>Netgraph</h3><p>An alternative networking approach under VNET is to use <a href="https://www.freebsd.org/cgi/man.cgi?query=netgraph&sektion=4"><code>netgraph(4)</code></a>.
+Netgraph is a rather old subsystem within FreeBSD that doesn&rsquo;t get much press but it is specifically designed for these types of software-defined networking applications.
+Unlike the previous approach, where we slotted network devices together like legos, netgraph takes a graph-oriented approach to packet handling.</p><p>Under netgraph, we have <em>nodes</em>, which are the entities that process packets, such as ethernet cards and switches.
+And each <em>node</em> has one or more <em>hooks</em>, which serve as the I/O ports to exchange packets between nodes.
+In our case, we&rsquo;re interested in three specific node types: <a href="https://www.freebsd.org/cgi/man.cgi?query=ng_ether&sektion=4"><code>ng_ether(4)</code></a>, which allows us to interface with physical ethernet devices; <a href="https://www.freebsd.org/cgi/man.cgi?query=ng_eiface&sektion=4"><code>ng_eiface(4)</code></a>, which creates a synthetic ethernet device; and <a href="https://www.freebsd.org/cgi/man.cgi?query=ng_bridge&sektion=4"><code>ng_bridge(4)</code></a>, which lets us link two or more ethernet devices together in a switched network.</p><p>Of these, <code>ng_eiface</code> and <code>ng_bridge</code> are the most straightforward.
+When creating an instance of <code>ng_eiface</code>, the kernel assigns it the first available index and creates a new synthetic device named <code>ngeth&lt;num></code>.
+It has a single hook, named <code>ether</code>, which allows it to deliver and receive packets from the kernel&rsquo;s protocol stack.
+Similarly, an instance of <code>ng_bridge</code> can have any number of hooks, all named <code>link&lt;num></code>, which connect any number of devices together.</p><p>By comparison, <code>ng_ether</code> is a bit more complicated.
+Under normal operation, a packet received by the hardware is delivered to the kernel&rsquo;s protocol stack and packets generated by the kernel are transmitted out the port.
+Netgraph allows us to insert ourselves into the middle of that process.
+To accomplish this, <code>ng_ether</code> has <em>three</em> hooks, two of which are relevant to us: <code>lower</code> and <code>upper</code>.
+<code>lower</code> corresponds to the ethernet hardware itself: if we send a packet into <code>lower</code>, it will be transmitted out on the wire and if a packet is received from the wire, it will come out of <code>lower</code>.
+<code>upper</code>, on the other hand, corresponds to the kernel&rsquo;s protocol stack: when the kernel wants to send a packet, it will send it out <code>upper</code> and if we inject a packet into <code>upper</code>, it will be as if the networking stack received it from the wire.
+By default, <code>upper</code> is joined with <code>lower</code>, allowing the network device to operate normally; however, we can place an <code>ng_bridge</code> between the two ports and now we switch traffic between a physical segment, the kernel, and our jails (or virtual machines).</p><p>Unfortunately, the base system doesn&rsquo;t provide any boot scripts to configure this for us, so we&rsquo;re on our own.</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=color:#75715e>#!/bin/sh
+</span><span style=color:#75715e></span><span style=color:#75715e># /usr/local/etc/rc.d/netgraph</span>
+<span style=color:#75715e>#</span>
+<span style=color:#75715e># REQUIRE: FILESYSTEM kld</span>
+<span style=color:#75715e># PROVIDE: netgraph</span>
+<span style=color:#75715e># BEFORE: netif</span>
+
+netgraph_start<span style=color:#f92672>()</span> <span style=color:#f92672>{</span>
+  <span style=color:#75715e># Ensure the kernel modules are loaded</span>
+  kld_load ng_bridge ng_eiface ng_ether
+  <span style=color:#75715e># Destroy any lingering pieces</span>
+  ngctl shutdown bridge0:
+  ngctl shutdown bridge1:
+  <span style=color:#75715e># Create the graph</span>
+  ngctl -f- <span style=color:#e6db74>&lt;&lt;EOF
+</span><span style=color:#e6db74>    # Create the bridge by extending from the hardware device.
+</span><span style=color:#e6db74>    mkpeer igb0: ng_bridge lower link0
+</span><span style=color:#e6db74>    # Bridges don&#39;t have a name by default, so assign it one.
+</span><span style=color:#e6db74>    name igb0:lower bridge0
+</span><span style=color:#e6db74>    # With our bridge now named, we can finish connecting the hardware device.
+</span><span style=color:#e6db74>    connect igb0: bridge0: upper link1
+</span><span style=color:#e6db74>    # Create three synthetic devices and connect them to the bridge.
+</span><span style=color:#e6db74>    mkpeer bridge0: ng_eiface link2 ether
+</span><span style=color:#e6db74>    mkpeer bridge0: ng_eiface link3 ether
+</span><span style=color:#e6db74>    mkpeer bridge0: ng_eiface link4 ether
+</span><span style=color:#e6db74>
+</span><span style=color:#e6db74>    # For a virtual network, we can use ngctl&#39;s control socket as an anchor. 
+</span><span style=color:#e6db74>    mkpeer . ng_bridge virt link0
+</span><span style=color:#e6db74>    name virt bridge1
+</span><span style=color:#e6db74>    # Gaps in the hook sequence are acceptable (e.g. no link0 or link1).
+</span><span style=color:#e6db74>    mkpeer bridge1: ng_eiface link2 ether
+</span><span style=color:#e6db74>    mkpeer bridge1: ng_eiface link3 ether
+</span><span style=color:#e6db74>    mkpeer bridge1: ng_eiface link4 ether
+</span><span style=color:#e6db74>EOF</span>
+<span style=color:#f92672>}</span>
+
+netgraph_stop<span style=color:#f92672>()</span> <span style=color:#f92672>{</span>
+  <span style=color:#75715e># All the instances of eiface will vanish once the bridge is gone</span>
+  ngctl shutdown bridge0:
+  ngctl shutdown bridge1:
+<span style=color:#f92672>}</span>
+</code></pre></div><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=color:#75715e># jail.conf</span>
+www <span style=color:#f92672>{</span>
+  vnet;
+  vnet.interface +<span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;ngeth0&#34;</span>;
+  vnet.interface +<span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;ngeth3&#34;</span>;
+<span style=color:#f92672>}</span>
+</code></pre></div><p>One of the limitations of <code>ng_eiface</code> is that it simply assigns devices sequentially.
+This makes it exceptionally difficult to manage multiple virtual networks, especially if interfaces are being created during operation.
+To address this, we can use the <code>name</code> command from <code>ifconfig</code>.</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh>ifconfig ngeth0 name phys0
+ifconfig ngeth1 name phys1
+ifconfig ngeth2 name phys2
+
+ifconfig ngeth3 name virt0
+ifconfig ngeth4 name virt1
+ifconfig ngeth5 name virt2
+</code></pre></div><p>Now, we can use friendly names in our configuration.
+Of course, if we&rsquo;re building up our network graph dynamically, it doesn&rsquo;t address how one selects the newly created interface.
+For that, we need only to ask it.</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plain data-lang=plain>&gt; ngctl msg bridge1:link2 getifname
+Rec&#39;d response &#34;getifname&#34; (1) from &#34;[1a9]:&#34;:
+Args:   &#34;ngeth3&#34;
+</code></pre></div><p>Since ngctl wraps an annoying level of markup around the answer with no way to minimize it, we can use <a href="https://www.freebsd.org/cgi/man.cgi?query=expr&sektion=1"><code>expr(1)</code></a> to select out the part we want:</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh>iface<span style=color:#f92672>=</span><span style=color:#66d9ef>$(</span>expr <span style=color:#e6db74>&#34;</span><span style=color:#66d9ef>$(</span>ngctl msg bridge1:link2 getifname<span style=color:#66d9ef>)</span><span style=color:#e6db74>&#34;</span> : <span style=color:#e6db74>&#39;.*Args:.*&#34;\([a-zA-Z]*[0-9]*\)&#34;&#39;</span><span style=color:#66d9ef>)</span>
+ifconfig <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>iface<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span> name virt0
+</code></pre></div><h3 id=interactions-with-if_lagg>Interactions with if_lagg</h3><p>On a server with multiple interfaces, it makes sense to aggregate devices for reliability and performance.
+Under FreeBSD, this is accomplished with the <a href="https://www.freebsd.org/cgi/man.cgi?query=if_lagg&sektion=4"><code>if_lagg(4)</code></a> device.</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=color:#75715e># rc.conf</span>
+cloned_interfaces<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;lagg0&#34;</span>
+ifconfig_lagg0<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;laggport igb0 laggport igb1 1.2.3.4/24 up&#34;</span>
+ifconfig_igb0<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;up&#34;</span>
+ifconfig_igb1<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;up&#34;</span>
+</code></pre></div><p>Unfortunately, there is a complication when using the <code>failover</code> operating mode.
+By default, the <code>lagg</code> device will discard packets that come in from the &ldquo;wrong&rdquo; interface and netgraph runs afoul of this logic when delivering packets from the switch.
+This behavior can be suppressed using the <code>net.link.lagg.failover_rx_all</code> sysctl but I never managed to have it do anything other than lock up the network device.
+This means that under <code>failover</code>, the host can&rsquo;t use the <code>lagg</code> device for its own traffic or it won&rsquo;t be able to communicate with any devices bridged into that device.</p><p>On my own system, I use a dedicated <code>lagg</code> device for the host and a second <code>lagg</code> device for the virtual devices.
+While it means that traffic between the public interfaces of the host and virtual machines goes through a physical switch, it is ultimately a minor problem.
+By having a dedicated networking device, the host&rsquo;s ethernet traffic takes advantage of the hardware TCP and checksum acceleration.</p></div></main><footer><div class=content><p>Copyright © 2021 Jonathan McGee. All Rights Reserved.</p></div></footer></body></html>

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+  xmlns:xhtml="http://www.w3.org/1999/xhtml">
+
+  <url>
+    <loc>https://etherealwake.com/2021/09/bazel-linkstamp/</loc>
+    <lastmod>2021-09-07T14:08:04-07:00</lastmod>
+  </url>
+
+  <url>
+    <loc>https://etherealwake.com/2021/08/freebsd-jail-networking/</loc>
+    <lastmod>2021-09-07T14:08:04-07:00</lastmod>
+  </url>
+
+  <url>
+    <loc>https://etherealwake.com/2021/01/portable-sockets-basics/</loc>
+    <lastmod>2021-09-07T14:08:04-07:00</lastmod>
+  </url>
+
+  <url>
+    <loc>https://etherealwake.com/2020/12/inline-functions-c-cpp/</loc>
+    <lastmod>2021-09-07T14:08:04-07:00</lastmod>
+  </url>
+
+  <url>
+    <loc>https://etherealwake.com/2020/12/freebsd-jail-startup/</loc>
+    <lastmod>2021-09-07T14:08:04-07:00</lastmod>
+  </url>
+
+  <url>
+    <loc>https://etherealwake.com/2020/12/wsgiref-unix-domain-sockets/</loc>
+    <lastmod>2021-09-07T14:08:04-07:00</lastmod>
+  </url>
+
+  <url>
+    <loc>https://etherealwake.com/2020/12/freebsd-geli-zfs-root-efi/</loc>
+    <lastmod>2021-09-07T14:08:04-07:00</lastmod>
+  </url>
+
+  <url>
+    <loc>https://etherealwake.com/blog/</loc>
+    <lastmod>2020-12-25T19:32:48-08:00</lastmod>
+  </url>
+
+  <url>
+    <loc>https://etherealwake.com/error/</loc>
+    <lastmod>2020-12-23T14:55:07-08:00</lastmod>
+    <changefreq>monthly</changefreq>
+  </url>
+
+  <url>
+    <loc>https://etherealwake.com/</loc>
+    <lastmod>2021-01-03T15:36:18-08:00</lastmod>
+    <changefreq>weekly</changefreq>
+  </url>
+
+  <url>
+    <loc>https://etherealwake.com/resume/</loc>
+    <lastmod>2020-12-24T16:23:05-08:00</lastmod>
+    <changefreq>monthly</changefreq>
+  </url>
+
+</urlset>

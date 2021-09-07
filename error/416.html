@@ -1,0 +1,38 @@
+<!doctype html><html lang=en-us><head><meta charset=utf-8><title>Range Not Satisfiable</title><link rel=stylesheet type=text/css href=/css/site.min.43a8091bfcf24b00a59a240c5087845072b0210f7ee047ab82de298097cfcef1.css integrity="sha256-Q6gJG/zySwClmiQMUIeEUHKwIQ9+4Eergt4pgJfPzvE="><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name=description content="4.4. 416 Range Not Satisfiable The 416 (Range Not Satisfiable) status code indicates that none of the ranges in the request&rsquo;s Range header field (Section 3.1) overlap the current extent of the selected resource or that the set of ranges requested has been rejected due to invalid ranges or an excessive request of small or overlapping ranges.
+For byte ranges, failing to overlap the current extent means that the first-byte-pos of all of the byte-range-spec values were greater than the current length of the selected representation."><meta name=generator content="Hugo 0.85.0"><link rel=canonical href=https://etherealwake.com/error/416.html><meta property="og:title" content="Range Not Satisfiable"><meta property="og:description" content="4.4. 416 Range Not Satisfiable The 416 (Range Not Satisfiable) status code indicates that none of the ranges in the request&rsquo;s Range header field (Section 3.1) overlap the current extent of the selected resource or that the set of ranges requested has been rejected due to invalid ranges or an excessive request of small or overlapping ranges.
+For byte ranges, failing to overlap the current extent means that the first-byte-pos of all of the byte-range-spec values were greater than the current length of the selected representation."><meta property="og:type" content="article"><meta property="og:url" content="https://etherealwake.com/error/416.html"><meta property="article:section" content="error"><meta property="article:published_time" content="1997-11-21T00:00:00+00:00"><meta property="article:modified_time" content="2020-12-24T14:22:14-08:00"><meta name=twitter:card content="summary"><meta name=twitter:title content="Range Not Satisfiable"><meta name=twitter:description content="4.4. 416 Range Not Satisfiable The 416 (Range Not Satisfiable) status code indicates that none of the ranges in the request&rsquo;s Range header field (Section 3.1) overlap the current extent of the selected resource or that the set of ranges requested has been rejected due to invalid ranges or an excessive request of small or overlapping ranges.
+For byte ranges, failing to overlap the current extent means that the first-byte-pos of all of the byte-range-spec values were greater than the current length of the selected representation."><link rel=preload href=/images/redsand.jpg as=image></head><body class="page error"><nav><div class=content><ul><li><a href=/>Home</a></li><li><a href=/resume/>Resume</a></li><li><a href=/blog/>Blog</a></li><li><a href=mailto:continuing.search@etherealwake.com>Email</a></li></ul></div></nav><header><div class=content><h1>Range Not Satisfiable</h1><p>HTTP/1.1 416 Range Not Satisfiable</p></div></header><main><div class=content><blockquote><h2 id=44--416-range-not-satisfiable>4.4. 416 Range Not Satisfiable</h2><p>The 416 (Range Not Satisfiable) status code indicates that none of
+the ranges in the request&rsquo;s Range header field (Section 3.1) overlap
+the current extent of the selected resource or that the set of ranges
+requested has been rejected due to invalid ranges or an excessive
+request of small or overlapping ranges.</p><p>For byte ranges, failing to overlap the current extent means that the
+first-byte-pos of all of the byte-range-spec values were greater than
+the current length of the selected representation. When this status
+code is generated in response to a byte-range request, the sender
+SHOULD generate a Content-Range header field specifying the current
+length of the selected representation (Section 4.2).</p><p>For example:</p><pre><code>HTTP/1.1 416 Range Not Satisfiable
+Date: Fri, 20 Jan 2012 15:41:54 GMT
+Content-Range: bytes */47022
+</code></pre><p>Note: Because servers are free to ignore Range, many
+implementations will simply respond with the entire selected
+representation in a 200 (OK) response. That is partly because
+most clients are prepared to receive a 200 (OK) to complete the
+task (albeit less efficiently) and partly because clients might
+not stop making an invalid partial request until they have
+received a complete representation. Thus, clients cannot depend
+on receiving a 416 (Range Not Satisfiable) response even when it
+is most appropriate.</p></blockquote><p><cite>From <a href=https://tools.ietf.org/html/rfc7233#section-4.4>RFC 7233 Section 4.4</a></cite></p><blockquote><h2 id=10417-416-requested-range-not-satisfiable>10.4.17 416 Requested range not satisfiable</h2><p>A server SHOULD return a response with this status code if a request
+included a Range request-header field (section 14.36) , and none of the
+range-specifier values in this field overlap the current extent of the
+selected resource, and the request did not include an If-Range request-
+header field. (For byte-ranges, this means that the first-byte-pos of
+all of the byte-range-spec values were greater than the current length
+of the selected resource.)</p><p>When this status code is returned for a byte-range request, the response
+MUST include a Content-Range entity-header field specifying the current
+length of the selected resource (see section 14.17). This response MUST
+NOT use the multipart/byteranges content-type.</p></blockquote><p><cite>First appears in <a href=https://tools.ietf.org/html/draft-ietf-http-v11-spec-rev-01#section-10.4.17>draft-ietf-http-v11-spec-rev-01 Section 10.4.17</a></cite></p><blockquote><h2 id=416-none-acceptable>416 None Acceptable</h2><p>This status code is reserved for future use by a planned content
+negotiation mechanism. HTTP/1.1 user agents receiving a 416 response
+which includes a Location header can treat this response as they would
+treat a 303 (See Other) response. If no Location header is included, the
+appropriate action is to display the entity enclosed in the response to
+the user.</p></blockquote><p><cite>First allocated in <a href=https://tools.ietf.org/html/draft-ietf-http-v11-spec-02#section-9.4>draft-ietf-http-v11-spec-02 Section 9.4</a></cite></p></div></main><footer><div class=content><p>Copyright © 2021 Jonathan McGee. All Rights Reserved.</p></div></footer></body></html>

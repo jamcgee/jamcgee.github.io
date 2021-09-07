@@ -1,0 +1,375 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Error Templates on Ethereal Wake</title>
+    <link>https://etherealwake.com/error/</link>
+    <description>Recent content in Error Templates on Ethereal Wake</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <docs>https://www.rssboard.org/rss-specification</docs>
+    <language>en-US</language>
+    <managingEditor>broken.source@etherealwake.com (Jonathan McGee)</managingEditor>
+    <webMaster>broken.source@etherealwake.com (Jonathan McGee)</webMaster>
+    <copyright>Copyright © 2021 Jonathan McGee. All Rights Reserved.</copyright>
+    <lastBuildDate>Wed, 23 Dec 2020 14:55:07 -0800</lastBuildDate>
+    <atom:link href="https://etherealwake.com/error/index.rss" rel="self" type="application/rss+xml" />
+    <atom:link href="https://etherealwake.com/error/" rel="alternate" type="text/html" />
+    <atom:link href="https://etherealwake.com/error/index.atom" rel="alternate" type="application/atom+xml" />
+    <item>
+      <title>Expectation Failed</title>
+      <link>https://etherealwake.com/error/417.html</link>
+      <pubDate>Fri, 21 Nov 1997 00:00:00 +0000</pubDate>
+      <guid>https://etherealwake.com/error/417.html</guid>
+      <description>6.5.14. 417 Expectation Failed The 417 (Expectation Failed) status code indicates that the expectation given in the request&amp;rsquo;s Expect header field (Section 5.1.1) could not be met by at least one of the inbound servers.
+ From RFC 7231 Section 6.5.14
+ 10.4.18 417 Expectation Failed The expectation given in an Expect request-header field (see section 14.47) could not be met by this server, or, if the server is a proxy, the server has unambiguous evidence that the request could not be met by the next-hop server</description>
+      <atom:content type="html"><![CDATA[<blockquote>
+<h2 id="6514--417-expectation-failed">6.5.14.  417 Expectation Failed</h2>
+<p>The 417 (Expectation Failed) status code indicates that the
+expectation given in the request&rsquo;s Expect header field
+(<a href="https://tools.ietf.org/html/rfc7231#section-5.1.1">Section 5.1.1</a>)
+could not be met by at least one of the inbound
+servers.</p>
+</blockquote>
+<p><cite>From <a href="https://tools.ietf.org/html/rfc7231#section-6.5.14">RFC 7231 Section 6.5.14</a></cite></p>
+<blockquote>
+<h2 id="10418-417-expectation-failed">10.4.18 417 Expectation Failed</h2>
+<p>The expectation given in an Expect request-header field (see
+<a href="https://tools.ietf.org/html/draft-ietf-http-v11-spec-rev-01#section-14.47">section 14.47</a>)
+could not be met by this server, or, if the server is a proxy,
+the server has unambiguous evidence that the request could not be met by
+the next-hop server</p>
+</blockquote>
+<p><cite>First appears in <a href="https://tools.ietf.org/html/draft-ietf-http-v11-spec-rev-01#section-10.4.18">draft-ietf-http-v11-spec-rev-01 Section 10.4.18</a></cite></p>]]></atom:content>
+    </item>
+    <item>
+      <title>Range Not Satisfiable</title>
+      <link>https://etherealwake.com/error/416.html</link>
+      <pubDate>Fri, 21 Nov 1997 00:00:00 +0000</pubDate>
+      <guid>https://etherealwake.com/error/416.html</guid>
+      <description>4.4. 416 Range Not Satisfiable The 416 (Range Not Satisfiable) status code indicates that none of the ranges in the request&amp;rsquo;s Range header field (Section 3.1) overlap the current extent of the selected resource or that the set of ranges requested has been rejected due to invalid ranges or an excessive request of small or overlapping ranges.
+For byte ranges, failing to overlap the current extent means that the first-byte-pos of all of the byte-range-spec values were greater than the current length of the selected representation.</description>
+      <atom:content type="html"><![CDATA[<blockquote>
+<h2 id="44--416-range-not-satisfiable">4.4.  416 Range Not Satisfiable</h2>
+<p>The 416 (Range Not Satisfiable) status code indicates that none of
+the ranges in the request&rsquo;s Range header field (Section 3.1) overlap
+the current extent of the selected resource or that the set of ranges
+requested has been rejected due to invalid ranges or an excessive
+request of small or overlapping ranges.</p>
+<p>For byte ranges, failing to overlap the current extent means that the
+first-byte-pos of all of the byte-range-spec values were greater than
+the current length of the selected representation.  When this status
+code is generated in response to a byte-range request, the sender
+SHOULD generate a Content-Range header field specifying the current
+length of the selected representation (Section 4.2).</p>
+<p>For example:</p>
+<pre><code>HTTP/1.1 416 Range Not Satisfiable
+Date: Fri, 20 Jan 2012 15:41:54 GMT
+Content-Range: bytes */47022
+</code></pre><p>Note: Because servers are free to ignore Range, many
+implementations will simply respond with the entire selected
+representation in a 200 (OK) response.  That is partly because
+most clients are prepared to receive a 200 (OK) to complete the
+task (albeit less efficiently) and partly because clients might
+not stop making an invalid partial request until they have
+received a complete representation.  Thus, clients cannot depend
+on receiving a 416 (Range Not Satisfiable) response even when it
+is most appropriate.</p>
+</blockquote>
+<p><cite>From <a href="https://tools.ietf.org/html/rfc7233#section-4.4">RFC 7233 Section 4.4</a></cite></p>
+<blockquote>
+<h2 id="10417-416-requested-range-not-satisfiable">10.4.17 416 Requested range not satisfiable</h2>
+<p>A server SHOULD return a response with this status code if a request
+included a Range request-header field (section 14.36) , and none of the
+range-specifier values in this field overlap the current extent of the
+selected resource, and the request did not include an If-Range request-
+header field.  (For byte-ranges, this means that the first-byte-pos of
+all of the byte-range-spec values were greater than the current length
+of the selected resource.)</p>
+<p>When this status code is returned for a byte-range request, the response
+MUST include a Content-Range entity-header field specifying the current
+length of the selected resource (see section 14.17).  This response MUST
+NOT use the multipart/byteranges content-type.</p>
+</blockquote>
+<p><cite>First appears in <a href="https://tools.ietf.org/html/draft-ietf-http-v11-spec-rev-01#section-10.4.17">draft-ietf-http-v11-spec-rev-01 Section 10.4.17</a></cite></p>
+<blockquote>
+<h2 id="416-none-acceptable">416 None Acceptable</h2>
+<p>This status code is reserved for future use by a planned content
+negotiation mechanism.  HTTP/1.1 user agents receiving a 416 response
+which includes a Location header can treat this response as they would
+treat a 303 (See Other) response. If no Location header is included, the
+appropriate action is to display the entity enclosed in the response to
+the user.</p>
+</blockquote>
+<p><cite>First allocated in <a href="https://tools.ietf.org/html/draft-ietf-http-v11-spec-02#section-9.4">draft-ietf-http-v11-spec-02 Section 9.4</a></cite></p>]]></atom:content>
+    </item>
+    <item>
+      <title>Unsupported Media Type</title>
+      <link>https://etherealwake.com/error/415.html</link>
+      <pubDate>Tue, 23 Apr 1996 00:00:00 +0000</pubDate>
+      <guid>https://etherealwake.com/error/415.html</guid>
+      <description>6.5.13. 415 Unsupported Media Type The 415 (Unsupported Media Type) status code indicates that the origin server is refusing to service the request because the payload is in a format not supported by this method on the target resource. The format problem might be due to the request&amp;rsquo;s indicated Content-Type or Content-Encoding, or as a result of inspecting the data directly.
+ From RFC 7231 Section 6.5.13
+ 415 Unsupported Media Type The server is refusing to service the request because the entity body of the request is in a format not supported by the requested resource for the requested method.</description>
+      <atom:content type="html"><![CDATA[<blockquote>
+<h2 id="6513--415-unsupported-media-type">6.5.13.  415 Unsupported Media Type</h2>
+<p>The 415 (Unsupported Media Type) status code indicates that the
+origin server is refusing to service the request because the payload
+is in a format not supported by this method on the target resource.
+The format problem might be due to the request&rsquo;s indicated
+Content-Type or Content-Encoding, or as a result of inspecting the
+data directly.</p>
+</blockquote>
+<p><cite>From <a href="https://tools.ietf.org/html/rfc7231#section-6.5.13">RFC 7231 Section 6.5.13</a></cite></p>
+<blockquote>
+<h2 id="415-unsupported-media-type">415 Unsupported Media Type</h2>
+<p>The server is refusing to service the request because the entity body of
+the request is in a format not supported by the requested resource for
+the requested method.</p>
+</blockquote>
+<p><cite>First appears in <a href="https://tools.ietf.org/html/draft-ietf-http-v11-spec-02#section-9.4">draft-ietf-http-v11-spec-02 Section 9.4</a></cite></p>]]></atom:content>
+    </item>
+    <item>
+      <title>URI Too Long</title>
+      <link>https://etherealwake.com/error/414.html</link>
+      <pubDate>Tue, 23 Apr 1996 00:00:00 +0000</pubDate>
+      <guid>https://etherealwake.com/error/414.html</guid>
+      <description>6.5.12. 414 URI Too Long The 414 (URI Too Long) status code indicates that the server is refusing to service the request because the request-target (Section 5.3 of [RFC7230]) is longer than the server is willing to interpret. This rare condition is only likely to occur when a client has improperly converted a POST request to a GET request with long query information, when the client has descended into a &amp;ldquo;black hole&amp;rdquo; of redirection (e.</description>
+      <atom:content type="html"><![CDATA[<blockquote>
+<h2 id="6512--414-uri-too-long">6.5.12.  414 URI Too Long</h2>
+<p>The 414 (URI Too Long) status code indicates that the server is
+refusing to service the request because the request-target
+(<a href="https://tools.ietf.org/html/rfc7230#section-5.3">Section 5.3 of [RFC7230]</a>)
+is longer than the server is willing to interpret.
+This rare condition is only likely to occur when a client has
+improperly converted a POST request to a GET request with long query
+information, when the client has descended into a &ldquo;black hole&rdquo; of
+redirection (e.g., a redirected URI prefix that points to a suffix of
+itself) or when the server is under attack by a client attempting to
+exploit potential security holes.</p>
+<p>A 414 response is cacheable by default; i.e., unless otherwise
+indicated by the method definition or explicit cache controls (see
+<a href="https://tools.ietf.org/html/rfc7234#section-4.2.2">Section 4.2.2 of [RFC7234]</a>).</p>
+</blockquote>
+<p><cite>From <a href="https://tools.ietf.org/html/rfc7231#section-6.5.12">RFC 7231 Section 6.5.12</a></cite></p>
+<blockquote>
+<h2 id="414-request-uri-too-large">414 Request-URI Too Large</h2>
+<p>The server is refusing to service the request because the Request-URI is
+longer than the server is willing to interpret. This rare condition is
+only likely to occur when a client has improperly converted a POST
+request to a GET request with long query information, when the client
+has descended into a URL <em>black hole</em> of redirection (e.g., a redirected
+URL prefix that points to a suffix of itself), or when the server is
+under attack by a client attempting to exploit security holes present in
+some servers using  fixed-length buffers for reading or manipulating the
+Request-URI.</p>
+</blockquote>
+<p><cite>First appears in <a href="https://tools.ietf.org/html/draft-ietf-http-v11-spec-02#section-9.4">draft-ietf-http-v11-spec-02 Section 9.4</a></cite></p>]]></atom:content>
+    </item>
+    <item>
+      <title>Payload Too Large</title>
+      <link>https://etherealwake.com/error/413.html</link>
+      <pubDate>Tue, 23 Apr 1996 00:00:00 +0000</pubDate>
+      <guid>https://etherealwake.com/error/413.html</guid>
+      <description>6.5.11. 413 Payload Too Large The 413 (Payload Too Large) status code indicates that the server is refusing to process a request because the request payload is larger than the server is willing or able to process. The server MAY close the connection to prevent the client from continuing the request.
+If the condition is temporary, the server SHOULD generate a Retry-After header field to indicate that it is temporary and after what time the client MAY try again.</description>
+      <atom:content type="html"><![CDATA[<blockquote>
+<h2 id="6511--413-payload-too-large">6.5.11.  413 Payload Too Large</h2>
+<p>The 413 (Payload Too Large) status code indicates that the server is
+refusing to process a request because the request payload is larger
+than the server is willing or able to process.  The server MAY close
+the connection to prevent the client from continuing the request.</p>
+<p>If the condition is temporary, the server SHOULD generate a
+Retry-After header field to indicate that it is temporary and after
+what time the client MAY try again.</p>
+</blockquote>
+<p><cite>From <a href="https://tools.ietf.org/html/rfc7231#section-6.5.11">RFC 7231 Section 6.5.11</a></cite></p>
+<blockquote>
+<h2 id="413-request-entity-too-large">413 Request Entity Too Large</h2>
+<p>The server is refusing to process a request because it considers the
+request entity to be larger than it is willing or able to process. The
+server SHOULD close the connection if that is necessary to prevent the
+client from continuing the request.</p>
+<p>If the client manages to read the 413 response, it MUST honor it and
+SHOULD reflect it to the user.</p>
+<p>If this restriction is considered temporary, the server MAY include a
+Retry-After header field to indicate that it is temporary and after what
+time the client MAY try again.</p>
+</blockquote>
+<p><cite>First appears in <a href="https://tools.ietf.org/html/draft-ietf-http-v11-spec-02#section-9.4">draft-ietf-http-v11-spec-02 Section 9.4</a></cite></p>]]></atom:content>
+    </item>
+    <item>
+      <title>Precondition Failed</title>
+      <link>https://etherealwake.com/error/412.html</link>
+      <pubDate>Wed, 22 Nov 1995 00:00:00 +0000</pubDate>
+      <guid>https://etherealwake.com/error/412.html</guid>
+      <description>4.2. 412 Precondition Failed The 412 (Precondition Failed) status code indicates that one or more conditions given in the request header fields evaluated to false when tested on the server. This response code allows the client to place preconditions on the current resource state (its current representations and metadata) and, thus, prevent the request method from being applied if the target resource is in an unexpected state.
+ From RFC 7232 Section 4.</description>
+      <atom:content type="html"><![CDATA[<blockquote>
+<h2 id="42--412-precondition-failed">4.2.  412 Precondition Failed</h2>
+<p>The 412 (Precondition Failed) status code indicates that one or more
+conditions given in the request header fields evaluated to false when
+tested on the server.  This response code allows the client to place
+preconditions on the current resource state (its current
+representations and metadata) and, thus, prevent the request method
+from being applied if the target resource is in an unexpected state.</p>
+</blockquote>
+<p><cite>From <a href="https://tools.ietf.org/html/rfc7231#section-4.2">RFC 7232 Section 4.2</a></cite></p>
+<blockquote>
+<h2 id="412-unless-true">412 Unless True</h2>
+<p>The condition given in the Unless request-header field
+(Section 10.40) evaluated to true when it was tested on the server
+and the request did not include a Range header field (which would
+indicate a partial GET) or an If-Modified-Since header field (which
+would indicate a conditional GET). This response code allows the
+client to place arbitrary preconditions on the current resource
+metainformation (header field data) and thus prevent the requested
+method from being applied to a resource other than the one intended.</p>
+</blockquote>
+<p><cite>First appears in <a href="https://tools.ietf.org/html/draft-ietf-http-v11-spec-00#section-9.4">draft-ietf-http-v11-spec-00 Section 9.4</a></cite></p>]]></atom:content>
+    </item>
+    <item>
+      <title>Length Required</title>
+      <link>https://etherealwake.com/error/411.html</link>
+      <pubDate>Wed, 22 Nov 1995 00:00:00 +0000</pubDate>
+      <guid>https://etherealwake.com/error/411.html</guid>
+      <description>6.5.10. 411 Length Required The 411 (Length Required) status code indicates that the server refuses to accept the request without a defined Content-Length (Section 3.3.2 of [RFC7230]). The client MAY repeat the request if it adds a valid Content-Length header field containing the length of the message body in the request message.
+ From RFC 7231 Section 6.5.10
+ 411 Length Required The server refuses to accept the request without a defined Content-Length.</description>
+      <atom:content type="html"><![CDATA[<blockquote>
+<h2 id="6510--411-length-required">6.5.10.  411 Length Required</h2>
+<p>The 411 (Length Required) status code indicates that the server
+refuses to accept the request without a defined Content-Length
+(<a href="https://tools.ietf.org/html/rfc7230#section-3.3.2">Section 3.3.2 of [RFC7230]</a>).
+The client MAY repeat the request if
+it adds a valid Content-Length header field containing the length of
+the message body in the request message.</p>
+</blockquote>
+<p><cite>From <a href="https://tools.ietf.org/html/rfc7231#section-6.5.10">RFC 7231 Section 6.5.10</a></cite></p>
+<blockquote>
+<h2 id="411-length-required">411 Length Required</h2>
+<p>The server refuses to accept the request without a defined
+Content-Length. The client may repeat the request if it adds a
+valid Content-Length header field containing the length of the
+entity body in the request message.</p>
+</blockquote>
+<p><cite>First appears in <a href="https://tools.ietf.org/html/draft-ietf-http-v11-spec-00#section-9.4">draft-ietf-http-v11-spec-00 Section 9.4</a></cite></p>
+<blockquote>
+<h2 id="411-authorization-refused">411 Authorization Refused</h2>
+<p>The request credentials provided by the client were rejected by the
+server or insufficient to grant authorization to access the
+resource. This is similar to the 403 (forbidden) response, but
+allows more information to be provided to the user. The content of
+the response should contain a description of the problem and may
+suggest corrective action. HTTP access authentication is explained
+in <a href="https://tools.ietf.org/html/draft-ietf-http-v10-spec-01#section-10">Section 10</a>.</p>
+<p>The response must include a WWW-Authenticate header field
+(<a href="https://tools.ietf.org/html/draft-ietf-http-v10-spec-01#section-8.30">Section 8.30</a>)
+containing a challenge applicable to the requested
+resource. If the challenge is different from that assumed by the
+last request, the client may repeat the request with a suitable
+Authorization header field after obtaining the user&rsquo;s approval.</p>
+</blockquote>
+<p><cite>First allocated in <a href="https://tools.ietf.org/html/draft-ietf-http-v10-spec-01#section-6.2.4">draft-ietf-http-v10-spec-01 Section 6.2.4</a></cite></p>]]></atom:content>
+    </item>
+    <item>
+      <title>Not Implemented</title>
+      <link>https://etherealwake.com/error/501.html</link>
+      <pubDate>Wed, 08 Mar 1995 00:00:00 +0000</pubDate>
+      <guid>https://etherealwake.com/error/501.html</guid>
+      <description>6.6.2. 501 Not Implemented The 501 (Not Implemented) status code indicates that the server does not support the functionality required to fulfill the request. This is the appropriate response when the server does not recognize the request method and is not capable of supporting it for any resource.
+A 501 response is cacheable by default; i.e., unless otherwise indicated by the method definition or explicit cache controls (see Section 4.</description>
+      <atom:content type="html"><![CDATA[<blockquote>
+<h2 id="662--501-not-implemented">6.6.2.  501 Not Implemented</h2>
+<p>The 501 (Not Implemented) status code indicates that the server does
+not support the functionality required to fulfill the request.  This
+is the appropriate response when the server does not recognize the
+request method and is not capable of supporting it for any resource.</p>
+<p>A 501 response is cacheable by default; i.e., unless otherwise
+indicated by the method definition or explicit cache controls (see
+<a href="https://tools.ietf.org/html/rfc7234#section-4.2.2">Section 4.2.2 of [RFC7234]</a>).</p>
+</blockquote>
+<p><cite>From <a href="https://tools.ietf.org/html/rfc7231#section-6.6.2">RFC 7231 Section 6.6.2</a></cite></p>
+<blockquote>
+<h2 id="501-not-implemented">501 Not Implemented</h2>
+<p>The server does not support the functionality required to fulfill
+the request. This is the appropriate response when the server does
+not recognize the request method and is not capable of supporting
+it for any resource.</p>
+</blockquote>
+<p><cite>First appears in <a href="https://tools.ietf.org/html/draft-ietf-http-v10-spec-00#section-6.2.4">draft-ietf-http-v10-spec-00 Section 6.2.4</a></cite></p>]]></atom:content>
+    </item>
+    <item>
+      <title>Server Error</title>
+      <link>https://etherealwake.com/error/50x.html</link>
+      <pubDate>Wed, 08 Mar 1995 00:00:00 +0000</pubDate>
+      <guid>https://etherealwake.com/error/50x.html</guid>
+      <description>6.6.1. 500 Internal Server Error The 500 (Internal Server Error) status code indicates that the server encountered an unexpected condition that prevented it from fulfilling the request.
+ From RFC 7231 Section 6.6.1
+ 500 Internal Server Error The server encountered an unexpected condition which prevented it from fulfilling the request.
+ First appears in draft-ietf-http-v10-spec-00 Section 6.2.4</description>
+      <atom:content type="html"><![CDATA[<blockquote>
+<h2 id="661--500-internal-server-error">6.6.1.  500 Internal Server Error</h2>
+<p>The 500 (Internal Server Error) status code indicates that the server
+encountered an unexpected condition that prevented it from fulfilling
+the request.</p>
+</blockquote>
+<p><cite>From <a href="https://tools.ietf.org/html/rfc7231#section-6.6.1">RFC 7231 Section 6.6.1</a></cite></p>
+<blockquote>
+<h2 id="500-internal-server-error">500 Internal Server Error</h2>
+<p>The server encountered an unexpected condition which prevented it
+from fulfilling the request.</p>
+</blockquote>
+<p><cite>First appears in <a href="https://tools.ietf.org/html/draft-ietf-http-v10-spec-00#section-6.2.4">draft-ietf-http-v10-spec-00 Section 6.2.4</a></cite></p>]]></atom:content>
+    </item>
+    <item>
+      <title>Gone</title>
+      <link>https://etherealwake.com/error/410.html</link>
+      <pubDate>Wed, 08 Mar 1995 00:00:00 +0000</pubDate>
+      <guid>https://etherealwake.com/error/410.html</guid>
+      <description>6.5.9. 410 Gone The 410 (Gone) status code indicates that access to the target resource is no longer available at the origin server and that this condition is likely to be permanent. If the origin server does not know, or has no facility to determine, whether or not the condition is permanent, the status code 404 (Not Found) ought to be used instead.
+The 410 response is primarily intended to assist the task of web maintenance by notifying the recipient that the resource is intentionally unavailable and that the server owners desire that remote links to that resource be removed.</description>
+      <atom:content type="html"><![CDATA[<blockquote>
+<h2 id="659--410-gone">6.5.9.  410 Gone</h2>
+<p>The 410 (Gone) status code indicates that access to the target
+resource is no longer available at the origin server and that this
+condition is likely to be permanent.  If the origin server does not
+know, or has no facility to determine, whether or not the condition
+is permanent, the status code 404 (Not Found) ought to be used
+instead.</p>
+<p>The 410 response is primarily intended to assist the task of web
+maintenance by notifying the recipient that the resource is
+intentionally unavailable and that the server owners desire that
+remote links to that resource be removed.  Such an event is common
+for limited-time, promotional services and for resources belonging to
+individuals no longer associated with the origin server&rsquo;s site.  It
+is not necessary to mark all permanently unavailable resources as
+&ldquo;gone&rdquo; or to keep the mark for any length of time &ndash; that is left to
+the discretion of the server owner.</p>
+<p>A 410 response is cacheable by default; i.e., unless otherwise
+indicated by the method definition or explicit cache controls (see
+<a href="https://tools.ietf.org/html/rfc7234#section-4.2.2">Section 4.2.2 of [RFC7234]</a>).</p>
+</blockquote>
+<p><cite>From <a href="https://tools.ietf.org/html/rfc7231#section-6.5.9">RFC 7231 Section 6.5.9</a></cite></p>
+<blockquote>
+<h2 id="410-gone">410 Gone</h2>
+<p>The requested resource is no longer available at the server and no
+forwarding address is known. This condition should be considered
+permanent. Clients with link editing capabilities are encouraged to
+delete references to the Request-URI (after user approval). If the
+server does not know (or has no facility to determine) whether or
+not the condition is permanent, the status code &ldquo;404 Not Found&rdquo; can
+be used instead.</p>
+<p>The &ldquo;410 Gone&rdquo; response is primarily intended to assist the task of
+web maintenance by notifying the recipient that the resource is
+intentionally unavailable and that the server owners desire that
+remote links to that resource be removed. Such an event is common
+for limited-time, promotional services and for resources belonging
+to individuals no longer working at the server&rsquo;s site. It is not
+necessary to mark all permanently unavailable resources as &ldquo;gone&rdquo;
+or to keep the mark for any length of time &ndash; that is left to the
+discretion of the server owner.</p>
+</blockquote>
+<p><cite>First appears in <a href="https://tools.ietf.org/html/draft-ietf-http-v10-spec-00#section-6.2.3">draft-ietf-http-v10-spec-00 Section 6.2.3</a></cite></p>]]></atom:content>
+    </item>
+</channel>
+</rss>
