@@ -1,6 +1,7 @@
 ---
 date: 2020-12-25T19:00:00-08:00
 title: FreeBSD Encrypted ZFS Root on EFI
+slug: freebsd-geli-zfs-root-efi
 tags:
   - boot
   - eli

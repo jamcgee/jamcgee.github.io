@@ -1,9 +1,11 @@
 ---
 date: 2021-09-03T19:45:00-07:00
 title: Bazel Linkstamp
+slug: bazel-linkstamp
 tags:
   - Bazel
   - C++
+  - programming
 ---
 
 [Bazel](https://bazel.build/) is one of the *least terrible* build systems out there.

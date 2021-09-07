@@ -1,6 +1,7 @@
 ---
 date: 2021-01-13T10:00:00-08:00
 title: "Portable Sockets: Basics"
+slug: portable-sockets-basics
 tags:
   - network
   - portability

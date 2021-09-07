@@ -51,7 +51,7 @@ frontmatter:
     - publishDate
     - date
 permalinks:
-  article: /:year/:month/:filename/
+  article: /:year/:month/:slug/
 
 # Content Types
 mediaTypes:

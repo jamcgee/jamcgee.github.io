@@ -1,6 +1,7 @@
 ---
 date: 2020-12-27T20:15:00-08:00
 title: FreeBSD Jail Startup Sequence
+slug: freebsd-jail-startup
 tags:
   - containers
   - FreeBSD

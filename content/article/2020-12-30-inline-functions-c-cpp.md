@@ -1,6 +1,7 @@
 ---
 date: 2020-12-30T17:30:00-08:00
 title: Inline Functions in C and C++
+slug: inline-functions-c-cpp
 tags:
   - C
   - C++

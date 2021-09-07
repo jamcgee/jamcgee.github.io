@@ -1,6 +1,7 @@
 ---
 date: 2021-08-24T00:00:00-07:00
 title: FreeBSD Jails And Networking
+slug: freebsd-jail-networking
 tags:
   - containers
   - FreeBSD
@@ -14,7 +15,7 @@ Introduced with FreeBSD 4.0 in March of 2000, they predate the closest Linux equ
 
 A core part of any virtualization technology is its interaction with the networking infrastructure.
 In this regard, I've found much of the [available documentation](https://docs.freebsd.org/en/books/handbook/jails/) lacking, often deferring to third party tools which are no longer maintained.
-As such, I've had to scrape multiple sources and [reverse engineer system programs]({{< relref "/article/2020/12/freebsd-jail-startup" >}}) to figure out how it's put together.
+As such, I've had to scrape multiple sources and [reverse engineer system programs]({{< relref "/article/2020-12-27-freebsd-jail-startup" >}}) to figure out how it's put together.
 
 In today's article, I'll describe the results of my foray into FreeBSD jail networking.
 It's not the most cohesive piece, but I'll refine it over time and hopefully it will assist someone else in their efforts to deploy FreeBSD jails.

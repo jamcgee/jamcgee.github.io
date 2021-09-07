@@ -1,6 +1,7 @@
 ---
 date: 2020-12-26T11:15:00-08:00
 title: wsgiref and Unix Domain Sockets
+slug: wsgiref-unix-domain-sockets
 tags:
   - AF_UNIX
   - network
