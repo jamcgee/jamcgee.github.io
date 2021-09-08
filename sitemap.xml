@@ -3,6 +3,11 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
 
   <url>
+    <loc>https://etherealwake.com/2021/09/drone-runner/</loc>
+    <lastmod>2021-09-07T21:21:36-07:00</lastmod>
+  </url>
+
+  <url>
     <loc>https://etherealwake.com/2021/09/bazel-linkstamp/</loc>
     <lastmod>2021-09-07T14:08:04-07:00</lastmod>
   </url>

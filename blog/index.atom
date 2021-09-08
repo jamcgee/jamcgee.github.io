@@ -13,6 +13,123 @@
   <link href="https://etherealwake.com/blog/" rel="alternate" type="text/html" />
   <link href="https://etherealwake.com/blog/index.rss" rel="alternate" type="application/rss+xml" />
   <entry>
+    <id>https://etherealwake.com/2021/09/drone-runner/</id>
+    <title>Drone Running</title>
+    <updated>2021-09-07T21:21:36-07:00</updated>
+    <published>2021-09-07T21:20:00-07:00</published>
+    <link href="https://etherealwake.com/2021/09/drone-runner/" rel="alternate" type="text/html" />
+    <summary>While self-hosting Git isn&amp;rsquo;t that hard (all you need is a shell accessible through SSH), some tools make it easier. One of them is Gitea, a nice, self-contained Go binary that provides you a GitHub clone without all the complexity and dependency hell of something like GitLab. One of the things it does not provide is an integrated continuous integration/delivery (CI/CD) platform. Instead, it implements the same basic patterns at GitHub allowing for pairing with a range of third-party services, cloud or hosted.</summary>
+    <content type="html"><![CDATA[<p>While self-hosting Git isn&rsquo;t <em>that</em> hard (all you need is a shell accessible through SSH), some tools make it easier.
+One of them is <a href="https://gitea.io/">Gitea</a>, a nice, self-contained Go binary that provides you a <a href="https://docs.gitea.io/en-us/comparison/">GitHub clone</a> without all the complexity and dependency hell of something like GitLab.
+One of the things it does not provide is an integrated continuous integration/delivery (CI/CD) platform.
+Instead, it implements the same basic patterns at GitHub allowing for pairing with a range of third-party services, cloud or hosted.</p>
+<p>The most common CI paired with Gitea would be <a href="https://www.drone.io/">Drone</a>.
+While there are many reasons I&rsquo;m likely to discard it and try other options, I figure it&rsquo;s worthwhile to at least share my experience trying to make it work for me, most notably how it handles runners.</p>
+<h2 id="gitea-integration-background">Gitea Integration Background</h2>
+<p>Before talking about how Drone functions, it&rsquo;s worthwhile to spend a few words to describe how&rsquo;s Gitea CI integration works.
+On any number of repo events (new commits, pull requests, issues, etc.), Gitea can be configured with a <a href="https://docs.gitea.io/en-us/webhooks/"><em>webhook</em></a>.
+When any of these events occurs, Gitea will POST a JSON document to the configured URL.
+In the case of a CI/CD engine, the recipient will respond by kicking off the validation process.</p>
+<p>To gain access to the repos in question (as well as register the webhook), Drone is authenticated by <a href="https://docs.gitea.io/en-us/oauth2-provider/">OAuth2</a> and runs against Gitea&rsquo;s <a href="https://try.gitea.io/api/swagger">swagger-documented API</a>.
+Drone starts by posting a commit status (<code>/repos/{owner}/{repo}/statuses/{sha}</code>) to <code>pending</code> upon receipt of the webhook and will update it to a final status once the runner completes.</p>
+<h2 id="design-of-drone">Design of Drone</h2>
+<p>Drone operates on a server/runner dispatch model.
+The central server receives a notification from Gitea, pulls the repo to parse the <code>.drone.yml</code> file to map out its requirements, and then enqueues it for the first available runner.</p>
+<p>Very unlike classical solutions like Jenkins, Docker doesn&rsquo;t keep a list of configured pipelines or runners.
+Instead, each runner will periodically query the server for work, reporting its type (e.g. <code>docker</code>, <code>exec</code>), platform (e.g. <code>amd64</code>, <code>linux</code>), and any &ldquo;tags&rdquo; that have been attached to the runner (e.g. special hardware or software available to the unit).</p>
+<p>Increasing build resources or bringing new capabilities online is simply a matter of spinning up new runners and pointing them at the Drone server.
+No configuration required.</p>
+<h2 id="matching-algorithm">Matching Algorithm</h2>
+<p>The matching algorithm is entirely handled by the server, located in the module <a href="https://github.com/drone/drone/blob/v2.2.0/scheduler/queue/queue.go#L160"><code>drone/scheduler/queue</code></a>.
+First, the <code>kind</code> and <code>type</code> must match exactly, the defaults being <code>&quot;pipeline&quot;</code> and <code>&quot;docker&quot;</code>.
+Second, the build&rsquo;s requested platform is matched against the runner&rsquo;s platform.
+And finally, the labels are matched against each other.
+If a runner matches all the requirements of a queue item, the task is dequeued and dispatched to the runner.</p>
+<p>Looking at these steps in detail, we&rsquo;ll start with the platform since the kind/type-matching is exact and easy to understand.
+If a runner provides an OS, architecture, CPU variant, or kernel version, it&rsquo;s considered a platform-specific runner.
+If none of these are provided, it&rsquo;s considered a cross-platform runner.
+Matching is all-or-nothing.
+Once you specify any of them, the runner is going to be constrained on all of them.</p>
+<p>The pipeline is always assumed to have a platform.
+If it doesn&rsquo;t specify one, it&rsquo;s assumed to have an OS of <code>linux</code> and an architecture of <code>amd64</code>.
+There is no way to override these defaults on a per-server or per-repo basis.
+They are hardcoded into <a href="https://github.com/drone/drone/blob/v2.2.0/trigger/trigger.go#L406"><code>drone/trigger</code></a>.
+Once the runner has been identified as a platform-specific runner, the OS and architecture must match exactly.
+Variant and kernel version are tested <em>only if specified by the pipeline</em>.
+If the runner does not provide any platform information, these checks are simply skipped.</p>
+<p>As for labels, it&rsquo;s dictionary equivalence.
+In order for a pipeline to match up against a runner, both must have the exact same set of label names with associated values.
+There is no mechanism for a runner to accept subsets or perform other forms of fuzzy matching.</p>
+<p>Once a runner is matched to a queue item, it is <em>reserved</em> until the runner <em>accepts</em> it or the reservation times out.</p>
+<h2 id="limitations">Limitations</h2>
+<p>There are a number of weaknesses I find in the Drone model as it informs my own usage:</p>
+<ul>
+<li>The architecture is very clearly focused on running everything through an off-the-shelf docker container, where the only consequential degree of freedom is <em>which</em> container to run.
+That might be acceptable for the average web app, but it&rsquo;s far too limiting for many applications.</li>
+<li>The server does not maintain registrations of its runners.
+It might accept a work item that has no matching runner and it will simply wait indefinitely instead of raising an error.</li>
+<li>There is no mechanism to restrict which runners are available to which repos.
+For example, the exec runner can be used by any repo able to post jobs to the associated Drone server, which will run arbitrary commands as specified in the repo&rsquo;s <code>.drone.yml</code> file.
+You can&rsquo;t even configure the runner to perform any pre-execution steps (like dropping privileges after reading its configuration so the build script can&rsquo;t simply spirit away the shared authentication key).
+<ul>
+<li>Drone allows one to digitally sign the <code>.drone.yml</code> file in order to permit tampering by anyone with write access to the repo.
+However, the security this provides ends once the individual has the ability to enable or disable CI on individual repos.
+The server/runner owner cannot place any restrictions.</li>
+</ul>
+</li>
+<li>Platform selection is tightly controlled by the frontend.
+Under Drone, you need to specify exactly how the VM is going to be constructed with little-to-no input from the server operator.
+For comparison, GitHub actions have you just say <code>windows-latest</code> or <code>ubuntu-20.04</code> and not care <em>how</em> it is done.</li>
+<li>There is no way to split up the steps of a pipeline on multiple machines.
+In the embedded world, it&rsquo;s common for builds to be parallelized separately from the hardware-in-the-loop tests, which are constrained by the actual test hardware available to you.</li>
+<li>Drone does not automatically capture the build artifacts for review or deployment.</li>
+</ul>
+<p>Really, where Drone fails for me is in how I would approach integration with embedded systems.
+Maybe I simply lack imagination, but the older paradigm of statically configuring pipelines on the server seems more applicable.</p>
+<h2 id="hacks">Hacks</h2>
+<p>On my server, I wanted fuzzier testing of the platform, especially since I run FreeBSD and not Linux.
+Having to add <code>platform: os: freebsd</code> to every <code>.drone.yml</code> file would be a maintenance nightmare.</p>
+<p>I decided to experiment with a modified copy of the drone server with loosened matching rules.
+Most notably, if the pipeline does not specify an OS or architecture, then it does not care.
+Ideally, the exec runner would be matched by name, which could be accomplished by adding a <code>name</code> label.</p>
+<p>A basic diff applied against the <code>v2.2.0</code> release:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-diff" data-lang="diff">diff --git a/scheduler/queue/queue.go b/scheduler/queue/queue.go
+index 8deab988..b9904623 100644
+<span style="color:#f92672">--- a/scheduler/queue/queue.go
+</span><span style="color:#f92672"></span><span style="color:#a6e22e">+++ b/scheduler/queue/queue.go
+</span><span style="color:#a6e22e"></span><span style="color:#75715e">@@ -164,10 +164,10 @@ func (q *queue) signal(ctx context.Context) error {
+</span><span style="color:#75715e"></span> 			if w.os != &#34;&#34; || w.arch != &#34;&#34; || w.variant != &#34;&#34; || w.kernel != &#34;&#34; {
+ 				// the worker is platform-specific. check to ensure
+ 				// the queue item matches the worker platform.
+<span style="color:#f92672">-				if w.os != item.OS {
+</span><span style="color:#f92672"></span><span style="color:#a6e22e">+				if item.os != &#34;&#34; &amp;&amp; w.os != item.OS {
+</span><span style="color:#a6e22e"></span> 					continue
+ 				}
+<span style="color:#f92672">-				if w.arch != item.Arch {
+</span><span style="color:#f92672"></span><span style="color:#a6e22e">+				if item.arch != &#34;&#34; &amp;&amp; w.arch != item.Arch {
+</span><span style="color:#a6e22e"></span> 					continue
+ 				}
+ 				// if the pipeline defines a variant it must match
+diff --git a/trigger/trigger.go b/trigger/trigger.go
+index 18db04d0..1973306e 100644
+<span style="color:#f92672">--- a/trigger/trigger.go
+</span><span style="color:#f92672"></span><span style="color:#a6e22e">+++ b/trigger/trigger.go
+</span><span style="color:#a6e22e"></span><span style="color:#75715e">@@ -406,12 +406,6 @@ func (t *triggerer) Trigger(ctx context.Context, repo *core.Repository, base *co
+</span><span style="color:#75715e"></span> 		if stage.Kind == &#34;pipeline&#34; &amp;&amp; stage.Type == &#34;&#34; {
+ 			stage.Type = &#34;docker&#34;
+ 		}
+<span style="color:#f92672">-		if stage.OS == &#34;&#34; {
+</span><span style="color:#f92672">-			stage.OS = &#34;linux&#34;
+</span><span style="color:#f92672">-		}
+</span><span style="color:#f92672">-		if stage.Arch == &#34;&#34; {
+</span><span style="color:#f92672">-			stage.Arch = &#34;amd64&#34;
+</span><span style="color:#f92672">-		}
+</span><span style="color:#f92672"></span> 
+ 		if stage.Name == &#34;&#34; {
+ 			stage.Name = &#34;default&#34;
+</code></pre></div>]]></content>
+  </entry>
+  <entry>
     <id>https://etherealwake.com/2021/09/bazel-linkstamp/</id>
     <title>Bazel Linkstamp</title>
     <updated>2021-09-07T14:08:04-07:00</updated>
