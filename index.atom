@@ -16,10 +16,11 @@
   <entry>
     <id>https://etherealwake.com/2021/09/drone-runner/</id>
     <title>Drone Running</title>
-    <updated>2021-09-07T21:21:36-07:00</updated>
+    <updated>2021-09-07T21:29:47-07:00</updated>
     <published>2021-09-07T21:20:00-07:00</published>
     <link href="https://etherealwake.com/2021/09/drone-runner/" rel="alternate" type="text/html" />
-    <summary>While self-hosting Git isn&amp;rsquo;t that hard (all you need is a shell accessible through SSH), some tools make it easier. One of them is Gitea, a nice, self-contained Go binary that provides you a GitHub clone without all the complexity and dependency hell of something like GitLab. One of the things it does not provide is an integrated continuous integration/delivery (CI/CD) platform. Instead, it implements the same basic patterns at GitHub allowing for pairing with a range of third-party services, cloud or hosted.</summary>
+    <summary>While self-hosting Git isn&amp;rsquo;t that hard (all you need is a shell accessible through SSH), some tools make it easier. One of them is Gitea, a nice, self-contained Go binary that provides you a GitHub clone without all the complexity and dependency hell of something like GitLab. One of the things it does not provide is an integrated continuous integration/delivery (CI/CD) platform. Instead, it implements the same basic patterns at GitHub allowing for pairing with a range of third-party services, cloud or hosted.
+The most common CI paired with Gitea would be Drone. While there are many reasons I&amp;rsquo;m likely to discard it and try other options, I figure it&amp;rsquo;s worthwhile to at least share my experience trying to make it work for me, most notably how it handles runners.</summary>
     <content type="html"><![CDATA[<p>While self-hosting Git isn&rsquo;t <em>that</em> hard (all you need is a shell accessible through SSH), some tools make it easier.
 One of them is <a href="https://gitea.io/">Gitea</a>, a nice, self-contained Go binary that provides you a <a href="https://docs.gitea.io/en-us/comparison/">GitHub clone</a> without all the complexity and dependency hell of something like GitLab.
 One of the things it does not provide is an integrated continuous integration/delivery (CI/CD) platform.
