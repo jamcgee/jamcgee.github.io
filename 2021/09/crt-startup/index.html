@@ -1,0 +1,339 @@
+<!doctype html><html lang=en-us><head><meta charset=utf-8><title>C/C++ Runtime Startup</title><link rel=stylesheet type=text/css href=/css/site.min.43a8091bfcf24b00a59a240c5087845072b0210f7ee047ab82de298097cfcef1.css integrity="sha256-Q6gJG/zySwClmiQMUIeEUHKwIQ9+4Eergt4pgJfPzvE="><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name=description content="When writing a freestanding application, it&rsquo;s generally necessary for the firmware engineer to handle runtime initialization.
+Even when a library like newlib includes a rudimentary implementation of crt0.o, initialization is a very application-specific process owing to the need to initialize hardware, memory, and other loading tasks.
+In this essay, we examine the current and historical implementation of executable initialization, finishing with a minimal implementation usable with firmware applications.
+
+Note: Most firmware applications need to address the initialization of .data and .bss from nonvolatile memory.
+That is not addressed in this essay.
+"><meta name=generator content="Hugo 0.85.0"><link rel=canonical href=https://etherealwake.com/2021/09/crt-startup/><meta property="og:title" content="C/C++ Runtime Startup"><meta property="og:description" content="When writing a freestanding application, it&rsquo;s generally necessary for the firmware engineer to handle runtime initialization.
+Even when a library like newlib includes a rudimentary implementation of crt0.o, initialization is a very application-specific process owing to the need to initialize hardware, memory, and other loading tasks.
+In this essay, we examine the current and historical implementation of executable initialization, finishing with a minimal implementation usable with firmware applications.
+
+Note: Most firmware applications need to address the initialization of .data and .bss from nonvolatile memory.
+That is not addressed in this essay.
+"><meta property="og:type" content="article"><meta property="og:url" content="https://etherealwake.com/2021/09/crt-startup/"><meta property="article:section" content="article"><meta property="article:published_time" content="2021-09-22T13:45:00-07:00"><meta property="article:modified_time" content="2021-09-22T13:44:47-07:00"><meta name=twitter:card content="summary"><meta name=twitter:title content="C/C++ Runtime Startup"><meta name=twitter:description content="When writing a freestanding application, it&rsquo;s generally necessary for the firmware engineer to handle runtime initialization.
+Even when a library like newlib includes a rudimentary implementation of crt0.o, initialization is a very application-specific process owing to the need to initialize hardware, memory, and other loading tasks.
+In this essay, we examine the current and historical implementation of executable initialization, finishing with a minimal implementation usable with firmware applications.
+
+Note: Most firmware applications need to address the initialization of .data and .bss from nonvolatile memory.
+That is not addressed in this essay.
+"></head><body class="page article"><nav><div class=content><ul><li><a href=/>Home</a></li><li><a href=/resume/>Resume</a></li><li><a href=/blog/>Blog</a></li><li><a href=mailto:continuing.search@etherealwake.com>Email</a></li></ul></div></nav><header><div class=content><h1>Ethereal Wake</h1></div></header><main><div class=content><h1 class=title>C/C++ Runtime Startup</h1><ul class=metadata><li><time datetime="2021-09-22 13:45:00 -0700 -0700">2021 Sep 22</time></li><li><a href=https://etherealwake.com/2021/09/crt-startup/ rel=bookmark>Permalink</a></li><li>3135 words, 15 min read</li></ul><p>When writing a freestanding application, it&rsquo;s generally necessary for the firmware engineer to handle runtime initialization.
+Even when a library like newlib includes a rudimentary implementation of <code>crt0.o</code>, initialization is a very application-specific process owing to the need to initialize hardware, memory, and other loading tasks.</p><p>In this essay, we examine the current and historical implementation of executable initialization, finishing with a minimal implementation usable with firmware applications.</p><blockquote><p><strong>Note:</strong> Most firmware applications need to address the initialization of <code>.data</code> and <code>.bss</code> from nonvolatile memory.
+That is not addressed in this essay.</p></blockquote><h2 id=program-entry-point>Program Entry Point</h2><p>Files: <code>crt0.o</code> (number often indicates ABI version)<br>Symbols: <code>_start</code></p><p>In the classic Unix model, program execution begins at the executable entry point, which is the symbol <code>_start</code> in the GCC toolchain.
+Its basic purpose is to extract the runtime information from the system, initialize the program data structures, call <code>main</code>, and terminate the program when <code>main</code> returns.</p><p>The <a href=https://github.com/dspinellis/unix-history-repo/blob/Research-Release/usr/src/libc/csu/crt0.s>original Unix startup code</a> was quite simple.
+It extracts <code>argc</code>, <code>argv</code>, and <code>environ</code> from the stack; stores the stack in <code>environ</code>; calls <code>main</code>; and finally executes <code>exit</code> to terminate the process.
+We could summarize it like this:</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c data-lang=c><span style=color:#66d9ef>void</span> <span style=color:#a6e22e>start</span>(<span style=color:#66d9ef>int</span> argc, ...) {
+    <span style=color:#75715e>// Extract parameters from stack
+</span><span style=color:#75715e></span>    <span style=color:#66d9ef>char</span> <span style=color:#f92672>**</span>argv <span style=color:#f92672>=</span> <span style=color:#f92672>&amp;</span>argc <span style=color:#f92672>+</span> <span style=color:#ae81ff>1</span>;
+    <span style=color:#66d9ef>char</span> <span style=color:#f92672>**</span>envp <span style=color:#f92672>=</span> <span style=color:#f92672>&amp;</span>argc <span style=color:#f92672>+</span> <span style=color:#ae81ff>2</span> <span style=color:#f92672>+</span> argc;
+
+    <span style=color:#75715e>// Save block environment pointer
+</span><span style=color:#75715e></span>    environ <span style=color:#f92672>=</span> envp;
+
+    <span style=color:#75715e>// Invoke user entry point
+</span><span style=color:#75715e></span>    exit(main(argc, argv, envp));
+    syscall(<span style=color:#ae81ff>1</span>);
+}
+</code></pre></div><p>After the image is loaded, the kernel would store the arguments on the stack, set the initial instruction pointer to <code>start</code> and let it run.
+The only automatic cleanup on the part of the runtime is provided by stdio, which we can see within <a href=https://github.com/dspinellis/unix-history-repo/blob/Research-Release/usr/src/libc/gen/cuexit.s>exit</a> and <a href=https://github.com/dspinellis/unix-history-repo/blob/Research-Release/usr/src/libc/stdio/flsbuf.c>_cleanup</a>, where it will close all open files and flush their buffers.</p><p>The requirements for initialization and cleanup increased over time.
+Once we get to System V, we start to see additional features:</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c data-lang=c><span style=color:#66d9ef>void</span> <span style=color:#a6e22e>_start</span>(<span style=color:#66d9ef>int</span> argc, ...) {
+    <span style=color:#75715e>// Extract parameters from stack
+</span><span style=color:#75715e></span>    <span style=color:#66d9ef>char</span> <span style=color:#f92672>**</span>argv <span style=color:#f92672>=</span> <span style=color:#f92672>&amp;</span>argc <span style=color:#f92672>+</span> <span style=color:#ae81ff>1</span>;
+    <span style=color:#66d9ef>char</span> <span style=color:#f92672>**</span>envp <span style=color:#f92672>=</span> <span style=color:#f92672>&amp;</span>argc <span style=color:#f92672>+</span> <span style=color:#ae81ff>2</span> <span style=color:#f92672>+</span> argc;
+
+    <span style=color:#75715e>// Save block environment pointer
+</span><span style=color:#75715e></span>    environ <span style=color:#f92672>=</span> envp;
+
+    <span style=color:#75715e>// Initialize global state
+</span><span style=color:#75715e></span>    atexit(_cleanup);
+    _init();
+
+    <span style=color:#75715e>// Invoke user code
+</span><span style=color:#75715e></span>    exit(main(argc, argv, envp));
+}
+</code></pre></div><p>With the addition of dynamic linking and additional requirements from languages like C++, things get a little more complicated.
+Since Linux (or, more accurately, <a href=https://github.com/bminor/glibc/blob/master/csu/libc-start.c>glibc</a>) makes things complicated, let&rsquo;s look at the <a href=https://github.com/freebsd/freebsd-src/blob/master/lib/csu/amd64/crt1_c.c>amd64 startup code from FreeBSD</a> (commentary added by author):</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c data-lang=c><span style=color:#75715e>/* The entry function. */</span>
+<span style=color:#66d9ef>void</span>
+<span style=color:#a6e22e>_start</span>(<span style=color:#66d9ef>char</span> <span style=color:#f92672>**</span>ap, <span style=color:#66d9ef>void</span> (<span style=color:#f92672>*</span>cleanup)(<span style=color:#66d9ef>void</span>))
+{
+    <span style=color:#66d9ef>int</span> argc;
+    <span style=color:#66d9ef>char</span> <span style=color:#f92672>**</span>argv;
+    <span style=color:#66d9ef>char</span> <span style=color:#f92672>**</span>env;
+
+    <span style=color:#75715e>// Extract program arguments
+</span><span style=color:#75715e></span>    argc <span style=color:#f92672>=</span> <span style=color:#f92672>*</span>(<span style=color:#66d9ef>long</span> <span style=color:#f92672>*</span>)(<span style=color:#66d9ef>void</span> <span style=color:#f92672>*</span>)ap;
+    argv <span style=color:#f92672>=</span> ap <span style=color:#f92672>+</span> <span style=color:#ae81ff>1</span>;
+    env <span style=color:#f92672>=</span> ap <span style=color:#f92672>+</span> <span style=color:#ae81ff>2</span> <span style=color:#f92672>+</span> argc;
+
+    <span style=color:#75715e>// Set environ and initialize getprogname()
+</span><span style=color:#75715e></span>    handle_argv(argc, argv, env);
+
+    <span style=color:#75715e>// Perform relocations if necessary
+</span><span style=color:#75715e></span>    <span style=color:#66d9ef>if</span> (<span style=color:#f92672>&amp;</span>_DYNAMIC <span style=color:#f92672>!=</span> NULL) {
+        atexit(cleanup);
+    } <span style=color:#66d9ef>else</span> {
+        process_irelocs();
+        _init_tls();
+    }
+
+    <span style=color:#75715e>// Call _init() and .init_array (unless rtld already handled)
+</span><span style=color:#75715e></span>    handle_static_init(argc, argv, env);
+
+    <span style=color:#75715e>// Enter user code
+</span><span style=color:#75715e></span>    exit(main(argc, argv, env));
+}
+</code></pre></div><p><code>_DYNAMIC</code> is a symbol provided by the dynamic linker.
+If set, the program has been dynamically linked and all the complicated stuff has already been handled for us by the runtime linker.
+In this case, we need only register its termination function (since it can&rsquo;t talk to libc itself) and make our call to <code>main</code>.</p><p>If this symbol is <code>NULL</code> (i.e. not bound), we are statically linked and have to handle some of the things the dynamic linker normally handles for us, such as program relocations (e.g. position-independent executable), TLS (thread-local storage), and global initialization.</p><blockquote><p><strong>Note:</strong> The symbol <code>_start</code> is only for the benefit of the software developer.
+From the standpoint of the runtime loader, execution will begin either at a predetermined location (e.g. firmware) or a location specified in the executable header (e.g. a.out, COFF, ELF, etc.).</p></blockquote><h2 id=program-initialization>Program Initialization</h2><p>Files: <code>crti.o</code>, <code>crtn.o</code>, <code>crtbegin.o</code>, <code>crtend.o</code></p><p>Things like global C++ constructors, or just the objects in <code>&lt;stdio.h></code>, need to be executed before the call to <code>main</code>.
+How this has handled has changed over the years.
+In the beginning, we had the initialization functions <code>_init</code> and <code>_fini</code>.
+These functions would be assembled by the linker and each compiled object could inject code into the function to be called at program initialization.</p><p>Over time, this was deemed insufficient, especially for C++.
+A C++ constructor expects things like the C standard library to be available.
+This means that the C++ initialization code cannot be mixed in with other code in <code>_init</code>.
+To address this, GCC implemented the sections <code>.ctors</code> and <code>.dtors</code> to take the places of <code>_init</code> and <code>_fini</code> for C++ code.</p><p>Finally, ELF produced a standard data structure for all initialization purposes.
+As part of the standard file format, it is visible to the runtime linker, allowing the linker to orchestrate the initialization process.</p><blockquote><p><strong>Note:</strong> In a modern binary, the legacy functions (<code>_init</code>, <code>_fini</code>) and arrays (<code>.ctors</code>, <code>.dtors</code>) are generally empty.
+In a firmware application, it&rsquo;s generally safe to discard support for these constructs and use the ELF mechanism exclusively.</p></blockquote><h3 id=initialization-functions>Initialization Functions</h3><p>Files: <code>crti.o</code>, <code>crtn.o</code><br>Sections: <code>.init</code>, <code>.fini</code><br>Symbols: <code>_init</code>, <code>_fini</code></p><p>The earliest Unix initialization model was based on the functions <code>_init</code> and <code>_fini</code>.
+Prior to execution of <code>main</code>, the startup function would register <code>_fini</code> for execution at program exit (using <a href=https://en.cppreference.com/w/c/program/atexit><code>atext</code></a>) before calling <code>_init</code>.
+<code>_fini</code> is registered first in case of a call to <code>exit</code> in the middle of <code>_init</code>.</p><p>These two functions are assembled by the linker from three parts: the function prologues (from <code>crti.o</code>), the function body from the linked objects, and the function epilogues (from <code>crtn.o</code>).
+This construction is what leads to their position at the &ldquo;bookends&rdquo; of the linker command line.</p><p>As this code generation is architecture and ABI-specific, we have to pick a concrete example, such as the amd64 platform from FreeBSD.
+As described, <a href=https://github.com/freebsd/freebsd-src/blob/master/lib/csu/amd64/crti.S><code>crti.o</code></a> contains the function prologues:</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-gas data-lang=gas>        <span style=color:#a6e22e>.section</span> <span style=color:#66d9ef>.init</span>,<span style=color:#e6db74>&#34;ax&#34;</span>,<span style=color:#a6e22e>@progbits</span>
+        <span style=color:#a6e22e>.align</span>	<span style=color:#ae81ff>4</span>
+        <span style=color:#a6e22e>.globl</span>	<span style=color:#66d9ef>_init</span>
+        <span style=color:#a6e22e>.type</span>	<span style=color:#66d9ef>_init</span>,<span style=color:#a6e22e>@function</span>
+_init:
+        <span style=color:#a6e22e>subq</span>	<span style=color:#66d9ef>$8</span>,%rsp
+
+        <span style=color:#a6e22e>.section</span> <span style=color:#66d9ef>.fini</span>,<span style=color:#e6db74>&#34;ax&#34;</span>,<span style=color:#a6e22e>@progbits</span>
+        <span style=color:#a6e22e>.align</span>	<span style=color:#ae81ff>4</span>
+        <span style=color:#a6e22e>.globl</span>	<span style=color:#66d9ef>_fini</span>
+        <span style=color:#a6e22e>.type</span>	<span style=color:#66d9ef>_fini</span>,<span style=color:#a6e22e>@function</span>
+_fini:
+        <span style=color:#a6e22e>subq</span>	<span style=color:#66d9ef>$8</span>,%rsp
+</code></pre></div><p>In this case, there&rsquo;s no more than simply reserving the stack frame, a copy for each of the two functions with its own section.</p><p>And at the other end of the functions, we have the matching epilogue, from <a href=https://github.com/freebsd/freebsd-src/blob/master/lib/csu/amd64/crtn.S><code>crtn.o</code></a>, which simply cleans the stack frame and returns.</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-gas data-lang=gas>        <span style=color:#a6e22e>.section</span> <span style=color:#66d9ef>.init</span>,<span style=color:#e6db74>&#34;ax&#34;</span>,<span style=color:#a6e22e>@progbits</span>
+        <span style=color:#a6e22e>addq</span>	<span style=color:#66d9ef>$8</span>,%rsp
+        <span style=color:#a6e22e>ret</span>
+
+        <span style=color:#a6e22e>.section</span> <span style=color:#66d9ef>.fini</span>,<span style=color:#e6db74>&#34;ax&#34;</span>,<span style=color:#a6e22e>@progbits</span>
+        <span style=color:#a6e22e>addq</span>	<span style=color:#66d9ef>$8</span>,%rsp
+        <span style=color:#a6e22e>ret</span>
+</code></pre></div><p>And looking at a real executable, in this case <code>/bin/ls</code>:</p><pre><code>Disassembly of section .init:
+
+000000000020805c &lt;.init&gt;:
+  20805c:       48 83 ec 08             sub    $0x8,%rsp
+  208060:       e8 cb ff ff ff          callq  208030
+  208065:       48 83 c4 08             add    $0x8,%rsp
+  208069:       c3                      retq
+</code></pre><p>We can see the sandwich of prologue from <code>crti.o</code> (<code>0x20805c</code>), the initialization code from a module (<code>0x208060</code>), and the epilogue from <code>crtn.o</code> (<code>0x208065</code>).
+In practice, use of this function has been largely replaced by the ELF initialization tables, so it&rsquo;s often empty.
+The function at <code>0x208030</code> is actually <code>__do_global_ctors_aux</code> from <code>crtend.o</code>, another deprecated initialization framework.</p><blockquote><p><strong>Note:</strong> Modern compliers will not generate code for this section under normal conditions.
+For most embedded applications, it&rsquo;s safe to eliminate this mechanism entirely.</p></blockquote><p>It should be noted that there is no exported symbol bound to <code>.init</code> or <code>.fini</code>.
+The names <code>_init</code> and <code>_fini</code> are simply for the benefit of the entry code.
+As with <code>_start</code> itself, the runtime linker simply uses the information stored in the ELF headers.
+In this case, the linker will simply call into <code>.init</code> or <code>.fini</code> directly under the assumption that the initialization function begins with the first instruction.</p><blockquote><p><strong>Note:</strong> On machines with multiple instruction sets, namely 32-Bit ARM, there is no mechanism to communicate to the runtime linker which instruction set is in use for <code>.init</code> and <code>.fini</code> as this is handled by the LSB in the symbol address.
+This means the functions must be written in the processor&rsquo;s primary instruction set, even if the rest of the application has been compiled in an alternate ISA.</p></blockquote><h3 id=elf-initialization-sections>ELF Initialization Sections</h3><p>ELF defines the sections <code>.init_array</code>, <code>.fini_array</code>, and <code>.preinit_array</code> for initialization purposes.
+The section <code>.init_array</code> handles all normal initialization tasks, including C++ global objects.
+It is automatically populated by the compiler when constructing global objects or marking a function with the <a href=https://gcc.gnu.org/onlinedocs/gcc/Common-Function-Attributes.html#index-constructor-function-attribute><code>constructor</code></a> attribute in GCC.</p><p>The section <code>.fini_array</code> is rarely used (C++ destructors are handled separately), but can be used to register callbacks for execution on <em>normal</em> process termination.
+Programmatically, it can be accessed using the <a href=https://gcc.gnu.org/onlinedocs/gcc/Common-Function-Attributes.html#index-destructor-function-attribute><code>destructor</code></a> attribute in GCC.</p><p>Finally, <code>.preinit_array</code> gives the <em>executable</em> a chance to run initialization takes prior to the initialization of shared objects.
+It&rsquo;s rarely used in practice and needs to be accessed through use of explicit section placement.
+For example:</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c data-lang=c><span style=color:#75715e>// The actual name of this function is irrelevant
+</span><span style=color:#75715e></span><span style=color:#66d9ef>static</span> <span style=color:#66d9ef>void</span> <span style=color:#a6e22e>preinit_func</span>(<span style=color:#66d9ef>void</span>) {
+  <span style=color:#75715e>// Perform pre-initialization task here
+</span><span style=color:#75715e></span>}
+
+<span style=color:#75715e>// The actual name of this variable is irrelevant
+</span><span style=color:#75715e></span>__attribute__((used, section(<span style=color:#e6db74>&#34;.preinit_array&#34;</span>)))
+<span style=color:#66d9ef>static</span> <span style=color:#66d9ef>void</span> (<span style=color:#f92672>*</span>preinit_array)(<span style=color:#66d9ef>void</span>) <span style=color:#f92672>=</span> preinit_func;
+</code></pre></div><p>To facilitate access to these sections from inside the executable, it&rsquo;s common for the linker to define a set of symbols to bookend the data.
+A standard linker script would look like this:</p><pre><code>SECTIONS {
+    .preinit_array : {
+        HIDDEN (__preinit_array_start = .);
+        KEEP (*(.preinit_array))
+        HIDDEN (__preinit_array_end = .);
+    }
+    .init_array : {
+        HIDDEN (__init_array_start = .);
+        KEEP (*(SORT_BY_INIT_PRIORITY(.init_array.*)))
+        KEEP (*(.init_array))
+        HIDDEN (__init_array_end = .);
+    }
+    .fini_array : {
+        HIDDEN (__fini_array_start = .);
+        KEEP (*(SORT_BY_INIT_PRIORITY(.fini_array.*)))
+        KEEP (*(.fini_array))
+        HIDDEN (__fini_array_end = .);
+    }
+}
+</code></pre><p>The use of <code>HIDDEN</code> is to facilitate the presence of shared objects.
+Each object linked into the memory space will carry its own initialization tables.
+The symbols are only required when an object is initializing itself as the runtime linker will find the tables using the section definition in the ELF headers.</p><p>We can see the associated <a href=https://github.com/freebsd/freebsd-src/blob/master/lib/csu/common/ignore_init.c>initialization code from FreeBSD</a>:</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c data-lang=c><span style=color:#66d9ef>static</span> <span style=color:#66d9ef>inline</span> <span style=color:#66d9ef>void</span>
+<span style=color:#a6e22e>handle_static_init</span>(<span style=color:#66d9ef>int</span> argc, <span style=color:#66d9ef>char</span> <span style=color:#f92672>**</span>argv, <span style=color:#66d9ef>char</span> <span style=color:#f92672>**</span>env)
+{
+    <span style=color:#66d9ef>void</span> (<span style=color:#f92672>*</span>fn)(<span style=color:#66d9ef>int</span>, <span style=color:#66d9ef>char</span> <span style=color:#f92672>**</span>, <span style=color:#66d9ef>char</span> <span style=color:#f92672>**</span>);
+    size_t array_size, n;
+
+    <span style=color:#66d9ef>if</span> (<span style=color:#f92672>&amp;</span>_DYNAMIC <span style=color:#f92672>!=</span> NULL)
+        <span style=color:#66d9ef>return</span>;
+
+    atexit(finalizer);
+
+    array_size <span style=color:#f92672>=</span> __preinit_array_end <span style=color:#f92672>-</span> __preinit_array_start;
+    <span style=color:#66d9ef>for</span> (n <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>; n <span style=color:#f92672>&lt;</span> array_size; n<span style=color:#f92672>++</span>) {
+        fn <span style=color:#f92672>=</span> __preinit_array_start[n];
+        <span style=color:#66d9ef>if</span> ((uintptr_t)fn <span style=color:#f92672>!=</span> <span style=color:#ae81ff>0</span> <span style=color:#f92672>&amp;&amp;</span> (uintptr_t)fn <span style=color:#f92672>!=</span> <span style=color:#ae81ff>1</span>)
+            fn(argc, argv, env);
+    }
+    _init();
+    array_size <span style=color:#f92672>=</span> __init_array_end <span style=color:#f92672>-</span> __init_array_start;
+    <span style=color:#66d9ef>for</span> (n <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>; n <span style=color:#f92672>&lt;</span> array_size; n<span style=color:#f92672>++</span>) {
+        fn <span style=color:#f92672>=</span> __init_array_start[n];
+        <span style=color:#66d9ef>if</span> ((uintptr_t)fn <span style=color:#f92672>!=</span> <span style=color:#ae81ff>0</span> <span style=color:#f92672>&amp;&amp;</span> (uintptr_t)fn <span style=color:#f92672>!=</span> <span style=color:#ae81ff>1</span>)
+            fn(argc, argv, env);
+  }
+}
+</code></pre></div><p>There are four observations:</p><ul><li>If we have been dynamically linked (i.e. <code>_DYNAMIC</code> is bound), we skip the initialization entirely.
+It has been handled for us by the dynamic linker.</li><li>The finalizer is registered prior to executing the initializers.
+This is to provide reliable execution of the finalizers even if someone calls <code>exit</code> in the middle of the initialization process.
+This does mean that your finalizer cannot assume your initializer has been called.</li><li>The function pointers are compared to sentinel values prior to execution.
+This is for compatibility with the legacy GNU C++ initializer lists.
+Compilers will not generate these values so this guard is not required in normal situations.</li><li>The same arguments as <code>main</code> (i.e. <code>argc</code>, <code>argv</code>, <code>env</code>) are passed to the initializer functions.
+This is a platform ABI extension, allowing a library to customize its behavior or enable debugging features based on environment variables, for example.
+Initializer functions cannot normally assume any arguments.</li></ul><p>The global finalizer is found in the same file and simply iterates through it <code>.fini_array</code> <em>in reverse</em>.
+Since the <code>.init_array</code> and <code>.fini_array</code> will be constructed in the order the objects are linked, they will have a similar order.
+By reversing the direction of finalization, we can ensure the lifetimes of global objects are properly nested.</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c data-lang=c><span style=color:#66d9ef>static</span> <span style=color:#66d9ef>void</span>
+<span style=color:#a6e22e>finalizer</span>(<span style=color:#66d9ef>void</span>)
+{
+    <span style=color:#66d9ef>void</span> (<span style=color:#f92672>*</span>fn)(<span style=color:#66d9ef>void</span>);
+    size_t array_size, n;
+
+    array_size <span style=color:#f92672>=</span> __fini_array_end <span style=color:#f92672>-</span> __fini_array_start;
+    <span style=color:#66d9ef>for</span> (n <span style=color:#f92672>=</span> array_size; n <span style=color:#f92672>&gt;</span> <span style=color:#ae81ff>0</span>; n<span style=color:#f92672>--</span>) {
+        fn <span style=color:#f92672>=</span> __fini_array_start[n <span style=color:#f92672>-</span> <span style=color:#ae81ff>1</span>];
+        <span style=color:#66d9ef>if</span> ((uintptr_t)fn <span style=color:#f92672>!=</span> <span style=color:#ae81ff>0</span> <span style=color:#f92672>&amp;&amp;</span> (uintptr_t)fn <span style=color:#f92672>!=</span> <span style=color:#ae81ff>1</span>)
+            (fn)();
+    }
+    _fini();
+}
+</code></pre></div><blockquote><p><strong>Note:</strong> These arrays are typically generated as <em>mutable</em> and many linker script will place them with <code>.data</code>.
+This is for the benefit of position-independent code, which would require fixups when loaded into the target memory space.
+In firmware or other fixed-position applications, it&rsquo;s safe to store these sections in <code>.rodata</code>.</p></blockquote><h2 id=c-abi-extensions>C++ ABI Extensions</h2><p>Files: <a href=https://github.com/freebsd/freebsd-src/blob/main/lib/csu/common/crtbegin.c><code>crtbegin.o</code></a>, <a href=https://github.com/freebsd/freebsd-src/blob/main/lib/csu/common/crtend.c><code>crtend.o</code></a></p><p>While mostly compatible with C, C++ throws a few wrinkles into the initialization process.
+The first, global constructors, has been dealt with with the same platform-specific mechanisms available for C.</p><h3 id=destruction>Destruction</h3><p>The second consideration is global <em>destructors</em>.
+The native solution is to register them with <code>.fini_array</code>, but this has a subtle failure condition: a destructor should only be called once the object has been <em>successfully</em> initialized.
+If the program is terminated mid-initialization, we can only destruct those objects that have completed their constructor.
+The global finalizer, by contrast, runs through <em>everything</em> in <code>_fini</code> or <code>.fini_array</code>.</p><p>The official solution called out by the <a href=https://itanium-cxx-abi.github.io/cxx-abi/abi.html#dso-dtor-runtime-api>Itanium C++ ABI</a> (which, despite its name, is used by almost everyone) is to register each object with the <code>atexit</code> framework once the constructor completes.
+More specifically, a function <code>__cxa_atexit</code> is provided by the runtime with three arguments:</p><ol><li>The termination callback, normally the class destructor.</li><li>An opaque pointer, which is generally the <code>this</code> pointer for use by the destructor.</li><li>A pointer within the memory space of the object that constructed the object.</li></ol><p>Point (3) requires more explanation.
+When a shared object is loaded, it may have its own global objects to be initialized.
+When it&rsquo;s <em>unloaded</em>, the memory containing the objects and related functions is released, so we need to execute the associated finalizers or it will leave a bunch of dangling pointers.
+The object will load the appropriate pointer from <code>__dso_handle</code> when calling <code>__cxa_atexit</code>.
+This is typically defined in <code>crtbegin.o</code> and generally just points to itself.
+For example, <a href=https://github.com/freebsd/freebsd-src/blob/release/13.0.0/lib/csu/common/crtbegin.c#L35>from FreeBSD</a>:</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c data-lang=c><span style=color:#75715e>#ifndef SHARED
+</span><span style=color:#75715e></span><span style=color:#66d9ef>void</span> <span style=color:#f92672>*</span>__dso_handle <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>;
+<span style=color:#75715e>#else
+</span><span style=color:#75715e></span><span style=color:#66d9ef>void</span> <span style=color:#f92672>*</span>__dso_handle <span style=color:#f92672>=</span> <span style=color:#f92672>&amp;</span>__dso_handle;
+<span style=color:#75715e>#endif
+</span></code></pre></div><p>Before the shared object is unloaded, the runtime linker will call <code>__cxa_finalize</code> with that binary&rsquo;s value of <code>__dso_handle</code>.
+This allows the runtime to identify those finalizers to execute.
+When tearing down the process itself, the value <code>NULL</code> is used, signalling that <em>all</em> remaining finalizers are to be executed.</p><blockquote><p><strong>Note:</strong> As with the initialization structures, this is typically a <em>mutable</em> variable.
+As an <em>absolute</em> pointer, it is subject to relocation fixups and would dirty a text page if stored in <code>.rodata</code>.
+For static executables (e.g. firmware), it&rsquo;s safe to make this a <code>.rodata</code> pointer to <code>NULL</code>.
+It&rsquo;s still required since compiled C++ code will try to access it when invoking their global constructors but may be eliminated by LTO.</p></blockquote><blockquote><p><strong>Note:</strong> ARM defines a related function in their ABI, <code>__aeabi_atexit</code>, which is functionally equivalent to <code>__cxa_atexit</code> but swaps the order of arguments (1) and (2).
+This is to provide a code size reduction by leaving the object pointer in the register <code>this</code> would normally reside.</p></blockquote><h3 id=legacy-g-initialization>Legacy G++ Initialization</h3><p>Prior to the availability of ELF, G++ implemented its own initialization scheme using <code>crtbegin.o</code> and <code>crtend.o</code>.
+In this case, the sections <code>.ctors</code> and <code>.dtors</code> are bookended in much the same way <code>_init</code> and <code>_fini</code> are constructed using <code>crti.o</code> and <code>crtn.o</code>.</p><p>Being an array of function pointers, they are compatible with the more modern <code>.init_array</code> and <code>.fini_array</code>.
+As such, most modern linker scripts will remap their contents into those sections and leave the G++ lists empty.
+The actual bookend objects need to be left out since they contain sentinel values instead of valid pointers, unless checks are included such as the FreeBSD code above.</p><pre><code>SECTIONS {
+    .init_array : {
+        PROVIDE_HIDDEN (__init_array_start = .);
+        KEEP (*(SORT_BY_INIT_PRIORITY(.init_array.*) SORT_BY_INIT_PRIORITY(.ctors.*)))
+        KEEP (*(.init_array EXCLUDE_FILE (*crtbegin.o *crtbegin?.o *crtend.o *crtend?.o ) .ctors))
+        PROVIDE_HIDDEN (__init_array_end = .);
+    }
+    .fini_array : {
+        PROVIDE_HIDDEN (__fini_array_start = .);
+        KEEP (*(SORT_BY_INIT_PRIORITY(.fini_array.*) SORT_BY_INIT_PRIORITY(.dtors.*)))
+        KEEP (*(.fini_array EXCLUDE_FILE (*crtbegin.o *crtbegin?.o *crtend.o *crtend?.o ) .dtors))
+        PROVIDE_HIDDEN (__fini_array_end = .);
+    }
+}
+</code></pre><p>In practice, these data structures will not be used by any modern complier targeting ARM.
+Unless you&rsquo;re an OS developer trying to maintain a long tail of backwards ABI compatibility or using an archaic executable format, it&rsquo;s acceptable to leave them out.</p><h2 id=implementation-in-newlib>Implementation in Newlib</h2><p>In the embedded space, newlib is the most commonly seen C Library for all its warts.
+Its implementation of these functions is divided between <code>libc</code> and <code>libgloss</code>.</p><p>As the startup code is often written in assembly, newlib provides the functions <a href=https://github.com/bminor/newlib/blob/master/newlib/libc/misc/init.c><code>__libc_init_array</code></a> and <a href=https://github.com/bminor/newlib/blob/master/newlib/libc/misc/fini.c><code>__libc_fini_array</code></a> to run through the ELF initializers.
+Unlike the FreeBSD example, no allowances are made for dynamic linking and <code>__libc_init_array</code> will not register the global destructor with <code>atexit</code>.
+If either are required for your application, you need to address it yourself.</p><p>The C++ finalizer implementation, <code>__cxa_atexit</code> is <a href=https://github.com/bminor/newlib/blob/master/newlib/libc/stdlib/__atexit.c>integrated with <code>atexit</code></a> as is the case with most modern systems.
+It tries to play tricks with weak symbols to prevent normal C++ code from pulling in the framework unless it&rsquo;s explicitly referenced using <code>atexit</code>.
+In practice, I&rsquo;ve found this to be rather unsuccessful.</p><p>It is suggested you provide your own stubs unless you require proper termination handling:</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c data-lang=c><span style=color:#66d9ef>int</span> <span style=color:#a6e22e>__cxa_atexit</span>(<span style=color:#66d9ef>void</span> (<span style=color:#f92672>*</span>f)(<span style=color:#66d9ef>void</span><span style=color:#f92672>*</span>), <span style=color:#66d9ef>void</span> <span style=color:#f92672>*</span>a, <span style=color:#66d9ef>void</span> <span style=color:#f92672>*</span>d) {
+    (<span style=color:#66d9ef>void</span>)f;
+    (<span style=color:#66d9ef>void</span>)a;
+    (<span style=color:#66d9ef>void</span>)d;
+    <span style=color:#66d9ef>return</span> <span style=color:#ae81ff>0</span>;
+}
+
+<span style=color:#75715e>#ifdef __ARM_EABI__
+</span><span style=color:#75715e></span><span style=color:#75715e>// Could probably alias to __cxa_exit to save a few bytes.
+</span><span style=color:#75715e></span><span style=color:#66d9ef>int</span> <span style=color:#a6e22e>__aeabi_atexit</span>(<span style=color:#66d9ef>void</span> <span style=color:#f92672>*</span>a, <span style=color:#66d9ef>void</span> (<span style=color:#f92672>*</span>f)(<span style=color:#66d9ef>void</span><span style=color:#f92672>*</span>), <span style=color:#66d9ef>void</span> <span style=color:#f92672>*</span>d) {
+    (<span style=color:#66d9ef>void</span>)f;
+    (<span style=color:#66d9ef>void</span>)a;
+    (<span style=color:#66d9ef>void</span>)d;
+    <span style=color:#66d9ef>return</span> <span style=color:#ae81ff>0</span>;
+}
+<span style=color:#75715e>#endif
+</span></code></pre></div><blockquote><p><strong>Note:</strong> LLVM&rsquo;s LTO can properly analyze these functions.
+It has been observed pruning destructors entirely during dead code elimination.
+The casts to <code>void</code> are to silence warnings about unused arguments.</p></blockquote><p>The symbol <code>__dso_handle</code>, is provided by GCC&rsquo;s own <code>crtbegin.o</code>.
+Newlib does not provide its own implementation of the C++ bookends.</p><h2 id=freestanding-implementation>Freestanding Implementation</h2><p>For people who like to do everything themselves (<em>cough</em>).</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c data-lang=c><span style=color:#75715e>#include</span> <span style=color:#75715e>&lt;stddef.h&gt;</span><span style=color:#75715e>
+</span><span style=color:#75715e></span>
+<span style=color:#66d9ef>typedef</span> <span style=color:#a6e22e>void</span> (<span style=color:#f92672>*</span>init_func)(<span style=color:#66d9ef>void</span>);
+<span style=color:#66d9ef>extern</span> init_func __preinit_array_start[];
+<span style=color:#66d9ef>extern</span> init_func __preinit_array_end[];
+<span style=color:#66d9ef>extern</span> init_func __init_array_start[];
+<span style=color:#66d9ef>extern</span> init_func __init_array_end[];
+<span style=color:#66d9ef>extern</span> <span style=color:#66d9ef>void</span> <span style=color:#a6e22e>main</span>();
+
+<span style=color:#75715e>// If not using GCC&#39;s crtbegin.o
+</span><span style=color:#75715e></span><span style=color:#66d9ef>void</span> <span style=color:#f92672>*</span> <span style=color:#66d9ef>const</span> __dso_handle <span style=color:#f92672>=</span> NULL;
+
+<span style=color:#66d9ef>void</span> <span style=color:#a6e22e>_start</span>(<span style=color:#66d9ef>void</span>) {
+    <span style=color:#75715e>// If not generating your own pre-initialization callbacks,
+</span><span style=color:#75715e></span>    <span style=color:#75715e>// this code can be removed.
+</span><span style=color:#75715e></span>    size_t cnt <span style=color:#f92672>=</span> __preinit_array_end <span style=color:#f92672>-</span> __preinit_array_start;
+    <span style=color:#66d9ef>for</span> (size_t n <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>; n <span style=color:#f92672>&lt;</span> cnt; <span style=color:#f92672>++</span>n) {
+        __preinit_array_start[n]();
+    }
+
+    <span style=color:#75715e>// If not using global C++ objects and there are no constructor functions,
+</span><span style=color:#75715e></span>    <span style=color:#75715e>// this code can be removed.
+</span><span style=color:#75715e></span>    cnt <span style=color:#f92672>=</span> __init_array_end <span style=color:#f92672>-</span> __init_array_start;
+    <span style=color:#66d9ef>for</span> (size_t n <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>; n <span style=color:#f92672>&lt;</span> cnt; <span style=color:#f92672>++</span>n) {
+        __init_array_start[n]();
+    }
+
+    <span style=color:#75715e>// In a typical firmware application, there are no arguments to provide
+</span><span style=color:#75715e></span>    <span style=color:#75715e>// to main. Under U-Boot, we receive the arguments given to bootelf.
+</span><span style=color:#75715e></span>    <span style=color:#75715e>// Under Angel semihosting, we can query the host for a set of arguments.
+</span><span style=color:#75715e></span>    <span style=color:#75715e>// When sharing code with hosted systems, it may make sense to provide a
+</span><span style=color:#75715e></span>    <span style=color:#75715e>// constant set of arguments.  Otherwise, we can just call main as a
+</span><span style=color:#75715e></span>    <span style=color:#75715e>// void-argument function.
+</span><span style=color:#75715e></span>    main();
+  
+    <span style=color:#75715e>// Depending on the application, we may wish to return to the bootloader,
+</span><span style=color:#75715e></span>    <span style=color:#75715e>// reset the processor, notify the semihosting system, or any
+</span><span style=color:#75715e></span>    <span style=color:#75715e>// other number of things.  Here, we just stick an empty loop to catch
+</span><span style=color:#75715e></span>    <span style=color:#75715e>// any return from main().
+</span><span style=color:#75715e></span>    <span style=color:#66d9ef>for</span> (;;) {}
+}
+
+<span style=color:#66d9ef>int</span> <span style=color:#a6e22e>__cxa_atexit</span>(<span style=color:#66d9ef>void</span> (<span style=color:#f92672>*</span>f)(<span style=color:#66d9ef>void</span><span style=color:#f92672>*</span>), <span style=color:#66d9ef>void</span> <span style=color:#f92672>*</span>a, <span style=color:#66d9ef>void</span> <span style=color:#f92672>*</span>d) {
+    (<span style=color:#66d9ef>void</span>)f;
+    (<span style=color:#66d9ef>void</span>)a;
+    (<span style=color:#66d9ef>void</span>)d;
+    <span style=color:#66d9ef>return</span> <span style=color:#ae81ff>0</span>;
+}
+
+<span style=color:#75715e>#ifdef __ARM_EABI__
+</span><span style=color:#75715e></span><span style=color:#66d9ef>int</span> <span style=color:#a6e22e>__aeabi_atexit</span>(<span style=color:#66d9ef>void</span> <span style=color:#f92672>*</span>a, <span style=color:#66d9ef>void</span> (<span style=color:#f92672>*</span>f)(<span style=color:#66d9ef>void</span><span style=color:#f92672>*</span>), <span style=color:#66d9ef>void</span> <span style=color:#f92672>*</span>d) {
+    (<span style=color:#66d9ef>void</span>)f;
+    (<span style=color:#66d9ef>void</span>)a;
+    (<span style=color:#66d9ef>void</span>)d;
+    <span style=color:#66d9ef>return</span> <span style=color:#ae81ff>0</span>;
+}
+<span style=color:#75715e>#endif
+</span></code></pre></div><p>Here, we eliminate all initialization tasks not required by a firmware application.
+Since most embedded applications don&rsquo;t have a concept of normal termination, we can also eliminate all cleanup code.</p></div></main><footer><div class=content><p>Copyright © 2021 Jonathan McGee. All Rights Reserved.</p></div></footer></body></html>
