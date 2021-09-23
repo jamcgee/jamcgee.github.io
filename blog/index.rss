@@ -111,13 +111,12 @@ From the standpoint of the runtime loader, execution will begin either at a pred
 <h2 id="program-initialization">Program Initialization</h2>
 <p>Files: <code>crti.o</code>, <code>crtn.o</code>, <code>crtbegin.o</code>, <code>crtend.o</code></p>
 <p>Things like global C++ constructors, or just the objects in <code>&lt;stdio.h&gt;</code>, need to be executed before the call to <code>main</code>.
-How this has handled has changed over the years.
-In the beginning, we had the initialization functions <code>_init</code> and <code>_fini</code>.
-These functions would be assembled by the linker and each compiled object could inject code into the function to be called at program initialization.</p>
-<p>Over time, this was deemed insufficient, especially for C++.
-A C++ constructor expects things like the C standard library to be available.
-This means that the C++ initialization code cannot be mixed in with other code in <code>_init</code>.
-To address this, GCC implemented the sections <code>.ctors</code> and <code>.dtors</code> to take the places of <code>_init</code> and <code>_fini</code> for C++ code.</p>
+How this has handled has changed over the years.</p>
+<p>From the Unix perspective, the initialization functions <code>_init</code> and <code>_fini</code> were introduced around the time SysV and BSD4 roled around.
+The entry point <code>_start</code> would register <code>_fini</code> with <code>atexit</code> and call <code>init</code> before calling <code>main</code>.</p>
+<p>From the GCC perspective, they had to introduce a platform-independent scheme for C++ initialization.
+For this, they <a href="https://gcc.gnu.org/onlinedocs/gccint/Initialization.html">introduced the <code>.ctors</code> and <code>.dtors</code> sections</a>.
+To schedule their execution they either injected a callback into either the platform&rsquo;s initialization scheme (when available) or instrumented the <code>main</code> function during compilation.</p>
 <p>Finally, ELF produced a standard data structure for all initialization purposes.
 As part of the standard file format, it is visible to the runtime linker, allowing the linker to orchestrate the initialization process.</p>
 <blockquote>
