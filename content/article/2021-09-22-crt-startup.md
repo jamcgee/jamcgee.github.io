@@ -124,13 +124,13 @@ Files: `crti.o`, `crtn.o`, `crtbegin.o`, `crtend.o`
 
 Things like global C++ constructors, or just the objects in `<stdio.h>`, need to be executed before the call to `main`.
 How this has handled has changed over the years.
-In the beginning, we had the initialization functions `_init` and `_fini`.
-These functions would be assembled by the linker and each compiled object could inject code into the function to be called at program initialization.
 
-Over time, this was deemed insufficient, especially for C++.
-A C++ constructor expects things like the C standard library to be available.
-This means that the C++ initialization code cannot be mixed in with other code in `_init`.
-To address this, GCC implemented the sections `.ctors` and `.dtors` to take the places of `_init` and `_fini` for C++ code.
+From the Unix perspective, the initialization functions `_init` and `_fini` were introduced around the time SysV and BSD4 roled around.
+The entry point `_start` would register `_fini` with `atexit` and call `init` before calling `main`.
+
+From the GCC perspective, they had to introduce a platform-independent scheme for C++ initialization.
+For this, they [introduced the `.ctors` and `.dtors` sections](https://gcc.gnu.org/onlinedocs/gccint/Initialization.html).
+To schedule their execution they either injected a callback into either the platform's initialization scheme (when available) or instrumented the `main` function during compilation.
 
 Finally, ELF produced a standard data structure for all initialization purposes.
 As part of the standard file format, it is visible to the runtime linker, allowing the linker to orchestrate the initialization process.
