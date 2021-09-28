@@ -369,16 +369,48 @@ void *__dso_handle = &__dso_handle;
 #endif
 ```
 
-Before the shared object is unloaded, the runtime linker will call `__cxa_finalize` with that binary's value of `__dso_handle`.
-This allows the runtime to identify those finalizers to execute.
-When tearing down the process itself, the value `NULL` is used, signalling that *all* remaining finalizers are to be executed.
-
 > **Note:** As with the initialization structures, this is typically a *mutable* variable.
 > As an *absolute* pointer, it is subject to relocation fixups and would dirty a text page if stored in `.rodata`.
 > For static executables (e.g. firmware), it's safe to make this a `.rodata` pointer to `NULL`.
 > It's still required since compiled C++ code will try to access it when invoking their global constructors but may be eliminated by LTO.
 
-> **Note:** ARM defines a related function in their ABI, `__aeabi_atexit`, which is functionally equivalent to `__cxa_atexit` but swaps the order of arguments (1) and (2).
+The matching function `__cxa_finalize` is used at program termination or when a shared object is being unloaded.
+For the program termination case, we can simply look at the definition of [`exit`](https://github.com/freebsd/freebsd-src/blob/release/13.0.0/lib/libc/stdlib/exit.c).
+Disregarding the bits involving linker tricks and thread local storage, we have the following streamlined function:
+
+```c
+void
+exit(int status)
+{
+    __cxa_finalize(NULL);
+    if (__cleanup)
+        (*__cleanup)();
+    _exit(status);
+}
+```
+
+The `NULL` parameter to `__cxa_finalize` signals that *all* registered termination handlers are to be executed.
+The following reference to `__cleanup` is associated with `<stdio.h>` and guarantees that all streams have been flushed and closed before program termination.
+
+For shared objects, the situation is a little more complicated.
+As the runtime linker can't communicate with the C++ ABI, the shared object needs to handle its own termination.
+To this end, it needs to use its own `.fini` or `.fini_array` to register a call to `__cxa_finalize`.
+As with `__dso_handle`, this is typically handled by `crtbegin.o`.
+Using [FreeBSD as a reference](https://github.com/freebsd/freebsd-src/blob/release/13.0.0/lib/csu/common/crtbegin.c#L46), we can see how this is implemented:
+
+```c
+__attribute__((destructor))
+static void
+run_cxa_finalize(void)
+{
+    if (__cxa_finalize != NULL)
+        __cxa_finalize(__dso_handle);
+}
+```
+
+The code is a bit more complicated when support for the legacy G++ initialization (`.ctors` and `.dtors`) is required is required.
+
+> **Note:** ARM defines an additional function in their EABI, `__aeabi_atexit`, which is functionally equivalent to `__cxa_atexit` but swaps the order of arguments (1) and (2).
 > This is to provide a code size reduction by leaving the object pointer in the register `this` would normally reside.
 
 ### Legacy G++ Initialization
