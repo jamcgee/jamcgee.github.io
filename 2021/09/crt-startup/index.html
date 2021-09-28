@@ -10,13 +10,13 @@ In this essay, we examine the current and historical implementation of executabl
 
 Note: Most firmware applications need to address the initialization of .data and .bss from nonvolatile memory.
 That is not addressed in this essay.
-"><meta property="og:type" content="article"><meta property="og:url" content="https://etherealwake.com/2021/09/crt-startup/"><meta property="article:section" content="article"><meta property="article:published_time" content="2021-09-22T13:45:00-07:00"><meta property="article:modified_time" content="2021-09-23T13:58:33-07:00"><meta name=twitter:card content="summary"><meta name=twitter:title content="C/C++ Runtime Startup"><meta name=twitter:description content="When writing a freestanding application, it&rsquo;s generally necessary for the firmware engineer to handle runtime initialization.
+"><meta property="og:type" content="article"><meta property="og:url" content="https://etherealwake.com/2021/09/crt-startup/"><meta property="article:section" content="article"><meta property="article:published_time" content="2021-09-22T13:45:00-07:00"><meta property="article:modified_time" content="2021-09-28T14:30:09-07:00"><meta name=twitter:card content="summary"><meta name=twitter:title content="C/C++ Runtime Startup"><meta name=twitter:description content="When writing a freestanding application, it&rsquo;s generally necessary for the firmware engineer to handle runtime initialization.
 Even when a library like newlib includes a rudimentary implementation of crt0.o, initialization is a very application-specific process owing to the need to initialize hardware, memory, and other loading tasks.
 In this essay, we examine the current and historical implementation of executable initialization, finishing with a minimal implementation usable with firmware applications.
 
 Note: Most firmware applications need to address the initialization of .data and .bss from nonvolatile memory.
 That is not addressed in this essay.
-"></head><body class="page article"><nav><div class=content><ul><li><a href=/>Home</a></li><li><a href=/resume/>Resume</a></li><li><a href=/blog/>Blog</a></li><li><a href=mailto:continuing.search@etherealwake.com>Email</a></li></ul></div></nav><header><div class=content><h1>Ethereal Wake</h1></div></header><main><div class=content><h1 class=title>C/C++ Runtime Startup</h1><ul class=metadata><li><time datetime="2021-09-22 13:45:00 -0700 -0700">2021 Sep 22</time></li><li><a href=https://etherealwake.com/2021/09/crt-startup/ rel=bookmark>Permalink</a></li><li>3123 words, 15 min read</li></ul><p>When writing a freestanding application, it&rsquo;s generally necessary for the firmware engineer to handle runtime initialization.
+"></head><body class="page article"><nav><div class=content><ul><li><a href=/>Home</a></li><li><a href=/resume/>Resume</a></li><li><a href=/blog/>Blog</a></li><li><a href=mailto:continuing.search@etherealwake.com>Email</a></li></ul></div></nav><header><div class=content><h1>Ethereal Wake</h1></div></header><main><div class=content><h1 class=title>C/C++ Runtime Startup</h1><ul class=metadata><li><time datetime="2021-09-22 13:45:00 -0700 -0700">2021 Sep 22</time></li><li><a href=https://etherealwake.com/2021/09/crt-startup/ rel=bookmark>Permalink</a></li><li>3269 words, 16 min read</li></ul><p>When writing a freestanding application, it&rsquo;s generally necessary for the firmware engineer to handle runtime initialization.
 Even when a library like newlib includes a rudimentary implementation of <code>crt0.o</code>, initialization is a very application-specific process owing to the need to initialize hardware, memory, and other loading tasks.</p><p>In this essay, we examine the current and historical implementation of executable initialization, finishing with a minimal implementation usable with firmware applications.</p><blockquote><p><strong>Note:</strong> Most firmware applications need to address the initialization of <code>.data</code> and <code>.bss</code> from nonvolatile memory.
 That is not addressed in this essay.</p></blockquote><h2 id=program-entry-point>Program Entry Point</h2><p>Files: <code>crt0.o</code> (number often indicates ABI version)<br>Symbols: <code>_start</code></p><p>In the classic Unix model, program execution begins at the executable entry point, which is the symbol <code>_start</code> in the GCC toolchain.
 Its basic purpose is to extract the runtime information from the system, initialize the program data structures, call <code>main</code>, and terminate the program when <code>main</code> returns.</p><p>The <a href=https://github.com/dspinellis/unix-history-repo/blob/Research-Release/usr/src/libc/csu/crt0.s>original Unix startup code</a> was quite simple.
@@ -228,12 +228,32 @@ For example, <a href=https://github.com/freebsd/freebsd-src/blob/release/13.0.0/
 <span style=color:#75715e>#else
 </span><span style=color:#75715e></span><span style=color:#66d9ef>void</span> <span style=color:#f92672>*</span>__dso_handle <span style=color:#f92672>=</span> <span style=color:#f92672>&amp;</span>__dso_handle;
 <span style=color:#75715e>#endif
-</span></code></pre></div><p>Before the shared object is unloaded, the runtime linker will call <code>__cxa_finalize</code> with that binary&rsquo;s value of <code>__dso_handle</code>.
-This allows the runtime to identify those finalizers to execute.
-When tearing down the process itself, the value <code>NULL</code> is used, signalling that <em>all</em> remaining finalizers are to be executed.</p><blockquote><p><strong>Note:</strong> As with the initialization structures, this is typically a <em>mutable</em> variable.
+</span></code></pre></div><blockquote><p><strong>Note:</strong> As with the initialization structures, this is typically a <em>mutable</em> variable.
 As an <em>absolute</em> pointer, it is subject to relocation fixups and would dirty a text page if stored in <code>.rodata</code>.
 For static executables (e.g. firmware), it&rsquo;s safe to make this a <code>.rodata</code> pointer to <code>NULL</code>.
-It&rsquo;s still required since compiled C++ code will try to access it when invoking their global constructors but may be eliminated by LTO.</p></blockquote><blockquote><p><strong>Note:</strong> ARM defines a related function in their ABI, <code>__aeabi_atexit</code>, which is functionally equivalent to <code>__cxa_atexit</code> but swaps the order of arguments (1) and (2).
+It&rsquo;s still required since compiled C++ code will try to access it when invoking their global constructors but may be eliminated by LTO.</p></blockquote><p>The matching function <code>__cxa_finalize</code> is used at program termination or when a shared object is being unloaded.
+For the program termination case, we can simply look at the definition of <a href=https://github.com/freebsd/freebsd-src/blob/release/13.0.0/lib/libc/stdlib/exit.c><code>exit</code></a>.
+Disregarding the bits involving linker tricks and thread local storage, we have the following streamlined function:</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c data-lang=c><span style=color:#66d9ef>void</span>
+<span style=color:#a6e22e>exit</span>(<span style=color:#66d9ef>int</span> status)
+{
+    __cxa_finalize(NULL);
+    <span style=color:#66d9ef>if</span> (__cleanup)
+        (<span style=color:#f92672>*</span>__cleanup)();
+    _exit(status);
+}
+</code></pre></div><p>The <code>NULL</code> parameter to <code>__cxa_finalize</code> signals that <em>all</em> registered termination handlers are to be executed.
+The following reference to <code>__cleanup</code> is associated with <code>&lt;stdio.h></code> and guarantees that all streams have been flushed and closed before program termination.</p><p>For shared objects, the situation is a little more complicated.
+As the runtime linker can&rsquo;t communicate with the C++ ABI, the shared object needs to handle its own termination.
+To this end, it needs to use its own <code>.fini</code> or <code>.fini_array</code> to register a call to <code>__cxa_finalize</code>.
+As with <code>__dso_handle</code>, this is typically handled by <code>crtbegin.o</code>.
+Using <a href=https://github.com/freebsd/freebsd-src/blob/release/13.0.0/lib/csu/common/crtbegin.c#L46>FreeBSD as a reference</a>, we can see how this is implemented:</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c data-lang=c>__attribute__((destructor))
+<span style=color:#66d9ef>static</span> <span style=color:#66d9ef>void</span>
+run_cxa_finalize(<span style=color:#66d9ef>void</span>)
+{
+    <span style=color:#66d9ef>if</span> (__cxa_finalize <span style=color:#f92672>!=</span> NULL)
+        __cxa_finalize(__dso_handle);
+}
+</code></pre></div><p>The code is a bit more complicated when support for the legacy G++ initialization (<code>.ctors</code> and <code>.dtors</code>) is required is required.</p><blockquote><p><strong>Note:</strong> ARM defines an additional function in their EABI, <code>__aeabi_atexit</code>, which is functionally equivalent to <code>__cxa_atexit</code> but swaps the order of arguments (1) and (2).
 This is to provide a code size reduction by leaving the object pointer in the register <code>this</code> would normally reside.</p></blockquote><h3 id=legacy-g-initialization>Legacy G++ Initialization</h3><p>Prior to the availability of ELF, G++ implemented its own initialization scheme using <code>crtbegin.o</code> and <code>crtend.o</code>.
 In this case, the sections <code>.ctors</code> and <code>.dtors</code> are bookended in much the same way <code>_init</code> and <code>_fini</code> are constructed using <code>crti.o</code> and <code>crtn.o</code>.</p><p>Being an array of function pointers, they are compatible with the more modern <code>.init_array</code> and <code>.fini_array</code>.
 As such, most modern linker scripts will remap their contents into those sections and leave the G++ lists empty.

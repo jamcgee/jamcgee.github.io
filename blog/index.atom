@@ -15,7 +15,7 @@
   <entry>
     <id>https://etherealwake.com/2021/09/crt-startup/</id>
     <title>C/C&#43;&#43; Runtime Startup</title>
-    <updated>2021-09-23T13:58:33-07:00</updated>
+    <updated>2021-09-28T14:30:09-07:00</updated>
     <published>2021-09-22T13:45:00-07:00</published>
     <link href="https://etherealwake.com/2021/09/crt-startup/" rel="alternate" type="text/html" />
     <summary>When writing a freestanding application, it&amp;rsquo;s generally necessary for the firmware engineer to handle runtime initialization. Even when a library like newlib includes a rudimentary implementation of crt0.o, initialization is a very application-specific process owing to the need to initialize hardware, memory, and other loading tasks.
@@ -308,17 +308,40 @@ For example, <a href="https://github.com/freebsd/freebsd-src/blob/release/13.0.0
 <span style="color:#75715e">#else
 </span><span style="color:#75715e"></span><span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>__dso_handle <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>__dso_handle;
 <span style="color:#75715e">#endif
-</span></code></pre></div><p>Before the shared object is unloaded, the runtime linker will call <code>__cxa_finalize</code> with that binary&rsquo;s value of <code>__dso_handle</code>.
-This allows the runtime to identify those finalizers to execute.
-When tearing down the process itself, the value <code>NULL</code> is used, signalling that <em>all</em> remaining finalizers are to be executed.</p>
-<blockquote>
+</span></code></pre></div><blockquote>
 <p><strong>Note:</strong> As with the initialization structures, this is typically a <em>mutable</em> variable.
 As an <em>absolute</em> pointer, it is subject to relocation fixups and would dirty a text page if stored in <code>.rodata</code>.
 For static executables (e.g. firmware), it&rsquo;s safe to make this a <code>.rodata</code> pointer to <code>NULL</code>.
 It&rsquo;s still required since compiled C++ code will try to access it when invoking their global constructors but may be eliminated by LTO.</p>
 </blockquote>
+<p>The matching function <code>__cxa_finalize</code> is used at program termination or when a shared object is being unloaded.
+For the program termination case, we can simply look at the definition of <a href="https://github.com/freebsd/freebsd-src/blob/release/13.0.0/lib/libc/stdlib/exit.c"><code>exit</code></a>.
+Disregarding the bits involving linker tricks and thread local storage, we have the following streamlined function:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">void</span>
+<span style="color:#a6e22e">exit</span>(<span style="color:#66d9ef">int</span> status)
+{
+    __cxa_finalize(NULL);
+    <span style="color:#66d9ef">if</span> (__cleanup)
+        (<span style="color:#f92672">*</span>__cleanup)();
+    _exit(status);
+}
+</code></pre></div><p>The <code>NULL</code> parameter to <code>__cxa_finalize</code> signals that <em>all</em> registered termination handlers are to be executed.
+The following reference to <code>__cleanup</code> is associated with <code>&lt;stdio.h&gt;</code> and guarantees that all streams have been flushed and closed before program termination.</p>
+<p>For shared objects, the situation is a little more complicated.
+As the runtime linker can&rsquo;t communicate with the C++ ABI, the shared object needs to handle its own termination.
+To this end, it needs to use its own <code>.fini</code> or <code>.fini_array</code> to register a call to <code>__cxa_finalize</code>.
+As with <code>__dso_handle</code>, this is typically handled by <code>crtbegin.o</code>.
+Using <a href="https://github.com/freebsd/freebsd-src/blob/release/13.0.0/lib/csu/common/crtbegin.c#L46">FreeBSD as a reference</a>, we can see how this is implemented:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c">__attribute__((destructor))
+<span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span>
+run_cxa_finalize(<span style="color:#66d9ef">void</span>)
+{
+    <span style="color:#66d9ef">if</span> (__cxa_finalize <span style="color:#f92672">!=</span> NULL)
+        __cxa_finalize(__dso_handle);
+}
+</code></pre></div><p>The code is a bit more complicated when support for the legacy G++ initialization (<code>.ctors</code> and <code>.dtors</code>) is required is required.</p>
 <blockquote>
-<p><strong>Note:</strong> ARM defines a related function in their ABI, <code>__aeabi_atexit</code>, which is functionally equivalent to <code>__cxa_atexit</code> but swaps the order of arguments (1) and (2).
+<p><strong>Note:</strong> ARM defines an additional function in their EABI, <code>__aeabi_atexit</code>, which is functionally equivalent to <code>__cxa_atexit</code> but swaps the order of arguments (1) and (2).
 This is to provide a code size reduction by leaving the object pointer in the register <code>this</code> would normally reside.</p>
 </blockquote>
 <h3 id="legacy-g-initialization">Legacy G++ Initialization</h3>
