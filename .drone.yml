@@ -1,9 +1,0 @@
----
-name: default
-kind: pipeline
-type: exec
-
-steps:
-- name: build
-  commands:
-  - hugo -v --minify

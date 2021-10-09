@@ -10,7 +10,6 @@ items:
     organization:
       name: Ethereal Systems
       location: Mountain View, CA
-      url: https://etherealsystems.net
     startDate: 2019-06-01
     content: |
       Contract circuit design, <abbr title="Printed Circuit Board">PCB</abbr> layout, <abbr title="Field Programmable Gate Array">FPGA</abbr> and firmware development.
