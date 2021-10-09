@@ -209,7 +209,8 @@ As with `_start` itself, the runtime linker simply uses the information stored i
 In this case, the linker will simply call into `.init` or `.fini` directly under the assumption that the initialization function begins with the first instruction.
 
 > **Note:** On machines with multiple instruction sets, namely 32-Bit ARM, there is no mechanism to communicate to the runtime linker which instruction set is in use for `.init` and `.fini` as this is handled by the LSB in the symbol address.
-> This means the functions must be written in the processor's primary instruction set, even if the rest of the application has been compiled in an alternate ISA.
+> This means the functions must be written in the instruction set identified by the platform ABI.
+> For most Unix platforms, this is the legacy ARM instruction set but Thumb may be used by some ABIs (e.g. Windows).
 
 ### ELF Initialization Sections
 
@@ -343,7 +344,7 @@ The first, global constructors, has been dealt with with the same platform-speci
 ### Destruction
 
 The second consideration is global *destructors*.
-The native solution is to register them with `.fini_array`, but this has a subtle failure condition: a destructor should only be called once the object has been *successfully* initialized.
+The naive solution is to register them with `.fini_array`, but this has a subtle failure condition: a destructor should only be called once the object has been *successfully* initialized.
 If the program is terminated mid-initialization, we can only destruct those objects that have completed their constructor.
 The global finalizer, by contrast, runs through *everything* in `_fini` or `.fini_array`.
 
@@ -524,9 +525,9 @@ void _start(void) {
     main();
   
     // Depending on the application, we may wish to return to the bootloader,
-    // reset the processor, notify the semihosting system, or any
-    // other number of things.  Here, we just stick an empty loop to catch
-    // any return from main().
+    // reset the processor, notify the semihosting system, or any other number
+    // of things.  Here, we just stick an empty loop to catch any return from
+    // main().
     for (;;) {}
 }
 
