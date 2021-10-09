@@ -7,8 +7,8 @@
     <generator>Hugo -- gohugo.io</generator>
     <docs>https://www.rssboard.org/rss-specification</docs>
     <language>en-US</language>
-    <managingEditor>broken.source@etherealwake.com (Jonathan McGee)</managingEditor>
-    <webMaster>broken.source@etherealwake.com (Jonathan McGee)</webMaster>
+    <managingEditor>jamcgee@etherealwake.com (Jonathan McGee)</managingEditor>
+    <webMaster>jamcgee@etherealwake.com (Jonathan McGee)</webMaster>
     <copyright>Copyright © 2021 Jonathan McGee. All Rights Reserved.</copyright>
     <lastBuildDate>Fri, 25 Dec 2020 19:32:48 -0800</lastBuildDate>
     <atom:link href="https://etherealwake.com/blog/index.rss" rel="self" type="application/rss+xml" />
@@ -177,7 +177,8 @@ As with <code>_start</code> itself, the runtime linker simply uses the informati
 In this case, the linker will simply call into <code>.init</code> or <code>.fini</code> directly under the assumption that the initialization function begins with the first instruction.</p>
 <blockquote>
 <p><strong>Note:</strong> On machines with multiple instruction sets, namely 32-Bit ARM, there is no mechanism to communicate to the runtime linker which instruction set is in use for <code>.init</code> and <code>.fini</code> as this is handled by the LSB in the symbol address.
-This means the functions must be written in the processor&rsquo;s primary instruction set, even if the rest of the application has been compiled in an alternate ISA.</p>
+This means the functions must be written in the instruction set identified by the platform ABI.
+For most Unix platforms, this is the legacy ARM instruction set but Thumb may be used by some ABIs (e.g. Windows).</p>
 </blockquote>
 <h3 id="elf-initialization-sections">ELF Initialization Sections</h3>
 <p>ELF defines the sections <code>.init_array</code>, <code>.fini_array</code>, and <code>.preinit_array</code> for initialization purposes.
@@ -288,7 +289,7 @@ In firmware or other fixed-position applications, it&rsquo;s safe to store these
 The first, global constructors, has been dealt with with the same platform-specific mechanisms available for C.</p>
 <h3 id="destruction">Destruction</h3>
 <p>The second consideration is global <em>destructors</em>.
-The native solution is to register them with <code>.fini_array</code>, but this has a subtle failure condition: a destructor should only be called once the object has been <em>successfully</em> initialized.
+The naive solution is to register them with <code>.fini_array</code>, but this has a subtle failure condition: a destructor should only be called once the object has been <em>successfully</em> initialized.
 If the program is terminated mid-initialization, we can only destruct those objects that have completed their constructor.
 The global finalizer, by contrast, runs through <em>everything</em> in <code>_fini</code> or <code>.fini_array</code>.</p>
 <p>The official solution called out by the <a href="https://itanium-cxx-abi.github.io/cxx-abi/abi.html#dso-dtor-runtime-api">Itanium C++ ABI</a> (which, despite its name, is used by almost everyone) is to register each object with the <code>atexit</code> framework once the constructor completes.
@@ -438,9 +439,9 @@ Newlib does not provide its own implementation of the C++ bookends.</p>
 </span><span style="color:#75715e"></span>    main();
   
     <span style="color:#75715e">// Depending on the application, we may wish to return to the bootloader,
-</span><span style="color:#75715e"></span>    <span style="color:#75715e">// reset the processor, notify the semihosting system, or any
-</span><span style="color:#75715e"></span>    <span style="color:#75715e">// other number of things.  Here, we just stick an empty loop to catch
-</span><span style="color:#75715e"></span>    <span style="color:#75715e">// any return from main().
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// reset the processor, notify the semihosting system, or any other number
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// of things.  Here, we just stick an empty loop to catch any return from
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// main().
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">for</span> (;;) {}
 }
 
