@@ -6,11 +6,21 @@ weight: 200
 
 # Content
 items:
+  - title: Senior Electrical Engineer
+    organization:
+      name: Anduril Industries
+      location: Costa Mesa, CA
+      url: https://www.anduril.com/
+    startDate: 2021-11-01
+    content: |
+      Circuit design, <abbr title="Printed Circuit Board">PCB</abbr> layout, and <abbr title="Field Programmable Gate Array">FPGA</abbr> development for flight systems.
+      Focus on central computer modules and software-defined radio communication modules.
   - title: Founder
     organization:
       name: Ethereal Systems
       location: Mountain View, CA
     startDate: 2019-06-01
+    endDate: 2021-10-01
     content: |
       Contract circuit design, <abbr title="Printed Circuit Board">PCB</abbr> layout, <abbr title="Field Programmable Gate Array">FPGA</abbr> and firmware development.
 

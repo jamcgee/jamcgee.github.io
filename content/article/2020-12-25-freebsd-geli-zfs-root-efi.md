@@ -167,7 +167,7 @@ cp ${altroot}/zdata/ROOT/freebsd/boot/loader.efi /mnt/EFI/BOOT/BOOTX64.EFI
 umount /mnt
 ```
 
-As described in the introduction, we are copying `loader.efi`~and not `boot1.efi` ~~as described in [`uefi(8)`](https://www.freebsd.org/cgi/man.cgi?query=uefi&sektion=8).
+As described in the introduction, we are copying `loader.efi` and not `boot1.efi` ~~as described in [`uefi(8)`](https://www.freebsd.org/cgi/man.cgi?query=uefi&sektion=8).
 This is intentional~~.
 
 ## Preparing for First Boot
