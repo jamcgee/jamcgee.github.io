@@ -1,3 +1,4 @@
 # Build Artifacts
+.hugo_build*
 public/
 resources/
