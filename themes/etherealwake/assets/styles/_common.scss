@@ -49,6 +49,19 @@ pre > code {
   padding: 0;
 }
 
+table {
+  border-collapse: collapse;
+}
+
+th {
+  background: #CCC;
+}
+
+td, th {
+  border: 1px solid #272822;
+  padding: 0px 8px;
+}
+
 /*
  * Strip most navigation and decoration on print
  */
