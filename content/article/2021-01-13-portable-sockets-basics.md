@@ -121,8 +121,8 @@ Under Unix, no such initialization is required.
 ## Basic Functions
 
 In Unix, a socket is a normal file descriptor and is closed using [`close`](https://www.freebsd.org/cgi/man.cgi?query=close&sektion=2) from `<unistd.h>`.
-Under Windows, we need to use [`closehandle`](https://docs.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock2-closesocket) instead.
-This difference is trivially resolved by create a new function `closehandle` under Unix to use with our sockets.
+Under Windows, we need to use [`closesocket`](https://docs.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock2-closesocket) instead.
+This difference is trivially resolved by create a new function `closesocket` under Unix that aliases with `close` to use with our sockets.
 
 Both systems provide the [`send`](https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-send) and [`recv`](https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-recv) functions, which operate identically for the most part.
 The primary difference centers on types: WinSock uses `int` for the buffer size (instead of `size_t`) and expects the buffers to be of type `char` (instead of a more proper `void`).
@@ -161,7 +161,7 @@ Alternatively, most modern platforms support the use of the `SOCK_NONBLOCK` bitf
 
 As Windows has no equivalent to `fcntl`, the manipulation is made using the `FIONBIO` operation with [`ioctlsocket`](https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-ioctlsocket).
 There is no equivalent to `F_GETFL` under Windows, so directly querying the non-blocking status is not possible.
-This is not a huge loss as configuring non-blocking status is generally part of the application's start-up sequence and not something done reactively.
+This is not a huge loss as configuring non-blocking status is generally part of the socket creation process and not something done reactively.
 
 ## Close-On-Exec
 
@@ -218,7 +218,7 @@ On Unix, `fd_set` is implemented as a bitfield and `FD_SETSIZE` impacts the *hig
 The superior option, `poll`, is available on all currently *supported* platforms, introduced by Microsoft in Windows 8.1 under the name [`WSAPoll`](https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsapoll).
 Its absence from Windows 7 may cause issues for some developers despite that system no longer being supported by Microsoft.
 The only notable difference is that `WSAPoll` is very picky about the values placed in the `events` field: including `POLLHUP`, `POLLERR`, or `POLLNVAL` will cause the function to fail.
-As these conditions are checked regardless, this doesn't introduce any meaningful compatibility issue.
+As these conditions are checked regardless, excluding them does not introduce any meaningful compatibility issue.
 
 For applications dealing with a larger number of simultaneous connections, it is generally necessary to move onto the more modern systems, such as [epoll](https://man7.org/linux/man-pages/man7/epoll.7.html) on Linux, [kqueue](https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2) on BSD derivatives (including macOS), and [I/O Completion Ports](https://docs.microsoft.com/en-us/windows/win32/fileio/i-o-completion-ports) or [Registered I/O](https://docs.microsoft.com/en-us/windows/win32/api/mswsock/ns-mswsock-rio_extension_function_table) on Windows.
 Commercial Unices (AIX, Solaris) have adopted the IOCP model from Windows.

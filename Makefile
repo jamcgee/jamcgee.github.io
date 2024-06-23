@@ -4,7 +4,7 @@ BASEDIR ?= /zdata/db/www
 
 # Build for release
 all:
-	hugo -v ${FLAGS}
+	hugo ${FLAGS}
 
 # Clear out all generated content
 clean:

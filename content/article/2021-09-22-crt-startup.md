@@ -126,11 +126,11 @@ Things like global C++ constructors, or just the objects in `<stdio.h>`, need to
 How this has handled has changed over the years.
 
 From the Unix perspective, the initialization functions `_init` and `_fini` were introduced around the time SysV and BSD4 roled around.
-The entry point `_start` would register `_fini` with `atexit` and call `init` before calling `main`.
+The entry point `_start` would register `_fini` with `atexit` and call `_init` before entering `main`.
 
 From the GCC perspective, they had to introduce a platform-independent scheme for C++ initialization.
 For this, they [introduced the `.ctors` and `.dtors` sections](https://gcc.gnu.org/onlinedocs/gccint/Initialization.html).
-To schedule their execution they either injected a callback into either the platform's initialization scheme (when available) or instrumented the `main` function during compilation.
+To schedule their execution, they either injected a callback into either the platform's initialization scheme (when available) or instrumented the `main` function during compilation.
 
 Finally, ELF produced a standard data structure for all initialization purposes.
 As part of the standard file format, it is visible to the runtime linker, allowing the linker to orchestrate the initialization process.
@@ -145,8 +145,8 @@ Sections: `.init`, `.fini`<br>
 Symbols: `_init`, `_fini`
 
 The earliest Unix initialization model was based on the functions `_init` and `_fini`.
-Prior to execution of `main`, the startup function would register `_fini` for execution at program exit (using [`atext`](https://en.cppreference.com/w/c/program/atexit)) before calling `_init`.
-`_fini` is registered first in case of a call to `exit` in the middle of `_init`.
+Prior to execution of `main`, the startup function would register `_fini` for execution at program exit (using [`atexit`](https://en.cppreference.com/w/c/program/atexit)) before calling `_init`.
+This is done first to address the possibility of a call to `exit` in the middle of `_init` but does mean a finalizer can be called without the initializer ever being invoked.
 
 These two functions are assembled by the linker from three parts: the function prologues (from `crti.o`), the function body from the linked objects, and the function epilogues (from `crtn.o`).
 This construction is what leads to their position at the "bookends" of the linker command line.
@@ -198,17 +198,17 @@ Disassembly of section .init:
 
 We can see the sandwich of prologue from `crti.o` (`0x20805c`), the initialization code from a module (`0x208060`), and the epilogue from `crtn.o` (`0x208065`).
 In practice, use of this function has been largely replaced by the ELF initialization tables, so it's often empty.
-The function at `0x208030` is actually `__do_global_ctors_aux` from `crtend.o`, another deprecated initialization framework.
+The function at `0x208030` is actually `__do_global_ctors_aux` from `crtend.o`, which handles the old `.ctors`/`.dtors` initialization scheme.
 
 > **Note:** Modern compliers will not generate code for this section under normal conditions.
 > For most embedded applications, it's safe to eliminate this mechanism entirely.
 
 It should be noted that there is no exported symbol bound to `.init` or `.fini`.
 The names `_init` and `_fini` are simply for the benefit of the entry code.
-As with `_start` itself, the runtime linker simply uses the information stored in the ELF headers.
+As with `_start` itself, the runtime linker uses the information stored in the ELF headers.
 In this case, the linker will simply call into `.init` or `.fini` directly under the assumption that the initialization function begins with the first instruction.
 
-> **Note:** On machines with multiple instruction sets, namely 32-Bit ARM, there is no mechanism to communicate to the runtime linker which instruction set is in use for `.init` and `.fini` as this is handled by the LSB in the symbol address.
+> **Note:** On machines with multiple instruction sets, namely 32-Bit ARM, there is no mechanism to communicate to the runtime linker which instruction set is in use for `.init` and `.fini` as this is handled by the reserved bits in the symbol address.
 > This means the functions must be written in the instruction set identified by the platform ABI.
 > For most Unix platforms, this is the legacy ARM instruction set but Thumb may be used by some ABIs (e.g. Windows).
 
@@ -261,8 +261,7 @@ SECTIONS {
 }
 ```
 
-The use of `HIDDEN` is to facilitate the presence of shared objects.
-Each object linked into the memory space will carry its own initialization tables.
+The use of `HIDDEN` is to facilitate the presence of shared objects, which have their own copies of these sections.
 The symbols are only required when an object is initializing itself as the runtime linker will find the tables using the section definition in the ELF headers.
 
 We can see the associated [initialization code from FreeBSD](https://github.com/freebsd/freebsd-src/blob/master/lib/csu/common/ignore_init.c):
@@ -303,7 +302,7 @@ There are four observations:
   This is to provide reliable execution of the finalizers even if someone calls `exit` in the middle of the initialization process.
   This does mean that your finalizer cannot assume your initializer has been called.
 - The function pointers are compared to sentinel values prior to execution.
-  This is for compatibility with the legacy GNU C++ initializer lists.
+  This is to allow the legacy `.ctors`/`.dtors` sections to be merged directly.
   Compilers will not generate these values so this guard is not required in normal situations.
 - The same arguments as `main` (i.e. `argc`, `argv`, `env`) are passed to the initializer functions.
   This is a platform ABI extension, allowing a library to customize its behavior or enable debugging features based on environment variables, for example.
@@ -414,6 +413,9 @@ The code is a bit more complicated when support for the legacy G++ initializatio
 > **Note:** ARM defines an additional function in their EABI, `__aeabi_atexit`, which is functionally equivalent to `__cxa_atexit` but swaps the order of arguments (1) and (2).
 > This is to provide a code size reduction by leaving the object pointer in the register `this` would normally reside.
 
+> **Note:** GCC provides an `-fno-use-cxa-atexit` argument which modifies the initialization code and inserts a function into `.fini_array` to avoid the use of `__cxa_atexit`.
+> While clang accepts this argument, as of version 18.1.3, it interprets it very differently and calls `atexit`.
+
 ### Legacy G++ Initialization
 
 Prior to the availability of ELF, G++ implemented its own initialization scheme using `crtbegin.o` and `crtend.o`.
@@ -454,7 +456,7 @@ If either are required for your application, you need to address it yourself.
 
 The C++ finalizer implementation, `__cxa_atexit` is [integrated with `atexit`](https://github.com/bminor/newlib/blob/master/newlib/libc/stdlib/__atexit.c) as is the case with most modern systems.
 It tries to play tricks with weak symbols to prevent normal C++ code from pulling in the framework unless it's explicitly referenced using `atexit`.
-In practice, I've found this to be rather unsuccessful.
+In practice, I've found this to be rather unpredictable.
 
 It is suggested you provide your own stubs unless you require proper termination handling:
 
@@ -528,6 +530,10 @@ void _start(void) {
     // reset the processor, notify the semihosting system, or any other number
     // of things.  Here, we just stick an empty loop to catch any return from
     // main().
+    //
+    // NOTE: This is technically undefined behavior, so it's best to include
+    // a NOP, barrier, or other volatile inside the loop to prevent your
+    // compiler from doing something odd.
     for (;;) {}
 }
 
