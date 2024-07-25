@@ -6,7 +6,7 @@ weight: 200
 
 # Content
 items:
-  - title: Senior Electrical Engineer
+  - title: Principal Electrical Engineer
     organization:
       name: Anduril Industries
       location: Costa Mesa, CA
@@ -14,7 +14,7 @@ items:
     startDate: 2021-11-01
     content: |
       Circuit design, <abbr title="Printed Circuit Board">PCB</abbr> layout, and <abbr title="Field Programmable Gate Array">FPGA</abbr> development for flight systems.
-      Focus on central computer modules and software-defined radio communication modules.
+      Focus on computer modules, software-defined networking, and software-defined radio communication modules.
   - title: Founder
     organization:
       name: Ethereal Systems
