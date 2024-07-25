@@ -1,4 +1,5 @@
 ---
+hidden: True
 fragment: content
 title: Skills & Abilities
 weight: 100

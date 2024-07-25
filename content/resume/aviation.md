@@ -1,4 +1,5 @@
 ---
+hidden: True
 fragment: content
 title: Aviation
 weight: 500
