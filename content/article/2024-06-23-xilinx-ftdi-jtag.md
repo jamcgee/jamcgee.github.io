@@ -32,12 +32,11 @@ All known Xilinx reference designs use the FT4232HL.
 It is untested whether the [automotive version](https://ftdichip.com/wp-content/uploads/2022/03/DS_FT4232HA.pdf) or [power delivery series](https://ftdichip.com/product-category/products/ic/usb-power-delivery-series-ics/) will function if appropriately programmed.
 
 All Xilinx reference designs use the [93LC56B](https://ww1.microchip.com/downloads/aemDocuments/documents/MPD/ProductDocuments/DataSheets/93AA56X-93LC56X-93C56X-2-Kbit-Microwire-Compatible-Serial-EEPROM-Data-Sheet.pdf) (2kbit) memory.
-The 93LC46B (1kbit) memory has been reported to work on Windows but fail to be properly detected by Vivado under Linux.
+The The 93LC46B (1kbit) memory has a different layout that works under Windows but fails to be properly detected by Vivado under Linux.
 Use of the 93LC66B (4kbit) memory has not been tested.
 
 **Note:** The second port on an FT2232H or three remaining ports on a FT4232H can be used for normal UART or bit-bang.
-However, only the FT2232H supports the FIFO, MCU, and fast serial modes on its additional port in addition to the MPSSE.
-On the FT4232H, only the second port can be used as an additional MPSSE channel.
+On the FT4232H, only the second port can be used as an additional MPSSE channel whereas the second port on the FT2232H is largely equivalent to the first.
 
 ### Pin Assignments
 
@@ -203,7 +202,7 @@ FT_PROGRAM_DATA data = {
     .DDriveCurrent = 4,   // Default Value
     .AIsVCP8 = 0,         // Set to MPSSE
     .BIsVCP8 = 1,         // Default Value, Set to VCP
-    .BIsVCP8 = 1,         // Default Value, Set to VCP
+    .CIsVCP8 = 1,         // Default Value, Set to VCP
     .DIsVCP8 = 1,         // Default Value, Set to VCP
     // FT232H Settings
     .SerNumEnableH = 1,   // Default Value
