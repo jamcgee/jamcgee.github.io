@@ -29,8 +29,8 @@ Much of the information will be conceptual but referenced repeatedly when discus
 
 Before we start diving into the specifics, it's useful to get a model for visualizing the components of Ethernet.
 When discussing networking, one frequently starts with the OSI model but given that it's based on a *software* model of networking, it's woefully inadequate for describing the hardware.
-It brushes everything into a single box called "Physical Layer".
-Compare that to <abbr title="HyperText Transfer Protocol">HTTP</abbr>, which gets smeared out over three layers despite having a fraction of the complexity.
+It simply brushes everything into a single box called "Physical Layer".
+Compare that to <abbr title="HyperText Transfer Protocol">HTTP</abbr>, which gets smeared out over the top three layers despite having a fraction of the complexity.
 
 <figure>
 <svg viewBox="-5 -5 510 250" style="display:block;margin:auto;">
@@ -94,7 +94,7 @@ Compare that to <abbr title="HyperText Transfer Protocol">HTTP</abbr>, which get
 
 For 802.3, we largely concern ourselves with the Physical Layer (Layer 1) and the lower half of the Data Link Layer (Layer 2).
 For most people working with embedded systems, this consists of the Media Access Controller (<abbr>MAC</abbr>) in Layer 2 and the <abbr title="Physical Layer Device">PHY</abbr> comprising most of Layer 1.
-These components generally communicate using a Media Independent Interface (<abbr>xMII</abbr>) and the <abbr>PHY</abbr> interfaces with the physical medium using a Medium Dependent Interface (<abbr>MDI</abbr>).
+These components typically communicate using some variant of the Media Independent Interface (<abbr>xMII</abbr>) and the <abbr>PHY</abbr> interfaces with the physical medium using a Medium Dependent Interface (<abbr>MDI</abbr>).
 The <abbr>MDI</abbr> and medium roughly corresponds to what people think of as "Ethernet", e.g. 100Base-TX, 1000Base-T, 10GBase-SR, etc.
 
 The PHY itself contains three sublayers:
@@ -102,11 +102,10 @@ The PHY itself contains three sublayers:
 - The Physical Medium Dependent (<abbr>PMD</abbr>) sublayer is responsible for directly interfacing with the medium, which can be the <abbr title="Analog-To-Digital Converter">ADC</abbr>s and <abbr title="Digital-To-Analog Converter">DAC</abbr>s of a 1000BaseT transceiver, or the laser diode and photodiode of a fiber transceiver.
 - The Physical Medium Attachment (<abbr>PMA</abbr>) sublayer glues the two layers together, containing serializers, deserializers, clock recovery, and other logic.
 
-Older standards, such as 10Base-T, have a different breakdown but this is fairly consistent for modern standards.
-Additional sublayers may appear in more sophisticated circumstances.
+Older standards, such as 10Base-T, have a different breakdown and additional sublayers may appear in more sophisticated circumstances but this is fairly consistent for modern standards.
 
 The original Media Independent Interface was introduced with Fast Ethernet (100 Megabit) in Clause 22, where it was intended as a standard interface between Line Replaceable Units (LRU) but this usage is generally extinct.
-Today, it primarily exists as a chip-to-chip or on-chip interface.
+Today, it primarily used as a chip-to-chip or on-chip interface.
 Each subsequent Ethernet revision tends to introduce a new variant of <abbr>xMII</abbr> and many of the dominant interfaces are external to the 802.3 process.
 
 The split between a processor-based MAC and a discrete PHY chip breaks down when considering higher-speed protocols like 10 Gigabit.
@@ -131,6 +130,7 @@ I will endeavour to provide explicit examples in these cases to help clear the a
 ## Ethernet Packets and Frames (Clause 3)
 
 In 802.3 parlance, an Ethernet *packet* is the entire structure from the preamble through the FCS and any extension while the Ethernet *frame* begins with the destination address and ends with the <abbr title="Frame Check Sequence">FCS</abbr>.
+
 To assist with verification, an example *packet* containing an <abbr title="Address Resolution Protocol">ARP</abbr> *frame* captured from a local network is illustrated.
 To minimize the probability of error, this packet was captured off my home network using a [Xilinx <abbr title="Integrated Logic Analyzer">ILA</abbr>](https://www.xilinx.com/products/intellectual-property/ila.html) attached to an <abbr title="Reduced Gigabit Media Independent Interface">RGMII</abbr> <abbr title="Physical Layer Device">PHY</abbr>.
 The <abbr title="Cyclic Redundancy Check">CRC</abbr> was independently verified and the packet is presented unmodified.
@@ -172,8 +172,8 @@ It provides a regular pattern of repeating symbols to extract a timing reference
 However, with the introduction of Fast Ethernet (100 Megabit), modern protocols transmit continuously in full duplex with the packet delimitated by control words, making the preamble largely vestigial.
 
 The standard preamble is seven bytes of `0x55` (`10101010` in transmit order); however, there are conditions under which the transmitter may intentionally adjust the length of this field.
-As a result, receivers should not assume that they will receive exactly seven byte.
-The specific interface will provide certain guarantees and implementations need to be careful they do not make incorrect assumptions.
+As a result, receivers should not assume that they will receive exactly seven bytes.
+The specific protocol will provide certain guarantees and implementations need to be careful they do not make incorrect assumptions.
 
 ### Start Frame Delimiter (Clause 3.2.2)
 
@@ -187,13 +187,13 @@ This immediately preceeds the first byte of the Ethernet *frame*.
 Example: <code style="background: #FC88; border: 1px solid #FC0; border-radius: 2px; padding: 0 4px;">FF FF FF FF FF FF</code>
 
 The first 48 bits (six bytes) of the Ethernet *frame* is the destination address.
-An Ethernet address, formally a EUI-48 address, has an internal structure that permits the hierarchy delegation of responsibility for assigning addresses but that is largely irrelevant from the perspective of hardware implementation.
+An Ethernet address, formally a EUI-48 address, has an internal structure that permits the hierarchial delegation of responsibility for assigning addresses but that is largely irrelevant from the perspective of hardware implementation.
 Instead, we only care whether the address identifies an individual host or a group.
 
 The least significant bit of the first byte (i.e. the first bit transmitted) is the individual/group bit.
 When set, the address is treated as a group (multicast) address.
 All ones, as in the above example, represents the standard broadcast address.
-Most switches treat all group addresses as broadcast addresses but techniques such as static configuration or <abbr title="Internet Group Management Protocol">IGMP</abbr> snooping can be used to reduce the scope of traffic in a multicast-heavy environment.
+Most switches treat all group addresses as broadcast addresses but techniques such as <abbr title="Internet Group Management Protocol">IGMP</abbr> snooping or a simple static configuration can be used to reduce the scope of traffic in a multicast-heavy environment.
 
 ### Source Address (Clause 3.2.5)
 
@@ -209,8 +209,10 @@ Example: <code style="background: #FE48; border: 1px solid #FD0; border-radius: 
 The next 16 bits of the Ethernet *frame* can be interpreted as either the length or the type of the frame.
 This is sent most significant byte first (although the bit ordering within each byte is still little endian).
 
-1. When 1500 or less (`0x05DC`), it is to be interpreted as a length.
-2. When 1536 or more (`0x0600`), it is to be interpreted as a type.
+1. When 1500 or less (`0x05DC`), it is to be interpreted as the number of bytes in the Client Data field, excluding any padding.
+   For example, a payload of 47 bytes (hex `0x002F`) will be transmitted as `00 2F` and include one byte of padding due to the minimum *frame* size of 64 bytes.
+2. When 1536 or more (`0x0600`), it is to be interpreted as the *EtherType*.
+   For example, the <abbr title="Address Resolution Protocol">ARP</abbr> packet in the example has an EtherType of `0x0806` and will be transmitted as `08 06`.
 3. Values in between these two are invalid and should be discarded.
 
 **Note:** There is no mechanism to indicate the length of a jumbo frame.
@@ -242,6 +244,8 @@ Some variants of Ethernet embed Forward Error Correction (<abbr>FEC</abbr>) into
 **Note:** Longer packets require stricter tolerances on the reference clocks and buffering of both peers.
 This can become acute for interfaces such as <abbr title="Serial Gigabit Media Independent Interface">SGMII</abbr> where the recovered clock cannot be used for PHY-MAC communications.
 Even the standard <abbr title="Maximum Transfer Unit">MTU</abbr> at 10Base-T with standard oscillator tolerances can exceed the buffering capabilities of some <abbr title="Multi-Gigabit Transceivers">MGTs</abbr>.
+
+**Note:** Due to the lack of explicit delimiters in the framing structure, it's possible that additional bytes may be appended to the payload at the receiver interface, such as padding and the <abbr>FCS</abbr>, when the frame uses an EtherType instead of an explicit length.
 
 ### Padding (Clause 3.2.8)
 
@@ -312,7 +316,7 @@ The final value of `crc_ether(data, len)` would then be shifted out least signif
 
 On reception, Clause 4.2.4.1.2 states that the receiver is to compute the <abbr>FCS</abbr> in the same manner as transmission and compare it to the value stored in the frame.
 While this works, a more common implementation is to send the entire frame, including the <abbr>FCS</abbr>, through the <abbr>CRC</abbr> computation.
-This will generate the same residual (`0x2144DF1C` or `1C DF 44 21` in transmit order) for all valid frames.
+This will generate the same residual (`0x2144DF1C` or `1C DF 44 21` in transmit order after inversion) for all valid frames.
 
 **Note:** The example C implementation is focused on algorithmic clarity, not performance, and largely models how it will be approached in HDL.
 The lookup tables common in software implementations are not characteristic of hardware implementations.
@@ -328,7 +332,7 @@ Given the 100 meter maximum segment length specified in 802.3, this corresponds 
 
 However, for 1000Base-T, this increases to 1000 bits (125 bytes), nearly double the minimum length of an Ethernet frame.
 This means that a station transmitting the minimum length frame may produce a collision it is unable to detect.
-1000Base-T addressed this deficiency by introducing carrier extension, a special waveform that extends the packet without extending the length of the frame.
+1000Base-T addressed this deficiency by introducing carrier extension, a control word that extends the packet without extending the length of the frame.
 
 As half-duplex 1000Base-T was never commercially available, it is rarely implemented in real hardware.
 However, it still exists in a vestigial form in 1000Base-X (Clause 36) and derived interfaces, represented by the token `/R/`.
@@ -355,7 +359,7 @@ With exception to 10Base-T1S, this implemented through an algorithm known as <ab
 While largely extinct in the wild, half-duplex mode can still be entered when autonegotiation is disabled or misconfigured.
 
 Failure to provide even a rudimentary implementation of the logic (e.g. *carrier sense*) can lead to severe communication failures when the peer attempts to engage in collision recovery.
-The specifics of <abbr>CSMA/CD</abbr> will be discussed in the essays describing each protocols.
+The specifics of <abbr>CSMA/CD</abbr> will be discussed in the essays describing each protocol.
 
 ### Full Duplex (Annex 4A)
 
@@ -420,7 +424,7 @@ As with the 802 standards, the ITU-T G.8261 standard is [freely available from t
 
 ### Carrier
 
-In radio, "carrier" frequently refers to a sinusoid that is mixed into a modulated signal to facilitate its transmission through radio and to permit the sharing of the physical medium.
+In radio, "carrier" frequently refers to a sinusoid that is mixed into a modulated signal to facilitate its transmission and permit sharing of the physical medium.
 With exception to optical Ethernet, where the wavelength of the laser would qualify, wired Ethernet does not have a carrier in this traditional sense.
 The "Base" in something like 10GBase-T refers to *baseband* (i.e. the absence of a carrier signal).
 
