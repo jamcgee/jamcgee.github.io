@@ -61,9 +61,9 @@ Compare that to <abbr title="HyperText Transfer Protocol">HTTP</abbr>, which get
   <rect width="150" height="30" y="180"/>
   <text x="75" y="195">Physical</text>
   <!-- Lines -->
-  <line x1="150" y1="150" x2="200" y2="0"/>
-  <line x1="150" y1="180" x2="200" y2="60"/>
-  <line x1="150" y1="210" x2="225" y2="210"/>
+  <line stroke-dasharray="5,5" x1="150" y1="150" x2="200" y2="0"/>
+  <line stroke-dasharray="5,5" x1="150" y1="180" x2="200" y2="60"/>
+  <line stroke-dasharray="5,5" x1="150" y1="210" x2="225" y2="210"/>
   <!-- Ethernet Model -->
   <rect x="200" width="300" height="30"/>
   <text x="350" y="15">LLC - Logical Link Control</text>
@@ -321,7 +321,7 @@ This will generate the same residual (`0x2144DF1C` or `1C DF 44 21` in transmit 
 **Note:** The example C implementation is focused on algorithmic clarity, not performance, and largely models how it will be approached in HDL.
 The lookup tables common in software implementations are not characteristic of hardware implementations.
 Many HDL examples of <abbr>CRC</abbr> in the wild have the XOR tree explicitly spelled out.
-This is unnecessary as all modern synthesis engines can handle the loop unrolling and logic folding without issue.
+This is unnecessary as modern synthesis engines can handle the loop unrolling and logic folding without issue.
 
 ### Extension (Clause 3.2.10)
 
@@ -385,6 +385,276 @@ Whereas for optical standards (e.g. 1000Base-X, Clause 37), autonegotiation is p
 
 The specifics of autonegotiation will be presented in the protocol-specific essays.
 
+## Q-Tagging (802.1Q Clause 9)
+
+As mentioned in the Client Data section, the user payload can be wrapped in an envelope for special processing by switches and networking equipment between the source and its destination.
+The most common envelope seen in the wild is the Customer VLAN Tag (or C-TAG) described in 802.1Q Clause 9.
+
+The presence of a C-TAG is identified by the Tag Protocol Identifier (<abbr>TPID</abbr>) `0x8100` (`81 00` in transmit order) in place of the EtherType.
+The C-TAG extends the frame by four bytes to provide the following additional information about a packet, known as the Tag Control Information (<abbr>TCI</abbr>):
+
+- Priority Code Point (<abbr>PCP</abbr>).
+  There are eight priorities identified by numeric value (zero through seven) with zero are the default priority.
+  Priorities are mostly in numeric order with seven as the highest priority and *one* as the lowest: 1 0 2 3 4 5 6 7.
+  Many networking stacks will synchronize this to the <abbr title="Differentiated Services Code Point">DSCP</abbr> in an <abbr title="Internet Protocol">IP</abbr> packet.
+- Drop Eligible Indicator (<abbr>DEI</abbr>).
+  As a queue reaches capacity, it may need to discard packets.
+  Packets with <abbr>DEI</abbr> are discarded in preference to packets without <abbr>DEI</abbr> set.
+- VLAN Identifier (<abbr>VID</abbr>).
+  The values 1 through 4094 can be used to specify the target VLAN.
+  A zero indicates that no VLAN is specified, identical to the absence of a C-TAG except for the effects of the <abbr>PCP</abbr> and <abbr>DEI</abbr>.
+  The maximum value, 4095, is reserved for the switch.
+
+Together, these are inserted between the source address and the EtherType.
+There are encoded in the following bitfield:
+
+<figure>
+<svg viewBox="0 0 660 60" style="display:block;margin:auto;">
+  <title>Encoding of 802.1Q C-TAG</title>
+  <style>
+    line, polyline, rect { stroke: black; }
+    text { dominant-baseline: central; text-anchor: middle; font-size: 15px; }
+  </style>
+  <symbol id="byte" width="170" height="60">
+    <line x1="160" x2="160" y2="50" stroke-dasharray="5,5"/>
+    <text x="10" y="50">8</text>
+    <line x1="20" y1="25" x2="20" y2="40"/>
+    <text x="30" y="50">7</text>
+    <line x1="40" y1="25" x2="40" y2="40"/>
+    <text x="50" y="50">6</text>
+    <line x1="60" y1="25" x2="60" y2="40"/>
+    <text x="70" y="50">5</text>
+    <line x1="80" y1="25" x2="80" y2="40"/>
+    <text x="90" y="50">4</text>
+    <line x1="100" y1="25" x2="100" y2="40"/>
+    <text x="110" y="50">3</text>
+    <line x1="120" y1="25" x2="120" y2="40"/>
+    <text x="130" y="50">2</text>
+    <line x1="140" y1="25" x2="140" y2="40"/>
+    <text x="150" y="50">1</text>
+  </symbol>
+  <!-- Fields -->
+  <rect x="10" y="5" width="320" height="35" style="fill:#F848"/>
+  <text x="170" y="15">TPID</text>
+  <rect x="330" y="5" width="60" height="35" style="fill:#FC88"/>
+  <text x="360" y="15">PCP</text>
+  <rect x="390" y="5" width="20" height="35" style="fill:#FE48"/>
+  <g transform="translate(400,22.5)"><text transform="rotate(90)">DEI</text></g>
+  <rect x="410" y="5" width="240" height="35" style="fill:#8F88"/>
+  <text x="530" y="15">VID</text>
+  <!-- Byte Outlines -->
+  <line x1="10" y1="0" x2="10" y2="50"/>
+  <line x1="10" y1="5" x2="650" y2="5"/>
+  <use href="#byte" x="10"/>
+  <use href="#byte" x="170"/>
+  <use href="#byte" x="330"/>
+  <use href="#byte" x="490"/>
+  <line x1="10" y1="40" x2="650" y2="40"/>
+</svg>
+<figcaption style="text-align:center">Encoding of 802.1Q C-TAG</figcaption>
+</figure>
+
+If we start with our original example frame:
+
+<p style="font-family: monospace;"><span
+ style="background: #FC88; border: 1px solid #FC0; border-radius: 2px;" title="Destination Address"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">FF FF FF FF FF FF</span></span><span
+   style="font-size: 0;"> </span><span
+ style="background: #FC88; border: 1px solid #FC0; border-radius: 2px;" title="Source Address"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">F8 B7 E2 04 0C 19</span></span><span
+   style="font-size: 0;"> </span><span
+ style="background: #FE48; border: 1px solid #FD0; border-radius: 2px;" title="Type/Length"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">08 06</span></span><span
+   style="font-size: 0;"> </span><span
+ style="background: #8F88; border: 1px solid #4F4; border-radius: 2px;" title="Client Data/Envelope"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">00 01 08 00 06 04 00 01 F8 B7 E2 04 0C 19 44 0F 43 F1 00 00 00 00 00 00 44 0F 43 FE</span></span><span
+   style="font-size: 0;"> </span><span
+ style="background: #88F8; border: 1px solid #88F; border-radius: 2px;" title="Padding"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00</span></span><span
+   style="font-size: 0;"> </span><span
+ style="background: #C8F8; border: 1px solid #C8F; border-radius: 2px;" title="Frame Check Sequence"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">69 70 39 BB</span></span></p>
+
+We can place it on VLAN 24 at default priority by adding the C-TAG:
+
+<p style="font-family: monospace;"><span
+ style="background: #FC88; border: 1px solid #FC0; border-radius: 2px;" title="Destination Address"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">FF FF FF FF FF FF</span></span><span
+   style="font-size: 0;"> </span><span
+ style="background: #FC88; border: 1px solid #FC0; border-radius: 2px;" title="Source Address"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">F8 B7 E2 04 0C 19</span></span><span
+   style="font-size: 0;"> </span><span
+ style="background: #F848; border: 1px solid #F80; border-radius: 2px;" title="Tag Protocol Identifier"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">81 00</span></span><span
+   style="font-size: 0;"> </span><span
+ style="background: #F848; border: 1px solid #F80; border-radius: 2px;" title="Tag Control Information"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">00 18</span></span><span
+   style="font-size: 0;"> </span><span
+ style="background: #FE48; border: 1px solid #FD0; border-radius: 2px;" title="Type/Length"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">08 06</span></span><span
+   style="font-size: 0;"> </span><span
+ style="background: #8F88; border: 1px solid #4F4; border-radius: 2px;" title="Client Data/Envelope"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">00 01 08 00 06 04 00 01 F8 B7 E2 04 0C 19 44 0F 43 F1 00 00 00 00 00 00 44 0F 43 FE</span></span><span
+   style="font-size: 0;"> </span><span
+ style="background: #88F8; border: 1px solid #88F; border-radius: 2px;" title="Padding"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">00 00 00 00 00 00 00 00 00 00 00 00 00 00</span></span><span
+   style="font-size: 0;"> </span><span
+ style="background: #C8F8; border: 1px solid #C8F; border-radius: 2px;" title="Frame Check Sequence"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">79 C4 55 07</span></span></p>
+
+Alternatively, we can drop its priority and make it drop eligible, but leave it on the default VLAN:
+
+<p style="font-family: monospace;"><span
+ style="background: #FC88; border: 1px solid #FC0; border-radius: 2px;" title="Destination Address"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">FF FF FF FF FF FF</span></span><span
+   style="font-size: 0;"> </span><span
+ style="background: #FC88; border: 1px solid #FC0; border-radius: 2px;" title="Source Address"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">F8 B7 E2 04 0C 19</span></span><span
+   style="font-size: 0;"> </span><span
+ style="background: #F848; border: 1px solid #F80; border-radius: 2px;" title="Tag Protocol Identifier"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">81 00</span></span><span
+   style="font-size: 0;"> </span><span
+ style="background: #F848; border: 1px solid #F80; border-radius: 2px;" title="Tag Control Information"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">30 00</span></span><span
+   style="font-size: 0;"> </span><span
+ style="background: #FE48; border: 1px solid #FD0; border-radius: 2px;" title="Type/Length"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">08 06</span></span><span
+   style="font-size: 0;"> </span><span
+ style="background: #8F88; border: 1px solid #4F4; border-radius: 2px;" title="Client Data/Envelope"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">00 01 08 00 06 04 00 01 F8 B7 E2 04 0C 19 44 0F 43 F1 00 00 00 00 00 00 44 0F 43 FE</span></span><span
+   style="font-size: 0;"> </span><span
+ style="background: #88F8; border: 1px solid #88F; border-radius: 2px;" title="Padding"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">00 00 00 00 00 00 00 00 00 00 00 00 00 00</span></span><span
+   style="font-size: 0;"> </span><span
+ style="background: #C8F8; border: 1px solid #C8F; border-radius: 2px;" title="Frame Check Sequence"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">8D D0 E8 4A</span></span></p>
+
+As with any envelope, this can also extend the frame past the standard <abbr title="Maximum Transmit Unit">MTU</abbr>.
+A packet at the standard <abbr>MTU</abbr> of 1500 would have its frame increased from 1518 to 1522 bytes after the inclusion of a C-TAG.
+
+**Note:** These examples apply the tag *without* extending the length of the frame.
+Instead, four bytes are removed from the padding to accommodate the C-TAG while leaving the frame at the minimum size.
+This is not required or expected on the part of the sender, but it is valid and was done here to demonstrate an important point.
+Should a switch remove the tag when forwarding the frame, it must be prepared to extend the padding to maintain the minimum length or the frame is likely to be discarded by the recipient.
+
+A nearly identical structure, called the Service VLAN Tag (S-TAG), is also described in in Clause 9.
+Instead, it uses a <abbr>TPID</abbr> of `0x88A8` (`88 A8` in transmit order).
+It exists to distinguish service provider data planes from those of the customer and, in fact, an S-TAG will regularly carry C-TAGs within its envelope.
+
+> **Note:** As part of the 802 standards, the latest version of 802.1Q is available from the [IEEE Get program](https://ieeexplore.ieee.org/browse/standards/get-program/page/series?id=68) at no cost.
+> Despite its common association with VLAN tags, 802.1Q describes all forms of bridging (e.g. switches).
+> Many of the Time Sensitive Networking (<abbr>TSN</abbr>) standards built on top of the features described in 802.1Q.
+
+## Flow Control (Clause 31, Annex 31B, Annex 31D)
+
+Ethernet does not have an intrinsic concept of flow control.
+There is no "ready" or "wait" signal by which the receiver can apply backpressure against the transmitter.
+Instead, the transmitter may send data at full rate and the receiver must either accept or drop the data as it comes.
+
+What 802.3 does provide is an *optional* <abbr title="Media Access Controller">MAC</abbr> Control sublayer, described in Clause 31.
+This establishes a control plane using otherwise normal Ethernet frames.
+For the purpose of flow control, we are interested in the PAUSE (Annex 31B) and <abbr title="Priority-based Flow Control">PFC</abbr> (Annex 31D) operations.
+
+### PAUSE (Annex 31B)
+
+The PAUSE operation is a fairly simply frame with the following characteristics:
+- The destination address is the multicast address `01 80 C2 00 00 01` or the address of the peer.
+  Switches are not to forward frames set to this multicast address, regardless of the link characteristics.
+- The source address is the individual address of the station generating the PAUSE frame.
+- The EtherType for control operations, `0x8808` (`88 08` in transmit order).
+- The Control Opcode `0x0001` (`00 01` in transmit order).
+- A 16-bit value indicating the requested pause time in units of 512 bit periods (64 bytes), sent most significant byte first.
+- The rest of the frame is padded with zeros (reserved).
+
+An example PAUSE frame with a pause time of `0x1234` (4660 pause quanta, aka 298,240 bytes) would look like:
+
+<p style="font-family: monospace;"><span
+ style="background: #FC88; border: 1px solid #FC0; border-radius: 2px;" title="Destination Address"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">01 80 C2 00 00 01</span></span><span
+   style="font-size: 0;"> </span><span
+ style="background: #FC88; border: 1px solid #FC0; border-radius: 2px;" title="Source Address"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">F8 B7 E2 04 0C 19</span></span><span
+   style="font-size: 0;"> </span><span
+ style="background: #FE48; border: 1px solid #FD0; border-radius: 2px;" title="EtherType"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">88 08</span></span><span
+   style="font-size: 0;"> </span><span
+ style="background: #8F88; border: 1px solid #4F4; border-radius: 2px;" title="Opcode"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">00 01</span></span><span
+   style="font-size: 0;"> </span><span
+ style="background: #8F88; border: 1px solid #4F4; border-radius: 2px;" title="Pause Time"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">12 34</span></span><span
+   style="font-size: 0;"> </span><span
+ style="background: #88F8; border: 1px solid #88F; border-radius: 2px;" title="Padding"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00</span></span><span
+   style="font-size: 0;"> </span><span
+ style="background: #C8F8; border: 1px solid #C8F; border-radius: 2px;" title="Frame Check Sequence"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">C0 77 B2 C3</span></span><span
+   style="font-size: 0;"> </span></p>
+
+Upon receiving the frame, the transmitter should complete the current frame (if any) and then pause transmission of normal traffic for the requested time period.
+Transmission of MAC Control frames is not affected by a PAUSE operation.
+
+If a second PAUSE frame is received during this period, it will override the previous PAUSE operation.
+This facilitates a manner of operation in which a max length `0xFFFF` PAUSE is sent when buffers have received capacity and then sending a zero-length PAUSE after they have fallen below the target threshold.
+
+> **Note:** Support for PAUSE needs to be negotiated as part of the protocol's autonegotiation mechanism and only applies to full duplex links.
+> PAUSE frames are not used when <abbr title="Priority-based Flow Control">PFC</abbr> is in effect.
+
+### Priority-based Flow Control (Annex 31D, 802.1Q Clause 36)
+
+Using Q-Tags, traffic may be sent at different priorities with different <abbr title="Quality of Service">QoS</abbr> guarantees.
+As such, when approaching link capacity, it may be desirable to slow down (pause) lower-priority traffic in order to ensure the timely delivery of higher-priority traffic.
+The <abbr title="Priority-based Flow Control">PFC</abbr> operation permits the specification of separate durations for each of the eight priorities permitted by a Q-Tag.
+
+The structure is similar to the PAUSE frame:
+- The destination address is the same multicast address as a PAUSE frame (`01 80 C2 00 00 01`).
+  The state diagram for the <abbr>PFC</abbr> opcode does not permit the station's individual address as it does for PAUSE.
+- The source address is the individual address of the station generating the PFC frame.
+- The same EtherType (`0x8808`) as all <abbr>MAC</abbr> Control sublayer frames.
+- The Control Opcode `0x0101`.
+- A 16-bit bitmask indicating which priorities the frame is configuring, sent most significant byte first.
+  As there are only eight priorities, the high-order byte is always zero.
+  The remaining bit positions correspond to each priority.
+  For example, configuring priority zero would set the least significant bit (`0x0001` or `00 01` in transmit order).
+- Eight 16-bit fields, named `time[n]`, starting from zero, corresponding to each priority in order.
+  All eight properties are present, even if the specific priority has been masked out by the enable vector.
+  Like the PAUSE frame, these indicate the requested inhibit time in units of 512 bit periods (64 bytes) and are sent most significant byte first.
+- The rest of the frame is padded with zeros (reserved).
+
+An example <abbr>PFC</abbr> frame requesting a pause time of `0x1234` on priority two and a pause time of `0x5678` on priority one would look like:
+
+<p style="font-family: monospace;"><span
+ style="background: #FC88; border: 1px solid #FC0; border-radius: 2px;" title="Destination Address"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">01 80 C2 00 00 01</span></span><span
+   style="font-size: 0;"> </span><span
+ style="background: #FC88; border: 1px solid #FC0; border-radius: 2px;" title="Source Address"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">F8 B7 E2 04 0C 19</span></span><span
+   style="font-size: 0;"> </span><span
+ style="background: #FE48; border: 1px solid #FD0; border-radius: 2px;" title="EtherType"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">88 08</span></span><span
+   style="font-size: 0;"> </span><span
+ style="background: #8F88; border: 1px solid #4F4; border-radius: 2px;" title="Opcode"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">01 01</span></span><span
+   style="font-size: 0;"> </span><span
+ style="background: #8F88; border: 1px solid #4F4; border-radius: 2px;" title="Priority Enable Vector"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">00 06</span></span><span
+   style="font-size: 0;"> </span><span
+ style="background: #8F88; border: 1px solid #4F4; border-radius: 2px;" title="Time Vector"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">00 00 56 78 12 34 00 00 00 00 00 00 00 00 00 00</span></span><span
+   style="font-size: 0;"> </span><span
+ style="background: #88F8; border: 1px solid #88F; border-radius: 2px;" title="Padding"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00</span></span><span
+   style="font-size: 0;"> </span><span
+ style="background: #C8F8; border: 1px solid #C8F; border-radius: 2px;" title="Frame Check Sequence"><span
+  style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">74 B3 B9 76</span></span><span
+   style="font-size: 0;"> </span></p>
+
+> **Note:** Like PAUSE, support for <abbr>PFC</abbr> needs to be enabled.
+> Unlike <abbr>PFC</abbr>, this is not handled by standard in-band autonegotiation mechanisms.
+> Audio Video Bridging (802.1BA) makes use of <abbr>PFC</abbr>.
+
+> **Note:** As part of the 802 standards, the latest versions of 802.1Q and 802.1BA are available from the [IEEE Get program](https://ieeexplore.ieee.org/browse/standards/get-program/page/series?id=68) at no cost.
+
 ## Energy Efficient Ethernet (Clause 78)
 
 With the exception of half-duplex operation and 10Base-T, modern Ethernet transmits continuously.
@@ -397,7 +667,7 @@ a sleep signal indicating an intent to enter <abbr>LPI</abbr>, the <abbr>LPI</ab
 Many of these steps are managed automatically by a Base-T PHY but more direct handling is required when implementing Base-X or Base-R using the <abbr title="Multi-Gigabit Transceiver">MGT</abbr>s of an FPGA.
 The specific handling of <abbr>EEE</abbr> will be described with each protocol.
 
-**Note:** As 10Base-T does not transmit continuously, it does not implement LPI.
+As 10Base-T does not transmit continuously, it does not implement <abbr>LPI</abbr>.
 Instead, 10Base-Te is a cross-compatible variant of 10Base-T with reduced signal amplitude introduced at the same time as <abbr>EEE</abbr>.
 
 ## Precision Time Protocol (802.1AS or 1588)
@@ -407,8 +677,8 @@ The timestamp point for PTP packets is the transition from the last symbol of th
 While this can be captured by the MAC in its interface with the PHY, many PHYs have built-in PTP support and will capture the packet timestamp as it crosses to/from the medium.
 When implemented in this fashion, nanosecond-level accuracy is possible.
 
-As part of 802, 802.1AS (<abbr title="Generalized Precision Time Protocol">gPTP</abbr>) is available from the [IEEE Get program](https://ieeexplore.ieee.org/browse/standards/get-program/page/series?id=68).
-The full <abbr>PTP</abbr> standard ([IEEE 1588](https://standards.ieee.org/ieee/1588/6825/)) is a paid standard.
+> **Note:** As part of 802, 802.1AS (<abbr title="Generalized Precision Time Protocol">gPTP</abbr>) is available from the [IEEE Get program](https://ieeexplore.ieee.org/browse/standards/get-program/page/series?id=68).
+> The full <abbr>PTP</abbr> standard ([IEEE 1588](https://standards.ieee.org/ieee/1588/6825/)) is a paid standard.
 
 ## Synchronous Ethernet (ITU-T G.8261)
 
@@ -418,7 +688,7 @@ This is commonly limited to high-speed protocols such as those implemented using
 
 > **Note:** I am not personally familiar with the SyncE specifications and have not acquainted myself with the SyncE features of the PHYs I have used.
 
-As with the 802 standards, the ITU-T G.8261 standard is [freely available from the ITU's website](https://www.itu.int/rec/T-REC-G.8261).
+> **Note:** As with the 802 standards, the ITU-T G.8261 standard is [freely available from the ITU's website](https://www.itu.int/rec/T-REC-G.8261).
 
 ## Definitions
 
