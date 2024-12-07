@@ -10,7 +10,7 @@ tags:
   - network
 ---
 
-Much of recent professional development has focused on Ethernet, making it a convenient target for technical essays.
+Much of my recent professional development has focused on Ethernet, making it a convenient target for technical essays.
 Unlike much of the Internet, this series of essays will focus on practical implementation of Ethernet from an FPGA or ASIC perspective.
 This means the necessary waveforms and encodings to generate ethernet packets when directly connected to a PHY or medium.
 
@@ -105,7 +105,7 @@ The PHY itself contains three sublayers:
 Older standards, such as 10Base-T, have a different breakdown and additional sublayers may appear in more sophisticated circumstances but this is fairly consistent for modern standards.
 
 The original Media Independent Interface was introduced with Fast Ethernet (100 Megabit) in Clause 22, where it was intended as a standard interface between Line Replaceable Units (LRU) but this usage is generally extinct.
-Today, it primarily used as a chip-to-chip or on-chip interface.
+Today, it is primarily used as a chip-to-chip or on-chip interface.
 Each subsequent Ethernet revision tends to introduce a new variant of <abbr>xMII</abbr> and many of the dominant interfaces are external to the 802.3 process.
 
 The split between a processor-based MAC and a discrete PHY chip breaks down when considering higher-speed protocols like 10 Gigabit.
@@ -133,7 +133,7 @@ In 802.3 parlance, an Ethernet *packet* is the entire structure from the preambl
 
 To assist with verification, an example *packet* containing an <abbr title="Address Resolution Protocol">ARP</abbr> *frame* captured from a local network is illustrated.
 To minimize the probability of error, this packet was captured off my home network using a [Xilinx <abbr title="Integrated Logic Analyzer">ILA</abbr>](https://www.xilinx.com/products/intellectual-property/ila.html) attached to an <abbr title="Reduced Gigabit Media Independent Interface">RGMII</abbr> <abbr title="Physical Layer Device">PHY</abbr>.
-The <abbr title="Cyclic Redundancy Check">CRC</abbr> was independently verified and the packet is presented unmodified.
+The <abbr title="Cyclic Redundancy Check">CRC</abbr> was independently verified and the packet is presented unmodified (excluding a simulated extension).
 
 <p style="font-family: monospace;"><span
  style="background: #F888; border: 1px solid #F88; border-radius: 2px;" title="Preamble"><span
@@ -180,14 +180,14 @@ The specific protocol will provide certain guarantees and implementations need t
 Example: <code style="background: #F888; border: 1px solid #F88; border-radius: 2px; padding: 0 4px;">D5</code>
 
 The last byte of the preamble sequence is the Start Frame Delimiter (SFD), which has the sequence `10101011` in transmit order (`0xD5` numerically).
-This immediately preceeds the first byte of the Ethernet *frame*.
+This immediately proceeds the first byte of the Ethernet *frame*.
 
 ### Destination Address (Clause 3.2.4)
 
 Example: <code style="background: #FC88; border: 1px solid #FC0; border-radius: 2px; padding: 0 4px;">FF FF FF FF FF FF</code>
 
 The first 48 bits (six bytes) of the Ethernet *frame* is the destination address.
-An Ethernet address, formally a EUI-48 address, has an internal structure that permits the hierarchial delegation of responsibility for assigning addresses but that is largely irrelevant from the perspective of hardware implementation.
+An Ethernet address, formally an EUI-48 address, has an internal structure that permits the hierarchial delegation of responsibility for assigning addresses but that is largely irrelevant from the perspective of hardware implementation.
 Instead, we only care whether the address identifies an individual host or a group.
 
 The least significant bit of the first byte (i.e. the first bit transmitted) is the individual/group bit.
@@ -199,14 +199,14 @@ Most switches treat all group addresses as broadcast addresses but techniques su
 
 Example: <code style="background: #FC88; border: 1px solid #FC0; border-radius: 2px; padding: 0 4px;">F8 B7 E2 04 0C 19</code>
 
-The next 48 bits of the Ethernet *frame* is the address of the transmitting host.
+The next 48 bits of the frame is the address of the transmitting host.
 Unlike the destination address, this should always be an individual address.
 
 ### Length/Type (Clause 3.2.6)
 
 Example: <code style="background: #FE48; border: 1px solid #FD0; border-radius: 2px; padding: 0 4px;">08 06</code>
 
-The next 16 bits of the Ethernet *frame* can be interpreted as either the length or the type of the frame.
+The next 16 bits of the frame can be interpreted as either the length or the type of the frame.
 This is sent most significant byte first (although the bit ordering within each byte is still little endian).
 
 1. When 1500 or less (`0x05DC`), it is to be interpreted as the number of bytes in the Client Data field, excluding any padding.
@@ -232,7 +232,7 @@ The standard maximum length of the payload is 1500 bytes (for a frame of 1518 by
 
 1. An *envelope* frame.  Q-Tagging (802.1Q Clause 9) is the most common example of this, but a variety of standards exist to encapsulate customer data as it transitions a network.
    While a Q-Tag only extends the frame by four bytes (to a maximum of 1522 bytes), other protocols can extend it considerably longer.
-   Clause 3.2.7 recommends a maximum of 1982 for the general handling of envelopes (for a total frame size of 2000 bytes) but the client data is still limited to 1500 bytes.
+   Clause 3.2.7 recommends a maximum of 1982 for the general handling of envelopes (for a total *frame* size of 2000 bytes) but the client data is still limited to 1500 bytes.
 2. Jumbo frames, those with a client payload in excess of 1500 bytes, are *not* defined by the 802.3 standard and are, in effect, a nonstandard extension.
 
 **Note:** The ability of the FCS to detect errors decreases as the frame increases in length.
@@ -330,8 +330,8 @@ Example: <code style="background: #8888; border: 1px solid #888; border-radius: 
 The minimum length of a packet was originally designed to exceed the round-trip time of a packet at the maximum segment length in order to facilitate the detection of collisions.
 Given the 100 meter maximum segment length specified in 802.3, this corresponds roughly to 10 bits at 10Base-T and 100 bits at 100Base-TX.
 
-However, for 1000Base-T, this increases to 1000 bits (125 bytes), nearly double the minimum length of an Ethernet frame.
-This means that a station transmitting the minimum length frame may produce a collision it is unable to detect.
+However, for 1000Base-T, this increases to 1000 bits (125 bytes), nearly double the minimum length of an Ethernet frame (64 bytes).
+This means that a station transmitting the minimum length frame may produce collisions it is unable to detect.
 1000Base-T addressed this deficiency by introducing carrier extension, a control word that extends the packet without extending the length of the frame.
 
 As half-duplex 1000Base-T was never commercially available, it is rarely implemented in real hardware.
@@ -371,7 +371,7 @@ However, Clause 4A allows the option to repurpose them.
 
 There are conditions under which the medium is not ready for transmission, such as when leaving <abbr title="Low Power Idle">LPI</abbr>.
 In these cases, the PHY may use the *carrier sense* signal to request deference from the MAC until the situation is resolved.
-This is described in Clause 4A.2.3.2.1 and largely amounts to implementing bullets 1-3 of the half duplex logic.
+This is described in Clause 4A.2.3.2.1 and largely amounts to implementing the collision avoidance component of the half duplex logic.
 It should be emphasized that this usage of *carrier sense* is not commonly supported in commercial <abbr>PHY</abbr>s and using it on such devices may result in significant transmission delays.
 
 ## Autonegotiation
@@ -396,7 +396,7 @@ The C-TAG extends the frame by four bytes to provide the following additional in
 - Priority Code Point (<abbr>PCP</abbr>).
   There are eight priorities identified by numeric value (zero through seven) with zero are the default priority.
   Priorities are mostly in numeric order with seven as the highest priority and *one* as the lowest: 1 0 2 3 4 5 6 7.
-  Many networking stacks will synchronize this to the <abbr title="Differentiated Services Code Point">DSCP</abbr> in an <abbr title="Internet Protocol">IP</abbr> packet.
+  Many networking stacks will synchronize this with the <abbr title="Differentiated Services Code Point">DSCP</abbr> in an <abbr title="Internet Protocol">IP</abbr> packet.
 - Drop Eligible Indicator (<abbr>DEI</abbr>).
   As a queue reaches capacity, it may need to discard packets.
   Packets with <abbr>DEI</abbr> are discarded in preference to packets without <abbr>DEI</abbr> set.
@@ -405,8 +405,7 @@ The C-TAG extends the frame by four bytes to provide the following additional in
   A zero indicates that no VLAN is specified, identical to the absence of a C-TAG except for the effects of the <abbr>PCP</abbr> and <abbr>DEI</abbr>.
   The maximum value, 4095, is reserved for the switch.
 
-Together, these are inserted between the source address and the EtherType.
-There are encoded in the following bitfield:
+Together, these are inserted between the source address and the EtherType, encoded with the following bitfield (bytes are transmitted bit one first):
 
 <figure>
 <svg viewBox="0 0 660 60" style="display:block;margin:auto;">
@@ -534,8 +533,8 @@ A packet at the standard <abbr>MTU</abbr> of 1500 would have its frame increased
 
 **Note:** These examples apply the tag *without* extending the length of the frame.
 Instead, four bytes are removed from the padding to accommodate the C-TAG while leaving the frame at the minimum size.
-This is not required or expected on the part of the sender, but it is valid and was done here to demonstrate an important point.
-Should a switch remove the tag when forwarding the frame, it must be prepared to extend the padding to maintain the minimum length or the frame is likely to be discarded by the recipient.
+This is not required or expected on the part of the sender, but it is valid and was done here to demonstrate an important point:
+Should a switch remove the tag when forwarding the frame, it must be prepared to extend the padding to maintain the minimum length or the frame is likely to be discarded by the recipient as a runt.
 
 A nearly identical structure, called the Service VLAN Tag (S-TAG), is also described in in Clause 9.
 Instead, it uses a <abbr>TPID</abbr> of `0x88A8` (`88 A8` in transmit order).
@@ -543,12 +542,12 @@ It exists to distinguish service provider data planes from those of the customer
 
 > **Note:** As part of the 802 standards, the latest version of 802.1Q is available from the [IEEE Get program](https://ieeexplore.ieee.org/browse/standards/get-program/page/series?id=68) at no cost.
 > Despite its common association with VLAN tags, 802.1Q describes all forms of bridging (e.g. switches).
-> Many of the Time Sensitive Networking (<abbr>TSN</abbr>) standards built on top of the features described in 802.1Q.
+> Many of the Time Sensitive Networking (<abbr>TSN</abbr>) standards are built on top of the features described in 802.1Q.
 
 ## Flow Control (Clause 31, Annex 31B, Annex 31D)
 
 Ethernet does not have an intrinsic concept of flow control.
-There is no "ready" or "wait" signal by which the receiver can apply backpressure against the transmitter.
+There is no "ready" or "wait" signal by which the receiver can apply backpressure against the transmitter like exists in a bus such as AXI-Stream.
 Instead, the transmitter may send data at full rate and the receiver must either accept or drop the data as it comes.
 
 What 802.3 does provide is an *optional* <abbr title="Media Access Controller">MAC</abbr> Control sublayer, described in Clause 31.
@@ -595,7 +594,7 @@ Upon receiving the frame, the transmitter should complete the current frame (if 
 Transmission of MAC Control frames is not affected by a PAUSE operation.
 
 If a second PAUSE frame is received during this period, it will override the previous PAUSE operation.
-This facilitates a manner of operation in which a max length `0xFFFF` PAUSE is sent when buffers have received capacity and then sending a zero-length PAUSE after they have fallen below the target threshold.
+This facilitates an on-off manner of operation in which a max-duration `0xFFFF` PAUSE is sent when buffers have received capacity followed by a zero-duration PAUSE after they have fallen below the target threshold.
 
 > **Note:** Support for PAUSE needs to be negotiated as part of the protocol's autonegotiation mechanism and only applies to full duplex links.
 > PAUSE frames are not used when <abbr title="Priority-based Flow Control">PFC</abbr> is in effect.
