@@ -11,10 +11,11 @@ enableRobotsTXT: true
 
 # Site Configuration
 title: Ethereal Wake
-author:
-  name: Jonathan McGee
-  email: jamcgee@etherealwake.com
-copyright: Copyright © 2024 Jonathan McGee. All Rights Reserved.
+params:
+  author:
+    name: Jonathan McGee
+    email: jamcgee@etherealwake.com
+copyright: Copyright © 2025 Jonathan McGee. All Rights Reserved.
 
 # Theme Configuration
 markup:

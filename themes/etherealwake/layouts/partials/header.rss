@@ -6,9 +6,9 @@
 {{- with .Site.LanguageCode }}
     <language>{{.}}</language>
 {{- end }}
-{{- with .Site.Author.email }}
-    <managingEditor>{{.}}{{ with $.Site.Author.name }} ({{.}}){{end}}</managingEditor>
-    <webMaster>{{.}}{{ with $.Site.Author.name }} ({{.}}){{end}}</webMaster>
+{{- with site.Params.author }}
+    <managingEditor>{{.email}} ({{.name}})</managingEditor>
+    <webMaster>{{.email}} ({{.name}})</webMaster>
 {{- end}}
 {{- with .Site.Copyright }}
     <copyright>{{.}}</copyright>
