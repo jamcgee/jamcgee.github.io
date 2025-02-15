@@ -1,6 +1,5 @@
 ---
 # Index
-hidden: True
 url: /error/{{ .Name }}.html
 weight: {{ .Name }}
 # Metadata

@@ -5,6 +5,12 @@ sitemap:
   changeFreq: monthly
 # Metadata
 title: Error Templates
+# Build
+build:
+  list: never
+cascade:
+  build:
+    list: local
 ---
 
 This directory contains the templates used for the generation of server error messages.
