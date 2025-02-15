@@ -1,5 +1,5 @@
 ---
-hidden: True
+# Index
 fragment: content
 title: Aviation
 weight: 500

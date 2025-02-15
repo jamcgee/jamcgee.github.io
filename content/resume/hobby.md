@@ -1,5 +1,5 @@
 ---
-hidden: True
+# Index
 disabled: true
 fragment: content
 title: Hobby Experience

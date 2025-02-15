@@ -12,6 +12,14 @@ author:
   email: jamcgee@etherealwake.com
   url: https://etherealwake.com
 description: Jonathan McGee's Professional Resume
+# Build
+build:
+  list: never
+  render: always
+cascade:
+  build:
+    list: local
+    render: never
 ---
 
 Private pilot and electrical engineer with experience in embedded systems, hardware design, and signal processing.

@@ -1,6 +1,5 @@
 ---
 # Index
-hidden: True
 fragment: experience
 title: Education
 weight: 300
