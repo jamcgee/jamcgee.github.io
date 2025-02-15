@@ -20,6 +20,9 @@ copyright: Copyright © 2025 Jonathan McGee. All Rights Reserved.
 # Theme Configuration
 markup:
   goldmark:
+    parser:
+      attribute:
+        block: true
     renderer:
       unsafe: true
 theme: etherealwake
