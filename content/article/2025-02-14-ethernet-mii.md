@@ -1,7 +1,8 @@
 ---
 date: 2025-02-14T22:55:00-0800
 title: "Ethernet: Media Independent Interface (MII)"
-series: Ethernet
+series: ethernet
+series_weight: 200
 slug: ethernet-mii
 tags:
   - embedded
@@ -571,7 +572,7 @@ The bounds of this delay expand exponentially with each retransmission attempt a
 </math>
 
 Where <var>r</var> is the number of slot times and <var>n</var> is the retransmission attempt (presumably one-based but Clause 4.2.3.2.5 isn't clear).
-As the upper bound is a power of two, this makes it straightforward to generate in hardware by simply masking off the appropriate number of bits from a random generator, such as a Linear Feedback Shift Register (<abbr>LFSR</abbr>) formed from the <abbr>FCS<abbr> generation logic.
+As the upper bound is a power of two, this makes it straightforward to generate in hardware by simply masking off the appropriate number of bits from a random generator, such as a Linear Feedback Shift Register (<abbr>LFSR</abbr>) formed from the <abbr>FCS</abbr> generation logic.
 The slotTime for 10 and 100 megabit is 512 bits (128 clocks).
 
 <figure>

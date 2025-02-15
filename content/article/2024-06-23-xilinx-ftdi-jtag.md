@@ -8,6 +8,7 @@ tags:
   - firmware
   - fpga
   - ftdi
+  - hardware
   - xilinx
 ---
 

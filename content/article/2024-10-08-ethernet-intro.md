@@ -1,7 +1,8 @@
 ---
 date: 2024-10-08T23:25:00-0700
 title: "Ethernet: Fundamentals"
-series: Ethernet
+series: ethernet
+series_weight: 100
 slug: ethernet-intro
 tags:
   - embedded
