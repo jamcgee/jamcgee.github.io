@@ -32,61 +32,65 @@ It simply brushes everything into a single box called "Physical Layer".
 Compare that to <abbr title="HyperText Transfer Protocol">HTTP</abbr>, which gets smeared out over the top three layers despite having a fraction of the complexity.
 
 <figure>
-<svg viewBox="-5 -5 510 250" style="display:block;margin:auto;">
+<svg viewBox="-5 -5 510 250" style="display:block;margin:auto;max-width:500px;">
   <title>Basic Ethernet Layer Model</title>
-  <style>
-    line, polyline, rect { stroke: black; }
-    polyline, rect { fill: none; }
-    text { dominant-baseline: central; text-anchor: middle; }
-    .small { font-size: 15px; }
-  </style>
-  <symbol id="arrow" width="30" height="10" y="-5">
-    <polyline points="6,1 1,5 6,9"/>
-    <line x1="1" y1="5" x2="30" y2="5"/>
-  </symbol>
-  <!-- OSI Model -->
-  <rect width="150" height="30"/>
-  <text x="75" y="15">Application</text>
-  <rect width="150" height="30" y="30"/>
-  <text x="75" y="45">Presentation</text>
-  <rect width="150" height="30" y="60"/>
-  <text x="75" y="75">Session</text>
-  <rect width="150" height="30" y="90"/>
-  <text x="75" y="105">Transport</text>
-  <rect width="150" height="30" y="120"/>
-  <text x="75" y="135">Network</text>
-  <rect width="150" height="30" y="150"/>
-  <text x="75" y="165">Data Link</text>
-  <rect width="150" height="30" y="180"/>
-  <text x="75" y="195">Physical</text>
-  <!-- Lines -->
-  <line stroke-dasharray="5,5" x1="150" y1="150" x2="200" y2="0"/>
-  <line stroke-dasharray="5,5" x1="150" y1="180" x2="200" y2="60"/>
-  <line stroke-dasharray="5,5" x1="150" y1="210" x2="225" y2="210"/>
-  <!-- Ethernet Model -->
-  <rect x="200" width="300" height="30"/>
-  <text x="350" y="15">LLC - Logical Link Control</text>
-  <rect x="200" width="300" height="30" y="30"/>
-  <text x="350" y="45">MAC - Media Access Controller</text>
-  <rect x="225" width="250" height="30" y="60"/>
-  <text x="350" y="75">Reconciliation</text>
-  <rect x="340" width="20" height="30" y="90"/>
-  <use href="#arrow" x="385" y="105"/>
-  <text x="435" y="105">xMII</text>
-  <rect x="300" width="100" height="20" y="120"/>
-  <text x="350" y="130" class="small">PCS</text>
-  <rect x="300" width="100" height="20" y="140"/>
-  <text x="350" y="150" class="small">PMA</text>
-  <rect x="300" width="100" height="20" y="160"/>
-  <text x="350" y="170" class="small">PMD</text>
-  <path fill="none" stroke="black"
-        d="M 405,120 a 5 5 0 0 1 5 5 v 20 a 5 5 0 0 0 5 5 a 5 5 0 0 0 -5 5 v 20 a 5 5 0 0 1 -5 5"/>
-  <text x="435" y="150">PHY</text>
-  <rect x="340" width="20" height="30" y="180"/>
-  <use href="#arrow" x="385" y="195"/>
-  <text x="435" y="195">MDI</text>
-  <rect x="225" width="250" height="30" y="210"/>
-  <text x="350" y="225">Media</text>
+  <!-- Outlines -->
+  <g fill="none" stroke="black">
+    <!-- OSI Model -->
+    <rect width="150" height="30"/>
+    <rect width="150" height="30" y="30"/>
+    <rect width="150" height="30" y="60"/>
+    <rect width="150" height="30" y="90"/>
+    <rect width="150" height="30" y="120"/>
+    <rect width="150" height="30" y="150"/>
+    <rect width="150" height="30" y="180"/>
+    <!-- Lines -->
+    <g stroke-dasharray="3,3">
+      <line x1="150" y1="150" x2="200" y2="0"/>
+      <line x1="150" y1="180" x2="200" y2="60"/>
+      <line x1="150" y1="210" x2="225" y2="210"/>
+    </g>
+    <!-- Ethernet Model -->
+    <rect x="200" width="300" height="30"/>
+    <rect x="200" width="300" height="30" y="30"/>
+    <rect x="225" width="250" height="30" y="60"/>
+    <rect x="340" width="20" height="30" y="90"/>
+    <rect x="300" width="100" height="20" y="120"/>
+    <rect x="300" width="100" height="20" y="140"/>
+    <rect x="300" width="100" height="20" y="160"/>
+    <rect x="340" width="20" height="30" y="180"/>
+    <rect x="225" width="250" height="30" y="210"/>
+    <!-- Pointers -->
+    <polyline points="390,109 385,105 390,101"/>
+    <line x1="386" y1="105" x2="415" y2="105"/>
+    <path d="M 405,120 a 5 5 0 0 1 5 5 v 20 a 5 5 0 0 0 5 5 a 5 5 0 0 0 -5 5 v 20 a 5 5 0 0 1 -5 5"/>
+    <polyline points="390,199 385,195 390,191"/>
+    <line x1="386" y1="195" x2="415" y2="195"/>
+  </g>
+  <!-- Labels -->
+  <g dominant-baseline="central" text-anchor="middle">
+    <!-- OSI Model -->
+    <text x="75" y="15">Application</text>
+    <text x="75" y="45">Presentation</text>
+    <text x="75" y="75">Session</text>
+    <text x="75" y="105">Transport</text>
+    <text x="75" y="135">Network</text>
+    <text x="75" y="165">Data Link</text>
+    <text x="75" y="195">Physical</text>
+    <!-- Ethernet Model -->
+    <text x="350" y="15">LLC - Logical Link Control</text>
+    <text x="350" y="45">MAC - Media Access Controller</text>
+    <text x="350" y="75">Reconciliation</text>
+    <text x="435" y="105">xMII</text>
+    <g font-size="15px">
+      <text x="350" y="130" class="small">PCS</text>
+      <text x="350" y="150" class="small">PMA</text>
+      <text x="350" y="170" class="small">PMD</text>
+    </g>
+    <text x="435" y="150">PHY</text>
+    <text x="435" y="195">MDI</text>
+    <text x="350" y="225">Media</text>
+  </g>
 </svg>
 <figcaption style="text-align:center">Mapping of Ethernet to the OSI Networking Model</figcaption>
 </figure>
@@ -407,38 +411,48 @@ The C-TAG extends the frame by four bytes to provide the following additional in
 Together, these are inserted between the source address and the EtherType, encoded with the following bitfield (bytes are transmitted bit one first):
 
 <figure>
-<svg viewBox="0 0 660 60" style="display:block;margin:auto;">
+<svg viewBox="0 0 660 60" style="display:block;margin:auto;"
+     dominant-baseline="central" font-size="15px" text-anchor="middle">
   <title>Encoding of 802.1Q C-TAG</title>
-  <style>
-    line, polyline, rect { stroke: black; }
-    text { dominant-baseline: central; text-anchor: middle; font-size: 15px; }
-  </style>
   <symbol id="byte" width="170" height="60">
-    <line x1="160" x2="160" y2="50" stroke-dasharray="5,5"/>
+    <!-- Bit Boundaries -->
+    <g stroke="black">
+      <line x1="20" y1="25" x2="20" y2="40"/>
+      <line x1="40" y1="25" x2="40" y2="40"/>
+      <line x1="60" y1="25" x2="60" y2="40"/>
+      <line x1="80" y1="25" x2="80" y2="40"/>
+      <line x1="100" y1="25" x2="100" y2="40"/>
+      <line x1="120" y1="25" x2="120" y2="40"/>
+      <line x1="140" y1="25" x2="140" y2="40"/>
+    </g>
+    <!-- Bit Labels -->
     <text x="10" y="50">8</text>
-    <line x1="20" y1="25" x2="20" y2="40"/>
     <text x="30" y="50">7</text>
-    <line x1="40" y1="25" x2="40" y2="40"/>
     <text x="50" y="50">6</text>
-    <line x1="60" y1="25" x2="60" y2="40"/>
     <text x="70" y="50">5</text>
-    <line x1="80" y1="25" x2="80" y2="40"/>
     <text x="90" y="50">4</text>
-    <line x1="100" y1="25" x2="100" y2="40"/>
     <text x="110" y="50">3</text>
-    <line x1="120" y1="25" x2="120" y2="40"/>
     <text x="130" y="50">2</text>
-    <line x1="140" y1="25" x2="140" y2="40"/>
     <text x="150" y="50">1</text>
   </symbol>
-  <!-- Fields -->
-  <rect x="10" y="5" width="320" height="35" style="fill:#F848"/>
+  <!-- Outlines -->
+  <g stroke="black">
+    <!-- Fields -->
+    <rect x="10" y="5" width="320" height="35" fill="#F848"/>
+    <rect x="330" y="5" width="60" height="35" fill="#FC88"/>
+    <rect x="390" y="5" width="20" height="35" fill="#FE48"/>
+    <rect x="410" y="5" width="240" height="35" fill="#8F88"/>
+    <!-- Byte Boundaries -->
+    <g stroke-dasharray="3,3">
+      <line x1="170" x2="170" y2="50"/>
+      <line x1="330" x2="330" y2="50"/>
+      <line x1="490" x2="490" y2="50"/>
+    </g>
+  </g>
+  <!-- Labels -->
   <text x="170" y="15">TPID</text>
-  <rect x="330" y="5" width="60" height="35" style="fill:#FC88"/>
   <text x="360" y="15">PCP</text>
-  <rect x="390" y="5" width="20" height="35" style="fill:#FE48"/>
-  <g transform="translate(400,22.5)"><text transform="rotate(90)">DEI</text></g>
-  <rect x="410" y="5" width="240" height="35" style="fill:#8F88"/>
+  <text transform="translate(400,22.5) rotate(90)">DEI</text>
   <text x="530" y="15">VID</text>
   <!-- Byte Outlines -->
   <line x1="10" y1="0" x2="10" y2="50"/>
