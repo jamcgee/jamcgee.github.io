@@ -58,16 +58,12 @@ markup:
 mediaTypes:
   application/atom+xml:
     suffixes:
+      - xml
       - atom
-      - xml
-  application/rss+xml:
-    suffixes:
       - rss
-      - xml
 outputs:
   home:
     - html
-    - atom
     - rss
   section:
     - html
@@ -75,10 +71,10 @@ outputs:
     - html
   term:
     - html
-    - atom
     - rss
 outputFormats:
-  atom:
-    mediaType: application/atom+xml
   rss:
-    mediaType: application/rss+xml
+    mediaType: application/atom+xml
+services:
+  rss:
+    limit: 10

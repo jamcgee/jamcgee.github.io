@@ -1,0 +1,53 @@
+{{- $root := . }}
+{{- if .IsHome }}{{ $root = .Site }}{{ end }}
+{{- $pages := $root.Pages }}
+{{- if or .IsHome $root.IsSection }}
+{{- $pages = $root.RegularPages }}
+{{- end }}
+{{- $limit := .Site.Config.Services.RSS.Limit }}
+{{- if ge $limit 1 }}
+{{- $pages = $pages | first $limit }}
+{{- end }}
+{{- "<?xml version=\"1.0\" encoding=\"utf-8\" ?>" | safeHTML }}
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="{{ .Site.LanguageCode | default "en" }}">
+  <id>{{ .Permalink }}</id>
+  <title type="text">{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ with .Title }}{{.}} on {{ end }}{{ .Site.Title }}{{ end }}</title>
+{{- with .Params.subTitle }}
+  <subtitle type="text">{{.}}</subtitle>
+{{- end }}
+  <updated>{{ (index $pages.ByLastmod.Reverse 0).Lastmod.Format "2006-01-02T15:04:05Z07:00" | safeHTML }}</updated>
+{{- with .Site.Copyright }}
+  <rights>{{ transform.HTMLUnescape .}}</rights>
+{{- end}}
+  <generator uri="https://gohugo.io/" version="{{ hugo.Version }}">Hugo -- gohugo.io</generator>
+{{- with site.Params.author }}
+  <author>{{ with .name }}
+    <name>{{.}}</name>{{ end }}{{ with .email }}
+    <email>{{.}}</email>{{ end }}{{ with .url }}
+    <uri>{{.}}</uri>{{ end }}
+  </author>
+{{- end}}
+{{- with .OutputFormats.Get "rss" }}
+  {{ printf "<link href=%q rel=%q type=%q />" .Permalink "self" .MediaType | safeHTML }}
+{{- end }}
+{{- range .AlternativeOutputFormats }}
+  {{ printf "<link href=%q rel=%q type=%q />" .Permalink "alternate" .MediaType | safeHTML }}
+{{- end }}
+{{- range $pages }}
+  <entry>
+    <id>{{ .Permalink }}</id>
+    <title>{{ .Title }}</title>
+    <updated>{{ .Lastmod.Format "2006-01-02T15:04:05Z07:00" | safeHTML }}</updated>
+    <published>{{ .PublishDate.Format "2006-01-02T15:04:05Z07:00" | safeHTML }}</published>
+{{- range .OutputFormats }}
+    {{ printf "<link href=%q rel=%q type=%q />" .Permalink "alternate" .MediaType | safeHTML }}
+{{- end }}
+{{- with .Summary }}
+    <summary>{{ . | plainify | transform.HTMLUnescape | chomp }}</summary>
+{{- end }}
+{{- with .Content }}
+    <content type="html">{{ "<![CDATA[" | safeHTML }}{{ . }}{{ "]]>" | safeHTML }}</content>
+{{- end}}
+  </entry>
+{{- end }}
+</feed>
