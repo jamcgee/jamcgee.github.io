@@ -60,6 +60,25 @@ ul.metadata > li:before {
   margin: 0 4px;
 }
 
+ul.taxonomy {
+  display: inline;
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+
+ul.taxonomy > li {
+  display: inline;
+}
+
+ul.taxonomy > li:after {
+  content: ", ";
+}
+
+ul.taxonomy > li:last-child:after {
+  content: none;
+}
+
 /*
  * Cheap knockoff of Bootstrap's Pagination component
  */
@@ -114,9 +133,4 @@ ul.metadata > li:before {
     background: #444;
     color: #FFF;
   }
-}
-
-.feed-icon {
-  height: 16px;
-  width: 16px;
 }

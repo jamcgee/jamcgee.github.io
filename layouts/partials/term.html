@@ -1,0 +1,14 @@
+<!-- Individual Term in a Taxonomy -->
+<article>
+  <h2 class="title"><a href="{{ .RelPermalink }}">{{ .Title }}</a></h2>
+  {{ $publishDate := (index .Pages.ByPublishDate.Reverse 0).PublishDate -}}
+  <ul class="metadata">
+    <li>{{ .Pages.Len }} Articles</li>
+    <li><a href="{{ .Permalink }}" rel="bookmark">Permalink</a></li>
+    <li><time datetime="{{ $publishDate }}">{{ $publishDate.Format "2006 January 2" }}</time></li>
+  </ul>
+  {{ with .Content -}}
+  <div class="summary">{{ . }}</div>
+  {{ end -}}
+  <p><a class="button" href="{{ .RelPermalink }}">View {{ title .Data.Singular }}</a></p>
+</article>

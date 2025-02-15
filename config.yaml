@@ -39,6 +39,9 @@ frontmatter:
 permalinks:
   article: /:year/:month/:slug/
 sectionPagesMenu: menu
+taxonomies:
+  series: series
+  tag: tags
 
 # Rendering
 disableKinds:
