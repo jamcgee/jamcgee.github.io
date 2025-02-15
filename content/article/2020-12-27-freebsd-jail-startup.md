@@ -22,8 +22,6 @@ That means if I'm going to write my own scripts, I need to understand how the Fr
 > **Note:** Jail functionality has improved *a lot* in the past two years.
 > I had started this essay with a lot of frustration over things I had to work around only to find things much improved during my research.
 
-<!--more-->
-
 ## Jail Startup Sequence
 
 While jails are a kernel feature, most of the magic is actually implemented by the [`jail(8)`](https://www.freebsd.org/cgi/man.cgi?query=jail&sektion=8) command.

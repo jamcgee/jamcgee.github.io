@@ -20,8 +20,6 @@ In this essay, we examine the current and historical implementation of executabl
 > **Note:** Most firmware applications need to address the initialization of `.data` and `.bss` from nonvolatile memory.
 > That is not addressed in this essay.
 
-<!--more-->
-
 ## Program Entry Point
 
 Files: `crt0.o` (number often indicates ABI version)<br>

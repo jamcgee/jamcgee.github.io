@@ -24,8 +24,6 @@ For security purposes, I like to use unix domain sockets whenever possible.
 It guarantees the endpoint can only be access from the local host and I can even configure permissions based on the *user*.
 Fortunately, it isn't that hard to modify `simple_server` to support other protocols.
 
-<!--more-->
-
 ## Socket Families and Python
 
 Each protocol family has its own unique representation for an address.

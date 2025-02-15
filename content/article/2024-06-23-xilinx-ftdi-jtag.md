@@ -24,8 +24,6 @@ At some point, the use of FTDI devices became officially supported by Vivado.
 Unfortunately, despite this support, the [documentation](https://docs.amd.com/r/en-US/ug908-vivado-programming-debugging/Programming-FTDI-Devices-for-Vivado-Hardware-Manager-Support) remains poor and occasionally nonfunctional.
 In this article, I will attempt to provide more complete design assistance.
 
-<!--more-->
-
 ## Hardware Configuration
 
 Officially, the [FT232H](https://ftdichip.com/wp-content/uploads/2023/09/DS_FT232H.pdf), [FT2232H](https://ftdichip.com/wp-content/uploads/2024/05/DS_FT2232H.pdf), and [FT4232H](https://ftdichip.com/wp-content/uploads/2024/05/DS_FT4232H.pdf) are supported (QFN or QFP).

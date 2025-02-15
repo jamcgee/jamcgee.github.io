@@ -24,8 +24,6 @@ It can either describe the specific interface defined in Clause 22, used for 10 
 In the later case, 802.3 will abbreviate it as <abbr>xMII</abbr>.
 For this chapter, <abbr>MII</abbr> will refer to the specific interface from Clause 22.
 
-<!--more-->
-
 When originally proposed, <abbr>MII</abbr> was to facilitate the construction of PHYs as a Line Replaceable Unit (<abbr>LRU</abbr>).
 As such, a standardized connector is included in 802.3, covered by Clauses 22.4 (Electrical), 22.5 (Power Supply), and 22.6 (Connector).
 It is unlikely anyone will make use of this connector.

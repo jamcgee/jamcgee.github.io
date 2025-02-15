@@ -27,8 +27,6 @@ For example, the page on [`efi(8)`](https://www.freebsd.org/cgi/man.cgi?query=ef
 > **NOTE:** These instructions were written at the time of FreeBSD 12.2.
 > They are still applicable as of FreeBSD 13.0, but recent updates to the documentation have fixed many of the complaints.
 
-<!--more-->
-
 A traditional boot process comes in three phases:
 
 1. The system firmware loads the *first stage boot loader*.

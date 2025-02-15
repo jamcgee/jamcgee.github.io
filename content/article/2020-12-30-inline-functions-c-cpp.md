@@ -32,8 +32,6 @@ int test2(void) {
 Sometimes, the easiest way to understand a rule is to see it in action.
 Let's analyze how modern compilers deal with C and C++ inline functions in different situations.
 
-<!--more-->
-
 ## Inline Functions in C
 
 C99 introduced inline functions to the language and it has the simplest implementation.

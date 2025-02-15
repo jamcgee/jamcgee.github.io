@@ -16,8 +16,6 @@ Instead, it implements the same basic patterns at GitHub allowing for pairing wi
 The most common CI paired with Gitea would be [Drone](https://www.drone.io/).
 While there are many reasons I'm likely to discard it and try other options, I figure it's worthwhile to at least share my experience trying to make it work for me, most notably how it handles runners.
 
-<!--more-->
-
 ## Gitea Integration Background
 
 Before talking about how Drone functions, it's worthwhile to spend a few words to describe how's Gitea CI integration works.

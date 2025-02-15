@@ -21,8 +21,6 @@ I will not be using the amendment names (e.g. 802.3z for Gigabit Ethernet) becau
 In this first essay, the focus will be on the fundamentals of Ethernet.
 Much of the information will be conceptual but referenced repeatedly when discussing specific protocols.
 
-<!--more-->
-
 > **Note:** The most recent version of the 802 standards are available from the [IEEE Get program](https://ieeexplore.ieee.org/browse/standards/get-program/page/series?id=68) at no cost.
 > It is highly advised that anyone working with Ethernet download a copy of 802.3 (Wired Ethernet).
 

@@ -18,8 +18,6 @@ Unfortunately, regarding this feature, Bazel suffers from the common documentati
 
 > **Note:** These instructions were written at the time of Bazel 4.2.1.
 
-<!--more-->
-
 ## Workspace Status
 
 The primary mechanism for getting VCS information into Bazel, is the [`--workspace_status_command`](https://docs.bazel.build/versions/4.2.0/user-manual.html#workspace_status) option.

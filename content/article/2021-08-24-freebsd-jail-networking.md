@@ -22,8 +22,6 @@ It's not the most cohesive piece, but I'll refine it over time and hopefully it 
 
 > **Note:** These instructions were written at the time of FreeBSD 13.0.
 
-<!--more-->
-
 ## IP Sharing
 
 When jails were first introduced, they were modeled as a variant of [`chroot(2)`](https://www.freebsd.org/cgi/man.cgi?query=chroot&sektion=4), placing direct constraints on the superuser instead of creating a virtual machine.

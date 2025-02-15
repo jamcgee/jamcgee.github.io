@@ -23,8 +23,6 @@ By comparison, the original version of WinSock was a completely user space affai
 As the interface transitioned into the 32-Bit era with WinSock 2, it began to integrate more closely into the Win32 API.
 While Microsoft has written some material on [porting Unix applications to WinSock](https://docs.microsoft.com/en-us/windows/win32/winsock/porting-socket-applications-to-winsock), it leaves unanswered the question as to how to portably target both platforms.
 
-<!--more-->
-
 ## Header Files
 
 The first visible difference will be the set of headers to include.
