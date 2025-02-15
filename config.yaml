@@ -25,7 +25,6 @@ markup:
         block: true
     renderer:
       unsafe: true
-theme: etherealwake
 
 # Content Management
 taxonomies:
