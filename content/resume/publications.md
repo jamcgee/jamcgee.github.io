@@ -1,5 +1,6 @@
 ---
 # Index
+disabled: true
 fragment: bibliography
 weight: 600
 title: Publications

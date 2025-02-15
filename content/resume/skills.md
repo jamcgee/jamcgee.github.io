@@ -5,19 +5,17 @@ title: Skills & Abilities
 weight: 100
 ---
 
-- Application Engineering
 - Assembly
 - C
 - C++
-- C#
 - Embedded Systems
 - Ethernet
-- FPGA
+- <abbr title="Field Programmable Gate Array">FPGA</abbr>
 - Hardware Design
 - Low Power
 - Microcontrollers
 - Private Pilot
 - Signal Processing
-- TCP/IP
-- UDP
-- VHDL
+- <abbr title="Transmission Control Protocol">TCP</abbr>/<abbr title="Internet Protocol">IP</abbr>
+- <abbr title="User Datagram Protocol">UDP</abbr>
+- <abbr title="VHSIC Hardware Description Language">VHDL</abbr>

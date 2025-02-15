@@ -25,7 +25,7 @@ items:
       Contract circuit design, <abbr title="Printed Circuit Board">PCB</abbr> layout, <abbr title="Field Programmable Gate Array">FPGA</abbr> and firmware development.
 
       Designed and implemented an FPGA-based data acquisition and signal processing core for a miniaturized weather RADAR system.
-      Electronics work included circuit design and schematic capture for the integrated CPU  module, FPGA module, and related power systems.
+      Electronics work included circuit design and schematic capture for the integrated CPU module, FPGA module, and related power systems.
       Software work included the HDL for the FPGA and related software on the host computer for communication with the FPGA over PCI-Express.
 
       On a smaller scale, provided contracted assistance in circuit design and board layout for the control electronics of a satellite propulsion system, firmware for consumer electronics, and firmware for the control electronics in an autonomous vehicle.
@@ -39,11 +39,11 @@ items:
     content: |
       Circuit design, <abbr title="Printed Circuit Board">PCB</abbr> layout, firmware development, and integrated testing for flight systems.
       Systems centered around use of the ARM [Cortex-M](https://developer.arm.com/products/processors/cortex-m).
-      Limited work investigating use of the [Cortex-R](https://developer.arm.com/products/processors/cortex-r) (including initial CPU bring-up) and <abbr title="Field Programmable Gate Arrays">FPGAs</abbr>.
+      Limited work investigating use of the [Cortex-R](https://developer.arm.com/products/processors/cortex-r) (including initial CPU bring-up) and <abbr title="Field Programmable Gate Array">FPGA</abbr>s.
       General focus on sensor systems.
       Limited experience with machine learning for prototyping computer vision applications.
 
-      Interfaced with Enterprise PLM Systems, Component Manufacturers, Prototyping Vendors, and Contract Manufacturers.
+      Interfaced with Enterprise <abbr title="Product Lifetime Management">PLM</abbr> Systems, Component Manufacturers, Prototyping Vendors, and Contract Manufacturers.
       Implemented and administered database for the centralized management of component libraries for Altium and Orcad/Allegro.
   - title: Research Engineer
     organization:
