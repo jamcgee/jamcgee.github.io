@@ -1,5 +1,5 @@
 ---
-#date: TBD
+date: 2025-02-14T22:55:00-0800
 title: "Ethernet: Media Independent Interface (MII)"
 series: Ethernet
 slug: ethernet-mii
