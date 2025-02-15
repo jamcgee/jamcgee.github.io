@@ -1,5 +1,8 @@
 ---
 date: 2020-12-01
-url: /blog
-title: Recent Articles
+title: Articles
+# Build
+build:
+  list: never
+  render: never
 ---

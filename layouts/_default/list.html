@@ -1,15 +1,17 @@
 {{ define "main" }}
+{{- $root := . }}
+{{- if .IsHome }}{{ $root = .Site }}{{ end }}
+{{- $pages := $root.Pages }}
+{{- if or .IsHome $root.IsSection }}
+{{- $pages = $root.RegularPages }}
+{{- end }}
 {{ .Content }}
 
 <div class="feed">
-{{ range .Paginator.Pages }}
-{{ partial "article" . }}
+{{ range (.Paginate $pages).Pages }}
+{{ partial .Kind . }}
 {{ end }}
 </div>
 
-<nav>
-{{ template "_internal/pagination.html" . }}
-</nav>
-
-{{ partial "feeds" . }}
+<nav>{{ template "_internal/pagination.html" . }}</nav>
 {{ end }}

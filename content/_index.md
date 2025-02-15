@@ -1,6 +1,9 @@
 ---
 # Index
 date: 2018-06-02
+menus:
+  main:
+    name: Home
 sitemap:
   changeFreq: weekly
 # Metadata

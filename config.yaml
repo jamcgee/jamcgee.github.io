@@ -1,34 +1,17 @@
-# Hugo Configuration
-baseURL: https://etherealwake.com/
-languageCode: en-US
-defaultContentLanguage: en
-disableKinds:
-  - "404"
-  - taxonomy
-  - term
-enableGitInfo: true
-enableRobotsTXT: true
-
 # Site Configuration
+baseURL: https://etherealwake.com/
+copyright: "&copy; Jonathan McGee. All Rights Reserved."
+defaultContentLanguage: en
+languageCode: en-US
 title: Ethereal Wake
 params:
   author:
     name: Jonathan McGee
     email: jamcgee@etherealwake.com
-copyright: Copyright © 2025 Jonathan McGee. All Rights Reserved.
-
-# Theme Configuration
-markup:
-  goldmark:
-    parser:
-      attribute:
-        block: true
-    renderer:
-      unsafe: true
+    url: https://etherealwake.com/
+  readingSpeed: 125
 
 # Content Management
-taxonomies:
-  tag: tags
 frontmatter:
   # Primary date associated with the page.  This is the primary user-visible
   # timestamp, used for filename generation, ordering, and pagination.  It
@@ -55,18 +38,29 @@ frontmatter:
     - date
 permalinks:
   article: /:year/:month/:slug/
+sectionPagesMenu: menu
 
-# Content Types
+# Rendering
+disableKinds:
+  - "404"  # Managed by the error collection
+enableGitInfo: true
+enableRobotsTXT: true
+markup:
+  goldmark:
+    parser:
+      attribute:
+        block: true
+    renderer:
+      unsafe: true
 mediaTypes:
   application/atom+xml:
-    suffixes: ["atom"]
+    suffixes:
+      - atom
+      - xml
   application/rss+xml:
-    suffixes: ["rss"]
-outputFormats:
-  ATOM:
-    mediaType: application/atom+xml
-  RSS:
-    mediaType: application/rss+xml
+    suffixes:
+      - rss
+      - xml
 outputs:
   home:
     - html
@@ -74,21 +68,14 @@ outputs:
     - rss
   section:
     - html
+  taxonomy:
+    - html
+  term:
+    - html
     - atom
     - rss
-
-# Menu Definitions
-menu:
-  main:
-    - name: Home
-      url: /
-      weight: 100
-    - name: Resume
-      url: /resume/
-      weight: 200
-    - name: Blog
-      url: /blog/
-      weight: 300
-    - name: Email
-      url: mailto:jamcgee@etherealwake.com
-      weight: 400
+outputFormats:
+  atom:
+    mediaType: application/atom+xml
+  rss:
+    mediaType: application/rss+xml

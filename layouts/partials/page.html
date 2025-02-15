@@ -1,0 +1,28 @@
+<!-- Individual article in a listing -->
+{{- $readingTime := math.Ceil (div (float .WordCount) (float .Site.Params.readingSpeed)) }}
+<article>
+  <h2 class="title"><a href="{{ .RelPermalink }}">{{ .Title }}</a></h2>
+  <ul class="metadata">
+    <li><time datetime="{{ .Date }}">{{ .Date.Format "2006 January 2" }}</time></li>
+    <li><a href="{{ .Permalink }}" rel="bookmark">Permalink</a></li>
+    <li>{{ .WordCount }} words, {{ $readingTime }} min read</li>
+    {{ range .GetTerms "series" -}}
+    <li>Series: <a href="{{ .RelPermalink }}">{{ .LinkTitle }}</a></li>
+    {{ end -}}
+    {{ with .GetTerms "tags" -}}
+    <li>Tags:
+      <ul class="taxonomy">
+        {{ range .ByTitle -}}
+        <li><a href="{{ .RelPermalink }}">{{ .LinkTitle }}</a></li></li>
+        {{ end -}}
+      </ul>
+    </li>
+    {{ end -}}
+    </ul>
+  <div class="summary">
+  {{ .Summary }}
+  </div>
+{{- if .Truncated }}
+  <p><a class="button" href="{{ .RelPermalink }}">Full Article</a></p>
+{{- end }}
+</article>

@@ -15,9 +15,7 @@
 {{ end }}
 
 {{ define "main" }}
-  {{ $directory := printf "%s%s" .File.Dir "_index" }}
-  {{ $bundle := .Site.GetPage $directory }}
-  {{ range $bundle.Pages }}
+  {{ range .Pages }}
     {{ if not .Params.disabled }}
     <section id="{{ .File.ContentBaseName }}">
       <h2>{{ .Title }}</h2>

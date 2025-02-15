@@ -1,11 +1,13 @@
 ---
 # Index
 date: 2018-06-02
+menus:
+  main:
+    name: Resume
 sitemap:
   changeFreq: monthly
-outputs:
-  - html
 # Metadata
+linkTitle: Resume
 title: Jonathan McGee - Resume
 author:
   name: Jonathan McGee
@@ -14,7 +16,7 @@ author:
 description: Jonathan McGee's Professional Resume
 # Build
 build:
-  list: never
+  list: always
   render: always
 cascade:
   build:
