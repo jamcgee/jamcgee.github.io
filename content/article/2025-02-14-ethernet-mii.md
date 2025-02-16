@@ -208,7 +208,7 @@ Many PHYs will signal them identically in both modes.
 ## Clocking (Clause 22.3)
 
 Both clocks are sourced from the PHY and run at 25% of the target bitrate (e.g. 2.5&nbsp;MHz / 400&nbsp;ns for 10Base-T, 25&nbsp;MHz / 40&nbsp;ns for 100Base-T) with a duty cycle between 35% and 65%.
-The transmit clock (`TX_CLK`) is always sourced from the local reference oscillator and should have an accuracy of 100&nbsp;<abbr title="Parts Per Million">ppm</abbr>.
+The transmit clock, `TX_CLK`, is always sourced from the local reference oscillator and should have an accuracy of 100&nbsp;<abbr title="Parts Per Million">ppm</abbr>.
 The <abbr title="Media Access Controller">MAC</abbr> is expected to drive the transmit signals on the rising edge of `TX_CLK`.
 Clause 22.3.1 specifies a transition window of 0&nbsp;ns (min) to 25&nbsp;ns (max) from the rising edge.
 
@@ -255,15 +255,34 @@ Clause 22.3.1 specifies a transition window of 0&nbsp;ns (min) to 25&nbsp;ns (ma
 <figcaption style="text-align:center">Transmit Signal Timing</figcaption>
 </figure>
 
+As this clocking scheme is system synchronous (from the perspective of the <abbr>MAC</abbr>), it is important that the routing of the clock be as short as possible while matching the data lines to each other.
 An example <abbr title="Synopsys Design Constraint">SDC</abbr> would be:
 
 ```tcl
-create_clock -name TX_CLK -period 40 [get_ports TX_CLK]
-set_output_delay -clock TX_CLK -min 0 [get_ports {TX_EN TX_ER TXD[*]}]
-set_output_delay -clock TX_CLK -max 25 [get_ports {TX_EN TX_ER TXD[*]}]
+# Requirements from 802.3
+set txclk_period 40
+set txd_hold 0
+set txd_valid 25
+
+# Routing latencies of TX_CLK and TXD/TX_EN/TX_ER
+# TODO: Update these for your PCB
+set txclk_route_max 0
+set txclk_route_min 0
+set txd_route_max 0
+set txd_route_min 0
+
+# Generate constraints
+create_clock -name TX_CLK -period $txclk_period [get_ports TX_CLK]
+create_clock -name TX_CLK_virt -period $txclk_period
+set_output_delay -clock TX_CLK_virt \
+    -min [expr {$txd_route_min + $txclk_route_min - $txd_hold}] \
+    [get_ports {TX_EN TX_ER TXD[*]}]
+set_output_delay -clock TX_CLK_virt \
+    -max [expr {$txd_route_max + $txclk_route_max - $txd_valid + $txclk_period}] \
+    [get_ports {TX_EN TX_ER TXD[*]}]
 ```
 
-The receive clock (`RX_CLK`), on the other hand, may be sourced from the local oscillator or the recovered clock from the peer and may be suppressed under Low Power Idle (<abbr>LPI</abbr>).
+By contrast, the receive clock, `RX_CLK`, may be sourced from the local oscillator or the recovered clock from the peer and may be suppressed under Low Power Idle (<abbr>LPI</abbr>).
 Due to this, it may shift in frequency, phase, or disappear entirely based upon the link state.
 The <abbr>MAC</abbr> is expected to capture the signals on the rising edge of `RX_CLK`.
 Clause 22.3.2 specifies setup and hold times of 10&nbsp;ns from the rising edge.
@@ -322,17 +341,24 @@ Clause 22.3.2 specifies setup and hold times of 10&nbsp;ns from the rising edge.
 <figcaption style="text-align:center">Receive Signal Timing</figcaption>
 </figure>
 
+As this clocking scheme is source synchronous, the data lines should be length matched to the clock.
 An example <abbr title="Synopsys Design Constraint">SDC</abbr> would be:
 
 ```tcl
-create_clock -name RX_CLK -period 40 [get_ports RX_CLK]
-set_input_delay -clock RX_CLK -min 10 [get_ports {RX_DV RX_ER RXD[*]}]
-set_input_delay -clock RX_CLK -max 30 [get_ports {RX_DV RX_ER RXD[*]}]
-```
+# Requirements from 802.3
+set rxclk_period 40
+set rxd_hold 10
+set rxd_setup 10
 
-Strictly speaking, the signals should be length matched to their respective clock; however, it would take a mismatch on the better part of a meter to introduce an issue at the frequencies used here.
-Ultimately, one should consult the datasheet of the PHY they are using.
-It is possible, although highly unlikely, the PHY will have stricter requirements.
+# Generate constraints
+create_clock -name RX_CLK -period $rxclk_period [get_ports RX_CLK]
+create_clock -name RX_CLK_virt -period $rxclk_period
+set_input_delay -clock RX_CLK_virt -min $rxd_hold \
+    [get_ports {RX_DV RX_ER RXD[*]}]
+set_input_delay -clock RX_CLK_virt \
+    -max [expr {$rxclk_period - $rxd_setup}] \
+    [get_ports {RX_DV RX_ER RXD[*]}]
+```
 
 The remaining two signals, `COL` and `CRS`, are asynchronous to both clocks so users will need to explicitly synchronize them (generally to the transmit clock).
 
@@ -429,14 +455,14 @@ MAC-to-MAC can be connected directly, so long as an external clock is provided a
 
 ## Energy Efficient Ethernet (Clause 22.7, 78)
 
-Under 100Base-TX and later, the transmitter runs continuously, even when no packet is being transmitted, consuming energy.
+Under 100Base-TX and later, the transmitter runs continuously in full duplex operation, even when no packet is being transmitted.
 Energy Efficient Ethernet (<abbr>EEE</abbr>) is a mechanism by which the transmitter can be disabled during periods of extended inactivity, reducing power consumption.
-To maintain the link, the peer will periodically enable its transmitter to send a refresh signal, normally handled automatically by the PHY.
+To maintain the link, the PHY will periodically enable its transmitter to send a refresh signal.
 
 First, <abbr>EEE</abbr> support needs to be negotiated with the peer.
 On some PHYs, this is enabled by default.
 On others, some form of configuration is required.
-This is normally handled through the Clause 45 registers MMD3 and MMD7.
+This is normally handled through the Clause 45 register sets MMD3 and MMD7.
 
 When the peer signals it is entering Low Power Idle (<abbr>LPI</abbr>), the local PHY will report this to the MAC by signalling *Assert LPI*, holding `RX_DV` low, `RX_ER` high, and `0001` on `RXD`.
 Once the PHY has indicated this condition for at least nine clock cycles, it may halt `RX_CLK` until the peer leaves <abbr>LPI</abbr>.
@@ -517,7 +543,7 @@ Failure to meet these timing requirements may result in data loss as the peer ma
 Many embedded <abbr>MAC</abbr>s do not provide `TX_ER`, let alone implement <abbr>LPI</abbr>.
 As a result, many PHYs will allow software to manually enter <abbr>LPI</abbr> through a management action.
 
-10Base-T does not transmit continuously so does not implement <abbr>LPI</abbr>.
+10Base-T does not transmit continuously so does not need to implement <abbr>LPI</abbr>.
 Instead, <abbr>EEE</abbr> introduced 10Base-Te, which reduces the transmit amplitude but is otherwise identical.
 As it can freely interop with traditional 10Base-T, it does not need to be negotiated and many PHYs will enable it by default.
 
