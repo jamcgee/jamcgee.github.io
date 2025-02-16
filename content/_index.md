@@ -6,6 +6,8 @@ menus:
     name: Home
 sitemap:
   changeFreq: weekly
+aliases:
+  - /blog
 # Metadata
 title: Ethereal Wake
 subtitle: Center for the study of the Luminiferous Æther
