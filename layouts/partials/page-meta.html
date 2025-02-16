@@ -1,0 +1,15 @@
+{{ $readingTime := math.Ceil (div (float .WordCount) (float .Site.Params.readingSpeed)) -}}
+<ul class="metadata">
+  <li><time datetime="{{ .Date }}">{{ .Date.Format "2006 Jan 2" }}</time></li>
+  <li><a href="{{ .Permalink }}" rel="bookmark">Permalink</a></li>
+  <li>{{ .WordCount }} words, {{ $readingTime }} min read</li>
+  {{ range $taxonomy, $terms := .Site.Taxonomies -}}
+    {{ with $.GetTerms $taxonomy -}}
+      {{ $len := len . }}
+      <li>{{ title $taxonomy }}: {{ range $index, $link := .ByTitle -}}
+        {{ if gt $index 0 }}, {{ end -}}
+        <a href="{{ $link.RelPermalink }}">{{ $link.LinkTitle }}</a>
+      {{- end }}</li>
+    {{ end -}}
+  {{ end -}}
+</ul>

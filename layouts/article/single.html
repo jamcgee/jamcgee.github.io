@@ -3,24 +3,7 @@
 {{ end }}
 
 {{ define "main" }}
-{{ $readingTime := math.Ceil (div (float .WordCount) (float .Site.Params.readingSpeed)) -}}
 <h1 class="title">{{ .Title }}</h1>
-<ul class="metadata">
-  <li><time datetime="{{ .Date }}">{{ .Date.Format "2006 Jan 2" }}</time></li>
-  <li><a href="{{ .Permalink }}" rel="bookmark">Permalink</a></li>
-  <li>{{ .WordCount }} words, {{ $readingTime }} min read</li>
-  {{ range .GetTerms "series" -}}
-  <li>Series: <a href="{{ .RelPermalink }}">{{ .LinkTitle }}</a></li>
-  {{ end -}}
-  {{ with .GetTerms "tags" -}}
-  <li>Tags:
-    <ul class="taxonomy">
-      {{ range .ByTitle -}}
-      <li><a href="{{ .RelPermalink }}">{{ .LinkTitle }}</a></li></li>
-      {{ end -}}
-    </ul>
-  </li>
-  {{ end -}}
-</ul>
+{{ partial "page-meta" . }}
 {{ .Content }}
 {{ end }}
