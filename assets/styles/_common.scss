@@ -160,6 +160,14 @@ td, th {
     text-shadow: 0 0 5px #000;
   }
 
+  body.article > header {
+    background: url(/images/bluejell.jpg) #047 50% 25% no-repeat;
+  }
+
+  body.error > header {
+    background: url(/images/redsand.jpg) #944 50% 25% no-repeat;
+  }
+
   body.home > header {
     background: url(/images/metro.jpg) #444 50% 10% no-repeat;
   }
@@ -168,8 +176,12 @@ td, th {
     background: url(/images/scotchbrite.jpg) #032 50% 25% no-repeat;
   }
 
-  body.error > header {
-    background: url(/images/redsand.jpg) #944 50% 25% no-repeat;
+  body.series > header {
+    background: url(/images/greenpcb.jpg) #043 50% 25% no-repeat;
+  }
+
+  body.tags > header {
+    background: url(/images/lighttrail.jpg) #100808 50% 75% no-repeat;
   }
 
   body > header h1 {
