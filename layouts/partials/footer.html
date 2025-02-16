@@ -1,5 +1,3 @@
-<footer>
-<div class="content">
-{{ with .Site.Copyright }}<p>{{ . | transform.HTMLUnescape }}</p>{{ end }}
-</div>
-</footer>
+{{- with .Site.Copyright }}
+<p>{{ . | transform.HTMLUnescape }}</p>
+{{- end }}

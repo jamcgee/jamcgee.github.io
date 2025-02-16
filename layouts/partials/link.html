@@ -1,0 +1,17 @@
+{{- $title := "" -}}
+{{- if ne .Link.Name "rss" -}}
+  {{/* Ordinary Link */}}
+{{- else if .Page.IsHome -}}
+  {{- $title = printf "%s Site Feed" .Page.Site.Title -}}
+{{- else if eq .Page.Kind "term" -}}
+  {{- $title = printf "%s %s on %s Feed" .Page.Title (title .Page.Data.Singular) .Page.Site.Title -}}
+{{- else if eq .Page.Kind "page" -}}
+  {{- $title = printf "%s on %s Feed" .Page.Title .Page.Site.Title -}}
+{{- else -}}
+  {{- $title = printf "%s List on %s Feed" .Page.Title .Page.Site.Title -}}
+{{- end -}}
+{{- if $title -}}
+{{ printf "<link rel=%q type=%q href=%q title=%q>" .Link.Rel .Link.MediaType.Type .Link.RelPermalink $title | safeHTML }}
+{{- else -}}
+{{ printf "<link rel=%q type=%q href=%q>" .Link.Rel .Link.MediaType.Type .Link.RelPermalink | safeHTML }}
+{{- end }}

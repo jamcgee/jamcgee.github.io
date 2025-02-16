@@ -11,7 +11,17 @@
 {{- "<?xml version=\"1.0\" encoding=\"utf-8\" ?>" | safeHTML }}
 <feed xmlns="http://www.w3.org/2005/Atom" xml:lang="{{ .Site.LanguageCode | default "en" }}">
   <id>{{ .Permalink }}</id>
-  <title type="text">{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ with .Title }}{{.}} on {{ end }}{{ .Site.Title }}{{ end }}</title>
+  <title type="text">
+{{- if or .IsHome (eq .Title .Site.Title) -}}
+  {{ .Site.Title }}
+{{- else if eq .Kind "term" -}}
+  {{ .Title }} {{ title .Data.Singular }} on {{ .Site.Title }}
+{{- else if eq .Kind "page" -}}
+  {{ .Title }} on {{ .Site.Title }}
+{{- else -}}
+  {{ .Title }} List on {{ .Site.Title }}
+{{- end -}}
+  </title>
 {{- with .Params.subTitle }}
   <subtitle type="text">{{.}}</subtitle>
 {{- end }}

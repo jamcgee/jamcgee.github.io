@@ -1,15 +1,22 @@
 {{- $sassTemplate := resources.Get "styles/index.scss" -}}
 {{- $sassOptions := (dict "targetPath" "css/site.css" "outputStyle" "compressed" "includePaths" (slice "styles")) -}}
 {{- $style := $sassTemplate | toCSS $sassOptions | minify | fingerprint -}}
-<meta charset="utf-8" />
-<title>{{ .Title }}</title>
-<link rel="stylesheet" type="text/css" href="{{ $style.RelPermalink }}" integrity="{{ $style.Data.Integrity }}">
-<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-{{ hugo.Generator }}
-<link rel="canonical" href="{{ .Permalink }}">
-{{- range .AlternativeOutputFormats }}
-  {{ printf "<link rel=%q type=%q href=%q>" .Rel .MediaType.Type .Permalink | safeHTML }}
+  <meta charset="utf-8" />
+  <title>{{ .Title }}</title>
+  <link rel="stylesheet" type="text/css" href="{{ $style.RelPermalink }}" integrity="{{ $style.Data.Integrity }}">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  {{ hugo.Generator }}
+  <link rel="canonical" href="{{ .Permalink }}">
+  <!-- Normal Alternates -->
+{{- range $link := .AlternativeOutputFormats }}
+{{- partial "link" (dict "Page" $ "Link" $link) }}
 {{- end }}
+{{- range $page := .Ancestors }}
+{{- with .AlternativeOutputFormats.Get "rss" }}
+{{- partial "link" (dict "Page" $page "Link" .) }}
+{{- end }}
+{{- end }}
+  <!-- External Property Sets -->
 {{- template "_internal/schema.html" . -}}
 {{- template "_internal/opengraph.html" . -}}
 {{- template "_internal/twitter_cards.html" . -}}
