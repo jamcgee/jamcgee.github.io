@@ -55,6 +55,9 @@ markup:
         block: true
     renderer:
       unsafe: true
+    renderHooks:
+      link:
+        enableDefault: true
 mediaTypes:
   application/atom+xml:
     suffixes:
