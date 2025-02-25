@@ -48,7 +48,7 @@ This derivation of the half-duplex signals from the receive and transmit enables
     <rect x="200" y="5" width="100" height="125"/>
     <line x1="200" x2="300" y1="70" y2="70"/>
     <line x1="200" x2="300" y1="110" y2="110"/>
-    <rect x="110" y="150" width="80" height="40">
+    <rect x="110" y="150" width="80" height="40"/>
   </g>
   <g font-size="15" text-anchor="middle">
     <text x="50">MAC</text>
