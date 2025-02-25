@@ -2,7 +2,7 @@
 date: 2025-02-24T20:35:00-0800
 title: "Ethernet: Reduced Media Independent Interface (RMII)"
 series: ethernet
-series_weight: 300
+series_weight: 250
 slug: ethernet-rmii
 tags:
   - embedded
