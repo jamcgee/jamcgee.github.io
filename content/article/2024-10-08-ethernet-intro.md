@@ -83,9 +83,9 @@ Compare that to <abbr title="HyperText Transfer Protocol">HTTP</abbr>, which get
     <text x="350" y="75">Reconciliation</text>
     <text x="435" y="105">xMII</text>
     <g font-size="15px">
-      <text x="350" y="130" class="small">PCS</text>
-      <text x="350" y="150" class="small">PMA</text>
-      <text x="350" y="170" class="small">PMD</text>
+      <text x="350" y="130">PCS</text>
+      <text x="350" y="150">PMA</text>
+      <text x="350" y="170">PMD</text>
     </g>
     <text x="435" y="150">PHY</text>
     <text x="435" y="195">MDI</text>
