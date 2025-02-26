@@ -487,3 +487,16 @@ To avoid simply wasting this time, after the normal 96&nbsp;bits (12&nbsp;bytes)
 
 While half-duplex Gigabit may be a historical curiosity, *Carrier Extend* does make an appearance in 1000Base-X (e.g. fiber and <abbr title="Serial Gigabit Media Independent Interface">SGMII</abbr>).
 Even in full-duplex operation, a couple cycles may appear at the end of each frame due to the nature of the encoding.
+
+## Ten Bit Interface (Clause 35.3, 36.3)
+
+1000Base-X (and its derivatives) encodes the packet stream using 8b10b encoding, where every byte (8b) is encoded with ten bits (10b).
+The specifics of this encoding will be covered in the article on 1000Base-X; however, <abbr title="Gigabit Media Independent Interface">GMII</abbr> includes a provision to carry the <abbr title="Physical Coding Sublayer">PCS</abbr> encoding directly.
+This mode is known as the Ten Bit Interface (<abbr>TBI</abbr>), covered by Clause 36.3.
+
+GMII covers the mapping between its signals and TBI in Clause 35.3.
+Under TBI, `RXD[7:0]` and `TXD[7:0]` map to the low order eight bytes directly, while `RX_DV`/`TX_EN` map to the ninth bit and `RX_ER`/`TX_ER` map to the tenth.
+This is merely a pin assignment; the PCS encoding is not equivalent to that described in previous sections.
+
+As 1000Base-T does not use this encoding, it makes little sense when communicating with a traditional PHY where it is rarely supported (e.g. Marvell Alaska 88E1111).
+This encoding is used with 1000Base-X (e.g. fiber), where one is more likely to use the high-speed transceivers built into the processor or <abbr title="Field Programmable Gate Array">FPGA</abbr> instead of an external PHY.
