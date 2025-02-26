@@ -11,14 +11,7 @@ tags:
   - network
 ---
 
-Much of my recent professional development has focused on Ethernet, making it a convenient target for technical essays.
-Unlike much of the Internet, this series of essays will focus on practical implementation of Ethernet from an FPGA or ASIC perspective.
-This means the necessary waveforms and encodings to generate ethernet packets when directly connected to a PHY or medium.
-
-The essays will be making extensive references to IEEE 802.3-2022 and every effort will be made to specify the exact clauses for further research by the reader.
-I will not be using the amendment names (e.g. 802.3z for Gigabit Ethernet) because they are not not useful for finding content within the actual standard and any given clause may have been modified by multiple amendments.
-
-In this first essay, the focus will be on the fundamentals of Ethernet.
+In this first article in a series on Ethernet, I will be focusing on the fundamentals of Ethernet, such as packet structure, check sequences, and flow control.
 Much of the information will be conceptual but referenced repeatedly when discussing specific protocols.
 
 > **Note:** The most recent version of the 802 standards are available from the [IEEE Get program](https://ieeexplore.ieee.org/browse/standards/get-program/page/series?id=68) at no cost.
@@ -27,7 +20,7 @@ Much of the information will be conceptual but referenced repeatedly when discus
 ## Architecture (Clause 1.1)
 
 Before we start diving into the specifics, it's useful to get a model for visualizing the components of Ethernet.
-When discussing networking, one frequently starts with the OSI model but given that it's based on a *software* model of networking, it's woefully inadequate for describing the hardware.
+When discussing networking, one frequently starts with the <abbr title="Open Systems Interconnection">OSI</abbr> model but given that it's based on a *software* model of networking, it's woefully inadequate for describing the hardware.
 It simply brushes everything into a single box called "Physical Layer".
 Compare that to <abbr title="HyperText Transfer Protocol">HTTP</abbr>, which gets smeared out over the top three layers despite having a fraction of the complexity.
 
@@ -101,9 +94,10 @@ These components typically communicate using some variant of the Media Independe
 The <abbr>MDI</abbr> and medium roughly corresponds to what people think of as "Ethernet", e.g. 100Base-TX, 1000Base-T, 10GBase-SR, etc.
 
 The PHY itself contains three sublayers:
-- The Physical Coding Sublayer (<abbr>PCS</abbr>) is responsible for converting the generic encoding of <abbr>xMII</abbr> into the actual encoding of the medium.
-- The Physical Medium Dependent (<abbr>PMD</abbr>) sublayer is responsible for directly interfacing with the medium, which can be the <abbr title="Analog-To-Digital Converter">ADC</abbr>s and <abbr title="Digital-To-Analog Converter">DAC</abbr>s of a 1000BaseT transceiver, or the laser diode and photodiode of a fiber transceiver.
-- The Physical Medium Attachment (<abbr>PMA</abbr>) sublayer glues the two layers together, containing serializers, deserializers, clock recovery, and other logic.
+
+1. The Physical Coding Sublayer (<abbr>PCS</abbr>) is responsible for converting the generic encoding of <abbr>xMII</abbr> into the actual encoding of the medium.
+2. The Physical Medium Attachment (<abbr>PMA</abbr>) sublayer glues the outer two layers together, containing serializers, deserializers, clock recovery, and other logic.
+3. The Physical Medium Dependent (<abbr>PMD</abbr>) sublayer is responsible for directly interfacing with the medium, which can be the <abbr title="Analog-To-Digital Converter">ADC</abbr>s and <abbr title="Digital-To-Analog Converter">DAC</abbr>s of a 1000BaseT transceiver, or the laser diode and photodiode of a fiber transceiver.
 
 Older standards, such as 10Base-T, have a different breakdown and additional sublayers may appear in more sophisticated circumstances but this is fairly consistent for modern standards.
 
@@ -112,7 +106,7 @@ Today, it is primarily used as a chip-to-chip or on-chip interface.
 Each subsequent Ethernet revision tends to introduce a new variant of <abbr>xMII</abbr> and many of the dominant interfaces are external to the 802.3 process.
 
 The split between a processor-based MAC and a discrete PHY chip breaks down when considering higher-speed protocols like 10 Gigabit.
-An <abbr title="Small Form-factor Pluggable">SFP</abbr> module, for example, contains only the <abbr>PMD</abbr>.
+An <abbr title="Small Form-factor Pluggable">SFP</abbr> optical module, for example, contains only the <abbr>PMD</abbr>.
 The <abbr>PCS</abbr> and <abbr>PMA</abbr> sublayers are usually colocated with the <abbr>MAC</abbr> on the processor.
 
 ## Endian
