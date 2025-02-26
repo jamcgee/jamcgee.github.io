@@ -293,6 +293,8 @@ set_output_delay -clock REF_CLK_sys \
     [get_ports {TX_EN TXD[*]}]
 ```
 
+As `CRS_DV` asserts asynchronously, the receive path should include extra flip-flops to serve as a synchronizer for this signal.
+
 ## Data Errors (Clause 5.5.3, Clause 5.7)
 
 RMII does not have any equivalent to `TX_ER`.
