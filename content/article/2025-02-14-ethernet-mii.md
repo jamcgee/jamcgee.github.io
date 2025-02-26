@@ -284,6 +284,7 @@ set_output_delay -clock TX_CLK_virt \
 
 By contrast, the receive clock, `RX_CLK`, may be sourced from the local oscillator or the recovered clock from the peer and may be suppressed under Low Power Idle (<abbr>LPI</abbr>).
 Due to this, it may shift in frequency, phase, or disappear entirely based upon the link state.
+As such, it cannot be safely used as the reference for a <abbr title="Phase Locked Loop">PLL</abbr>.
 The <abbr>MAC</abbr> is expected to capture the signals on the rising edge of `RX_CLK`.
 Clause 22.3.2 specifies setup and hold times of 10&nbsp;ns from the rising edge.
 
