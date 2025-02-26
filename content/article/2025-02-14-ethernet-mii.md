@@ -409,9 +409,9 @@ The specific value of the data bus is undefined during a data error.
 **Note:** These signals are often absent on the <abbr title="Media Access Controller">MAC</abbr>s of low-end microcontrollers.
 If not used, `RX_ER` is left floating and `TX_ER` is tied to ground.
 
-## Special Conditions (Clause 22.2.2.4, 22.2.2.8)
+## Control Sequence (Clause 22.2.2.4, 22.2.2.8)
 
-Outside of a packet (`RX_DV`/`TX_EN` is low), the error signal (`RX_ER`/`TX_ER`) is used to indicate the presence of special conditions on the medium.
+Outside of a packet (`RX_DV`/`TX_EN` is low), the error signal (`RX_ER`/`TX_ER`) is used to indicate the presence of a control sequence.
 Most of these will be discussed in the following sections.
 
 Value  | Transmit    | Receive
@@ -449,7 +449,7 @@ Unlike later <abbr>MII</abbr> variants, all clocks are provided by the PHY.
 This means that PHY-to-PHY will have conflicting clocks while MAC-to-MAC will have no clock.
 While external clocks can be provided in the later case, the setup and hold requirements would likely not be met in a naïve configuration.
 
-Assuming one peer in this arrangement cannot be configured to switch interface direction through configuration, there are limited options.
+Assuming one peer in this arrangement cannot be configured to reverse interface direction by configuration, there are limited options.
 PHY-to-PHY will require active logic to perform clock domain crossing, including an elastic buffer to address potential clock skew.
 MAC-to-MAC can be connected directly, so long as an external clock is provided and opposite polarity is connected to the `TX_CLK` and `RX_CLK` inputs to mitigate differences in timing.
 
