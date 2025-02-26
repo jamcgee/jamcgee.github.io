@@ -1,7 +1,6 @@
 ---
 # Index
 date: 2025-02-25T19:21:00-08:00
-draft: true
 # Metadata
 title: "Ethernet: Gigabit Media Independent Interface (GMII)"
 series: ethernet
