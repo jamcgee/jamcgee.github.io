@@ -14,7 +14,7 @@ tags:
 ---
 
 When introducing Gigabit Ethernet, there was a problem adopting the existing <abbr title="Media Independent Interface">MII</abbr>.
-Simply increasing the clock speed another order of magnitude would bring it to 250&nbsp;MHz and a period of 8&nbsp;ns.
+Simply increasing the clock speed another order of magnitude would bring it to 250&nbsp;MHz and a period of 4&nbsp;ns.
 This introduced two issues:
 First, the clock speed would be well in excess of those used by commodity memory buses of the time, making it difficult to implement.
 Second, the system synchronous design of the transmit path would make it impossible to control setup and hold timing.
