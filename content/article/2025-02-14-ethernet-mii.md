@@ -32,7 +32,7 @@ Instead, most modern usages of <abbr>MII</abbr> will be chip-to-chip over a sing
 > **Note:** The most recent version of the 802 standards are available from the [IEEE Get program](https://ieeexplore.ieee.org/browse/standards/get-program/page/series?id=68) at no cost.
 > It is highly advised that anyone working with Ethernet download a copy of 802.3 (Wired Ethernet).
 
-## Signaling (Clause 22.2)
+## Signaling (Clause 22.2) {id="signaling"}
 
 <abbr title="Media Independent Interface">MII</abbr> is defined by sixteen individual signals.
 Each direction (transmit and receive) has seven signals: a PHY-provided clock (`RX_CLK`/`TX_CLK`), a valid/enable signal (`RX_DV`/`TX_EN`), an error signal (`RX_ER`/`TX_ER`), and a four-bit data bus (`RXD`/`TXD`).
@@ -205,7 +205,7 @@ The remaining signals, `CRS` and `COL`, are used in half-duplex operation.
 They are *undefined* in full-duplex operation and must be ignored by the reconciliation layer.
 Many PHYs will signal them identically in both modes.
 
-## Clocking (Clause 22.3)
+## Clocking (Clause 22.3) {id="clocking"}
 
 Both clocks are sourced from the PHY and run at 25% of the target bitrate (e.g. 2.5&nbsp;MHz / 400&nbsp;ns for 10Base-T, 25&nbsp;MHz / 40&nbsp;ns for 100Base-T) with a duty cycle between 35% and 65%.
 The transmit clock, `TX_CLK`, is always sourced from the local reference oscillator and should have an accuracy of 100&nbsp;<abbr title="Parts Per Million">ppm</abbr>.
@@ -363,7 +363,7 @@ set_input_delay -clock RX_CLK_virt \
 
 The remaining two signals, `COL` and `CRS`, are asynchronous to both clocks so users will need to explicitly synchronize them (generally to the transmit clock).
 
-## Data Errors (Clause 22.2.2.5, 22.2.2.10)
+## Data Errors (Clause 22.2.2.5, 22.2.2.10) {id="errors"}
 
 Encoding errors can be indicated by the use of `RX_ER` or `TX_ER`.
 When asserted during a packet (`RX_DV`/`TX_EN` are high), this indicates that an issue with that specific byte position.
@@ -410,7 +410,7 @@ The specific value of the data bus is undefined during a data error.
 **Note:** These signals are often absent on the <abbr title="Media Access Controller">MAC</abbr>s of low-end microcontrollers.
 If not used, `RX_ER` is left floating and `TX_ER` is tied to ground.
 
-## Control Sequence (Clause 22.2.2.4, 22.2.2.8)
+## Control Sequence (Clause 22.2.2.4, 22.2.2.8) {id="control"}
 
 Outside of a packet (`RX_DV`/`TX_EN` is low), the error signal (`RX_ER`/`TX_ER`) is used to indicate the presence of a control sequence.
 Most of these will be discussed in the following sections.
@@ -427,7 +427,7 @@ Value  | Transmit    | Receive
 False Carrier (`1110`) typically indicates a coding error on the part of the remote peer (Clause 24.2.4.4.2).
 This can generally be ignored except for logging purposes but may indicate hardware malfunction.
 
-## Link Configuration
+## Link Configuration {id="link-config"}
 
 The fundamental properties when configuring the interface, be it manually or through autonegotiation, are the following:
 
@@ -454,7 +454,7 @@ Assuming one peer in this arrangement cannot be configured to reverse interface 
 PHY-to-PHY will require active logic to perform clock domain crossing, including an elastic buffer to address potential clock skew.
 MAC-to-MAC can be connected directly, so long as an external clock is provided and opposite polarity is connected to the `TX_CLK` and `RX_CLK` inputs to mitigate differences in timing.
 
-## Energy Efficient Ethernet (Clause 22.7, 78)
+## Energy Efficient Ethernet (Clause 22.7, 78) {id="eee"}
 
 Under 100Base-TX and later, the transmitter runs continuously in full duplex operation, even when no packet is being transmitted.
 Energy Efficient Ethernet (<abbr>EEE</abbr>) is a mechanism by which the transmitter can be disabled during periods of extended inactivity, reducing power consumption.
@@ -551,7 +551,7 @@ As it can freely interop with traditional 10Base-T, it does not need to be negot
 > **Note:** I do not have personal experience with <abbr>EEE</abbr>.
 > This section is simply a summarization of the standard.
 
-## Half-Duplex (Clause 4.2.3.2, 22.2.2)
+## Half-Duplex (Clause 4.2.3.2, 22.2.2) {id="duplex"}
 
 Half-duplex is largely extinct for desktop usage with most protocols dedicated to shared media having been expired.
 It may still appear when autonegotiation is disabled or incorrectly configured.
@@ -663,7 +663,7 @@ Per Clause 4.2.3.2.2, there is a distinction between collisions that occur withi
 > **Note:** I do not have personal experience with half-duplex operation.
 > This section is simply a summarization of the standard.
 
-## Physical Layer Collision Avoidance (Clause 148)
+## Physical Layer Collision Avoidance (Clause 148) {id="plca"}
 
 As mentioned in the previous section, 10Base-T1S (Clause 147) has an optional mode to permit a CAN-like prioritization scheme on the shared media.
 This scheme is in addition to <abbr title="Carrier Sense Multiple Access with Collision Detection">CSMA/CD</abbr>.
