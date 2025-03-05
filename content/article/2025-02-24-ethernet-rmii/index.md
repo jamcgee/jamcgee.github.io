@@ -26,7 +26,7 @@ As there is no clear restriction on distribution, a copy is mirrored locally:
 > **Note:** There is no relationship between RMII and <abbr title="Reduced Gigabit Media Independent Interface">RGMII</abbr>.
 > Implementations and concepts from one will not translate to the other.
 
-## Signaling (Clause 5)
+## Signaling (Clause 5) {id="signaling"}
 
 In brief, <abbr title="Reduced Media Independent Interface">RMII</abbr> operates on a fixed 50&nbsp;MHz system clock, sending two bits at a time instead of four.
 The `RX_DV` and `CRS` signals are merged into a combined `CRS_DV` while the error signals, `RX_ER` and `TX_ER`, are largely jettisoned.
@@ -89,7 +89,7 @@ This derivation of the half-duplex signals from the receive and transmit enables
 <figcaption style="text-align:center"><abbr title="Reduced Media Independent Interface">RMII</abbr> Signals</figcaption>
 </figure>
 
-### Transmit (Clause 5.5)
+### Transmit (Clause 5.5) {id="transmit"}
 
 For 100&nbsp;megabit transmit operation, <abbr title="Reduced Media Independent Interface">RMII</abbr> is largely equivalent to ordinary <abbr title="Media Independent Interface">MII</abbr> except by using two bits per clock cycle (di-bit) instead of four.
 As in keeping with Ethernet conventions, these bits are transmitted LSB first.
@@ -105,7 +105,7 @@ SIGNAL    |   | 1 | 2 |...| 29| 30| 31| 32|...|281|282|283|284|285|286|287|288|
 When the bus is idle, `TXD` is supposed to be zero.
 Non-zero values are reserved under Clause 9.1.
 
-### Receive (Clause 5.3)
+### Receive (Clause 5.3) {id="receive"}
 
 For receive, `CRS` (Carrier Sense) and `RX_DV` (Receive Data Valid) are merged.
 This means that `CRS_DV` will assert *asynchronously* to `REF_CLK` and remain high prior to the appearance of received data on `RXD`.
@@ -158,7 +158,7 @@ The reconciliation layer can consider the *carrierSense* signal to be the logica
 As with the transmit interface, `RXD` is supposed to be zero when then the bus is idle (Clause 9.1).
 This is effectively required by the pseudo-asynchronous nature of `CRS_DV`.
 
-### 10 Megabit Operation (Clause 5.3.2, Clause 5.5.2)
+### 10 Megabit Operation (Clause 5.3.2, Clause 5.5.2) {id="ten-megabit"}
 
 As the system clock is running continuously at 50&nbsp;MHz, it cannot be reduced for 10 megabit operation.
 Instead, the system will simply hold the bus for ten cycles to provide a 10x reduction in datarate.
@@ -180,7 +180,7 @@ SIGNAL    |...|  1|  2|  3|  4|  5|  6|  7|  8|  9| 10| 11| 12| 13| 14| 15| 16| 
 Neither peer is required to align itself to the beginning of a packet.
 It is considered acceptable to simply sample every tenth cycle and ignore the other nine.
 
-## Clocking (Clause 5.1, Clause 7.4)
+## Clocking (Clause 5.1, Clause 7.4) {id="clocking"}
 
 <abbr title="Reduced Media Independent Interface">RMII</abbr> uses a single, system synchronous clock domain.
 This clock is specified as 50&nbsp;MHz &plusmn; 50&nbsp;ppm (20&nbsp;ns period) with a duty cycle between 35% and 65%.
@@ -295,7 +295,7 @@ set_output_delay -clock REF_CLK_sys \
 
 As `CRS_DV` asserts asynchronously, the receive path should include extra flip-flops to serve as a synchronizer for this signal.
 
-## Data Errors (Clause 5.5.3, Clause 5.7)
+## Data Errors (Clause 5.5.3, Clause 5.7) {id="errors"}
 
 RMII does not have any equivalent to `TX_ER`.
 This means that the <abbr title="Media Access Controller">MAC</abbr> cannot spoil a packet except to explicitly corrupt its <abbr title="Frame Check Sequence">FCS</abbr>.
@@ -304,13 +304,13 @@ It also means that transmitting control codes (e.g. <abbr title="Low Power Idle"
 It does, however, provide `RX_ER` to indicate coding errors; however, it treats `RX_ER` as do-not-care when `CRS_DV` is low.
 As such, it also should not be used to indicate control controls.
 
-## Half-Duplex
+## Half-Duplex {id="duplex"}
 
 Half-Duplex is the same as ordinary <abbr title="Media Independent Interface">MII</abbr>.
 The standard `CRS` signal is derived from `CRS_DV` as per the receive discussion.
 The standard `COL` signal is generated from AND'ing that derived `CRS` with `TX_EN`.
 
-## Link Configuration
+## Link Configuration {id="link-config"}
 
 The fundamental properties when configuring the interface, be it manually or through autonegotiation, are the following:
 
