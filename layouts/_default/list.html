@@ -5,7 +5,7 @@
 {{- if or .IsHome $root.IsSection }}
 {{- $pages = $root.RegularPages }}
 {{- end }}
-{{ .Content }}
+{{ partial "anchor" .Content }}
 
 <div class="feed">
 {{ range (.Paginate $pages).Pages }}

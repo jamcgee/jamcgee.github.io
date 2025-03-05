@@ -94,7 +94,7 @@ td, th {
     color: inherit;
   }
 
-  nav {
+  a.anchor, nav {
     display: none;
   }
 }
@@ -230,6 +230,10 @@ td, th {
   }
 
   a.button {
+    text-decoration: none;
+  }
+
+  a.anchor {
     text-decoration: none;
   }
 }
