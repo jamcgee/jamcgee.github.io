@@ -17,7 +17,7 @@ Much of the information will be conceptual but referenced repeatedly when discus
 > **Note:** The most recent version of the 802 standards are available from the [IEEE Get program](https://ieeexplore.ieee.org/browse/standards/get-program/page/series?id=68) at no cost.
 > It is highly advised that anyone working with Ethernet download a copy of 802.3 (Wired Ethernet).
 
-## Architecture (Clause 1.1)
+## Architecture (Clause 1.1) {id="architecture"}
 
 Before we start diving into the specifics, it's useful to get a model for visualizing the components of Ethernet.
 When discussing networking, one frequently starts with the <abbr title="Open Systems Interconnection">OSI</abbr> model but given that it's based on a *software* model of networking, it's woefully inadequate for describing the hardware.
@@ -124,7 +124,7 @@ For example, an Ethernet frame of length `0x157` would load its length field as 
 This discrepancy can sometimes lead to confusion between numerical representation and transmit order.
 I will endeavour to provide explicit examples in these cases to help clear the ambiguity.
 
-## Ethernet Packets and Frames (Clause 3)
+## Ethernet Packets and Frames (Clause 3) {id="framing"}
 
 In 802.3 parlance, an Ethernet *packet* is the entire structure from the preamble through the FCS and any extension while the Ethernet *frame* begins with the destination address and ends with the <abbr title="Frame Check Sequence">FCS</abbr>.
 
@@ -160,7 +160,7 @@ The <abbr title="Cyclic Redundancy Check">CRC</abbr> was independently verified 
  style="background: #8888; border: 1px solid #888; border-radius: 2px;" title="Extension"><span
   style="padding: 0 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone;">/R/R/</span></span></p>
 
-### Preamble (Clause 3.2.1)
+### Preamble (Clause 3.2.1) {id="preamble"}
 
 Example: <code style="background: #F888; border: 1px solid #F88; border-radius: 2px; padding: 0 4px;">55 55 55 55 55 55 55</code>
 
@@ -172,14 +172,14 @@ The standard preamble is seven bytes of `0x55` (`10101010` in transmit order); h
 As a result, receivers should not assume that they will receive exactly seven bytes.
 The specific protocol will provide certain guarantees and implementations need to be careful they do not make incorrect assumptions.
 
-### Start Frame Delimiter (Clause 3.2.2)
+### Start Frame Delimiter (Clause 3.2.2) {id="sfd"}
 
 Example: <code style="background: #F888; border: 1px solid #F88; border-radius: 2px; padding: 0 4px;">D5</code>
 
 The last byte of the preamble sequence is the Start Frame Delimiter (SFD), which has the sequence `10101011` in transmit order (`0xD5` numerically).
 This immediately proceeds the first byte of the Ethernet *frame*.
 
-### Destination Address (Clause 3.2.4)
+### Destination Address (Clause 3.2.4) {id="dst-addr"}
 
 Example: <code style="background: #FC88; border: 1px solid #FC0; border-radius: 2px; padding: 0 4px;">FF FF FF FF FF FF</code>
 
@@ -192,14 +192,14 @@ When set, the address is treated as a group (multicast) address.
 All ones, as in the above example, represents the standard broadcast address.
 Most switches treat all group addresses as broadcast addresses but techniques such as <abbr title="Internet Group Management Protocol">IGMP</abbr> snooping or a simple static configuration can be used to reduce the scope of traffic in a multicast-heavy environment.
 
-### Source Address (Clause 3.2.5)
+### Source Address (Clause 3.2.5) {id="src-addr"}
 
 Example: <code style="background: #FC88; border: 1px solid #FC0; border-radius: 2px; padding: 0 4px;">F8 B7 E2 04 0C 19</code>
 
 The next 48 bits of the frame is the address of the transmitting host.
 Unlike the destination address, this should always be an individual address.
 
-### Length/Type (Clause 3.2.6)
+### Length/Type (Clause 3.2.6) {id="ethertype"}
 
 Example: <code style="background: #FE48; border: 1px solid #FD0; border-radius: 2px; padding: 0 4px;">08 06</code>
 
@@ -218,7 +218,7 @@ In practice, lengths are not commonly seen in modern Ethernet.
 Instead, standard type values are used (e.g. the `0x0806` in our example represents the <abbr title="Address Resolution Protocol">ARP</abbr> protocol for mapping between IPv4 and Ethernet addresses).
 The set of standard values, formally EtherType, are [registered with the IEEE](https://regauth.standards.ieee.org/standards-ra-web/pub/view.html#registries) but a more accessible list of common protocols is [maintained at Wikipedia](https://en.wikipedia.org/wiki/EtherType#Values).
 
-### Client Data (Clause 3.2.7) and Envelope
+### Client Data (Clause 3.2.7) and Envelope {id="payload"}
 
 Example: <code style="background: #8F88; border: 1px solid #4F4; border-radius: 2px; padding: 0 4px;">00 01 08 00 06 04 ...</code>
 
@@ -244,7 +244,7 @@ Even the standard <abbr title="Maximum Transfer Unit">MTU</abbr> at 10Base-T wit
 
 **Note:** Due to the lack of explicit delimiters in the framing structure, it's possible that additional bytes may be appended to the payload at the receiver interface, such as padding and the <abbr>FCS</abbr>, when the frame uses an EtherType instead of an explicit length.
 
-### Padding (Clause 3.2.8)
+### Padding (Clause 3.2.8) {id="padding"}
 
 Example: <code style="background: #88F8; border: 1px solid #88F; border-radius: 2px; padding: 0 4px;">00 00 00 00 ...</code>
 
@@ -256,7 +256,7 @@ These are frequently the result of collisions (in case of half-duplex operation)
 They can also erroneously occur in some switch implementations when 802.1Q tags are removed.
 Per Clause 4.2.4.2.2, runt frames are to be discarded.
 
-### Frame Check Sequence (Clause 3.2.9)
+### Frame Check Sequence (Clause 3.2.9) {id="fcs"}
 
 Example: <code style="background: #C8F8; border: 1px solid #C8F; border-radius: 2px; padding: 0 4px;">69 70 39 BB</code>
 
@@ -320,7 +320,7 @@ The lookup tables common in software implementations are not characteristic of h
 Many HDL examples of <abbr>CRC</abbr> in the wild have the XOR tree explicitly spelled out.
 This is unnecessary as modern synthesis engines can handle the loop unrolling and logic folding without issue.
 
-### Extension (Clause 3.2.10)
+### Extension (Clause 3.2.10) {id="extension"}
 
 Example: <code style="background: #8888; border: 1px solid #888; border-radius: 2px; padding: 0 4px;">/R/R/</code>
 
@@ -334,7 +334,7 @@ This means that a station transmitting the minimum length frame may produce coll
 As half-duplex 1000Base-T was never commercially available, it is rarely implemented in real hardware.
 However, it still exists in a vestigial form in 1000Base-X (Clause 36) and derived interfaces, represented by the token `/R/`.
 
-### Interpacket Gap (Clause 4.2.3.2.2)
+### Interpacket Gap (Clause 4.2.3.2.2) {id="ifg"}
 
 Commonly known as the *interframe gap*, the IPG is a period between packets where the medium is idle to provide a buffer for the sublayers forming the physical interface.
 This includes the insertion of delimiters to mark the extends of a packet, absorbing the difference in reference frequency between stations, and aligning the frame as required by the underlying encoding.
@@ -343,13 +343,13 @@ As a result, the <abbr>IPG</abbr> at the receiving <abbr>MAC</abbr> may differ f
 The standard <abbr>IPG</abbr> is a minimum of 96 bit periods (12 bytes) and this applies to all normal forms of Ethernet.
 Some exotic variants of Ethernet (e.g. those involving SONET or SDH) may have more complex requirements for the interpacket gap.
 
-## Duplex (Clause 4.2.3.2, Annex 4A)
+## Duplex (Clause 4.2.3.2, Annex 4A) {id="duplex"}
 
 Most modern variants of Ethernet are full-duplex, providing a point-to-point link between two hosts with independent channels in each direction.
 Under these conditions, the two hosts can transmit continuously without consideration for the other's activities.
 In this mode, the transmit process can begin once data is available from the client and the minimum interpacket gap has been honored.
 
-### Half Duplex (Clause 4.2.3.2)
+### Half Duplex (Clause 4.2.3.2) {id="half-duplex"}
 
 Older implementations and some specialty variants, such as 10Base-T1S, are based on the concept of a shared medium which is exclusively held by one transmitter at a time.
 With exception to 10Base-T1S, this implemented through an algorithm known as <abbr title="Carrier Sense Multiple Access with Collision Detection">CSMA/CD</abbr>.
@@ -358,18 +358,12 @@ While largely extinct in the wild, half-duplex mode can still be entered when au
 Failure to provide even a rudimentary implementation of the logic (e.g. *carrier sense*) can lead to severe communication failures when the peer attempts to engage in collision recovery.
 The specifics of <abbr>CSMA/CD</abbr> will be discussed in the essays describing each protocol.
 
-### Full Duplex (Annex 4A)
+### Full Duplex (Annex 4A) {id="full-duplex"}
 
 With the near-complete extinction of half duplex, a simplified version of the <abbr title="Media Access Controller">MAC</abbr> specification is provided in Annex 4A, which eliminates all mentions to half duplex operation.
 
 Under Clause 4 and the original definitions of <abbr title="Media Independent Interface">MII</abbr>, the *carrier sense* and *collision* signals becomes *undefined* under full duplex operation.
 Most commercial <abbr title="Physical Layer Device">PHY</abbr>s simply continue to operate these signals unchanged between the two modes.
-However, Clause 4A allows the option to repurpose them.
-
-There are conditions under which the medium is not ready for transmission, such as when leaving <abbr title="Low Power Idle">LPI</abbr>.
-In these cases, the PHY may use the *carrier sense* signal to request deference from the MAC until the situation is resolved.
-This is described in Clause 4A.2.3.2.1 and largely amounts to implementing the collision avoidance component of the half duplex logic.
-It should be emphasized that this usage of *carrier sense* is not commonly supported in commercial <abbr>PHY</abbr>s and using it on such devices may result in significant transmission delays.
 
 ## Autonegotiation
 
@@ -382,7 +376,7 @@ Whereas for optical standards (e.g. 1000Base-X, Clause 37), autonegotiation is p
 
 The specifics of autonegotiation will be presented in the protocol-specific essays.
 
-## Q-Tagging (802.1Q Clause 9)
+## Q-Tagging (802.1Q Clause 9) {id="vlan"}
 
 As mentioned in the Client Data section, the user payload can be wrapped in an envelope for special processing by switches and networking equipment between the source and its destination.
 The most common envelope seen in the wild is the Customer VLAN Tag (or C-TAG) described in 802.1Q Clause 9.
@@ -551,7 +545,7 @@ It exists to distinguish service provider data planes from those of the customer
 > Despite its common association with VLAN tags, 802.1Q describes all forms of bridging (e.g. switches).
 > Many of the Time Sensitive Networking (<abbr>TSN</abbr>) standards are built on top of the features described in 802.1Q.
 
-## Flow Control (Clause 31, Annex 31B, Annex 31D)
+## Flow Control (Clause 31, Annex 31B, Annex 31D) {id="flow-control"}
 
 Ethernet does not have an intrinsic concept of flow control.
 There is no "ready" or "wait" signal by which the receiver can apply backpressure against the transmitter like exists in a bus such as AXI-Stream.
@@ -561,7 +555,7 @@ What 802.3 does provide is an *optional* <abbr title="Media Access Controller">M
 This establishes a control plane using otherwise normal Ethernet frames.
 For the purpose of flow control, we are interested in the PAUSE (Annex 31B) and <abbr title="Priority-based Flow Control">PFC</abbr> (Annex 31D) operations.
 
-### PAUSE (Annex 31B)
+### PAUSE (Annex 31B) {id="pause"}
 
 The PAUSE operation is a fairly simply frame with the following characteristics:
 - The destination address is the multicast address `01 80 C2 00 00 01` or the address of the peer.
@@ -606,7 +600,7 @@ This facilitates an on-off manner of operation in which a max-duration `0xFFFF` 
 > **Note:** Support for PAUSE needs to be negotiated as part of the protocol's autonegotiation mechanism and only applies to full duplex links.
 > PAUSE frames are not used when <abbr title="Priority-based Flow Control">PFC</abbr> is in effect.
 
-### Priority-based Flow Control (Annex 31D, 802.1Q Clause 36)
+### Priority-based Flow Control (Annex 31D, 802.1Q Clause 36) {id="pfc"}
 
 Using Q-Tags, traffic may be sent at different priorities with different <abbr title="Quality of Service">QoS</abbr> guarantees.
 As such, when approaching link capacity, it may be desirable to slow down (pause) lower-priority traffic in order to ensure the timely delivery of higher-priority traffic.
@@ -661,7 +655,7 @@ An example <abbr>PFC</abbr> frame requesting a pause time of `0x1234` on priorit
 
 > **Note:** As part of the 802 standards, the latest versions of 802.1Q and 802.1BA are available from the [IEEE Get program](https://ieeexplore.ieee.org/browse/standards/get-program/page/series?id=68) at no cost.
 
-## Energy Efficient Ethernet (Clause 78)
+## Energy Efficient Ethernet (Clause 78) {id="eee"}
 
 With the exception of half-duplex operation and 10Base-T, modern Ethernet transmits continuously.
 This can result in a considerable power expense, especially at higher signalling rates.
@@ -676,7 +670,7 @@ The specific handling of <abbr>EEE</abbr> will be described with each protocol.
 As 10Base-T does not transmit continuously, it does not implement <abbr>LPI</abbr>.
 Instead, 10Base-Te is a cross-compatible variant of 10Base-T with reduced signal amplitude introduced at the same time as <abbr>EEE</abbr>.
 
-## Precision Time Protocol (802.1AS or 1588)
+## Precision Time Protocol (802.1AS or 1588) {id="ptp"}
 
 The Precision Time Protocol (PTP) is a hardware-assisted time synchronization protocol capable of sub-microsecond accuracy.
 The timestamp point for PTP packets is the transition from the last symbol of the SFD to the first symbol of the destination address.
@@ -686,11 +680,11 @@ When implemented in this fashion, nanosecond-level accuracy is possible.
 > **Note:** As part of 802, 802.1AS (<abbr title="Generalized Precision Time Protocol">gPTP</abbr>) is available from the [IEEE Get program](https://ieeexplore.ieee.org/browse/standards/get-program/page/series?id=68).
 > The full <abbr>PTP</abbr> standard ([IEEE 1588](https://standards.ieee.org/ieee/1588/6825/)) is a paid standard.
 
-## Synchronous Ethernet (ITU-T G.8261)
+## Synchronous Ethernet (ITU-T G.8261) {id="synce"}
 
 As the transmit pattern in high speed ethernet runs continuously (baring the use of <abbr title="Low Power Idle">LPI</abbr>), the receiver is able to maintain continuous synchronization to the reference clock of its peer as part of its clock recovery circuit.
 The <abbr title="International Telecommunication Union">ITU</abbr> exploits this in their Synchronous Ethernet specifications to provide traceable time synchronization through a network.
-This is commonly limited to high-speed protocols such as those implemented using Base-X or Base-R which provide a high-precision reference.
+This is commonly limited to high-speed protocols such as those implemented using Base-X or Base-R, which provide a high-precision reference.
 
 > **Note:** I am not personally familiar with the SyncE specifications and have not acquainted myself with the SyncE features of the PHYs I have used.
 

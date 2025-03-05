@@ -93,7 +93,7 @@ This derivation of the half-duplex signals from the receive and transmit enables
 
 For 100&nbsp;megabit transmit operation, <abbr title="Reduced Media Independent Interface">RMII</abbr> is largely equivalent to ordinary <abbr title="Media Independent Interface">MII</abbr> except by using two bits per clock cycle (di-bit) instead of four.
 As in keeping with Ethernet conventions, these bits are transmitted LSB first.
-For example, the [example packet from the introduction]({{<ref "2024-10-08-ethernet-intro#ethernet-packets-and-frames-clause-3">}}) (ends with <abbr title="Frame Check Sequence">FCS</abbr> `69 70 39 BB`) would be sent:
+For example, the [example packet from the introduction]({{<ref "2024-10-08-ethernet-intro#framing">}}) (ends with <abbr title="Frame Check Sequence">FCS</abbr> `69 70 39 BB`) would be sent:
 
 SIGNAL    |   | 1 | 2 |...| 29| 30| 31| 32|...|281|282|283|284|285|286|287|288|
 :---------|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:
@@ -132,7 +132,7 @@ As such, `00` should be interpreted as "MII bus idle, carrier sense high"; `01` 
 
 Deassertion is a bit complicated and the notable difference between the two RMII revisions.
 In RMII version 1.0, `CRS_DV` will deassert normally at the end of the packet with the last di-bit.
-For example, the [example packet from the introduction]({{<ref "2024-10-08-ethernet-intro#ethernet-packets-and-frames-clause-3">}}) (ends with <abbr title="Frame Check Sequence">FCS</abbr> `69 70 39 BB`) would terminate:
+For example, the [example packet from the introduction]({{<ref "2024-10-08-ethernet-intro#framing">}}) (ends with <abbr title="Frame Check Sequence">FCS</abbr> `69 70 39 BB`) would terminate:
 
 SIGNAL    |281|282|283|284|285|286|287|288|...|...|...|...
 :---------|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:

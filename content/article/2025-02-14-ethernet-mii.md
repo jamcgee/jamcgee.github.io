@@ -176,7 +176,7 @@ Raising `RX_DV`/`TX_EN` is done to indicate when a packet is being sent (includi
 
 As discussed previously, Ethernet is *primarily* a little endian protocol.
 Each data byte is sent least significant nibble first with the most significant bit stored in position three and the least significant bit stored in position zero.
-For example, the [example packet from the introduction]({{<ref "2024-10-08-ethernet-intro#ethernet-packets-and-frames-clause-3">}}) (ends with <abbr title="Frame Check Sequence">FCS</abbr> `69 70 39 BB`) would be sent:
+For example, the [example packet from the introduction]({{<ref "2024-10-08-ethernet-intro#framing">}}) (ends with <abbr title="Frame Check Sequence">FCS</abbr> `69 70 39 BB`) would be sent:
 
 SIGNAL    |   | 1 | 2 |...| 13| 14| 15| 16|...|141|142|143|144|
 :---------|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:
