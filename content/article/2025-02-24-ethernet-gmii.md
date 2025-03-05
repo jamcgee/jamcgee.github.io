@@ -30,7 +30,7 @@ Despite this, these are still defined in context of GMII.
 > **Note:** The most recent version of the 802 standards are available from the [IEEE Get program](https://ieeexplore.ieee.org/browse/standards/get-program/page/series?id=68) at no cost.
 > It is highly advised that anyone working with Ethernet download a copy of 802.3 (Wired Ethernet).
 
-## Signaling (Clause 35.2)
+## Signaling (Clause 35.2) {id="signaling"}
 
 <abbr title="Gigabit Media Independent Interface">GMII</abbr> is defined by 24 individual signals, largely straightforward extensions from those used in <abbr title="Media Independent Interface">MII</abbr>.
 Each direction (transmit and receive) has eleven signals: a source-synchronous clock (`RX_CLK`/`GTX_CLK`), a valid/enable signal (`RX_DV`/`TX_EN`), an error signal (`RX_ER`/`TX_ER`), and an eight-bit data bus (`RXD`/`TXD`).
@@ -177,7 +177,7 @@ Raising `RX_DV`/`TX_EN` is done to indicate when a packet is being sent (includi
 Even though a standard preamble is 7 bytes of `0x55` followed by the SFD, as with MII, there is no guarantee you will receive the full preamble.
 It is advised that the MAC accept any number of `0x55`, including zero, prior to the appearance of the SFD, `0xD5`.
 
-## Clocking (Clause 35.5.2)
+## Clocking (Clause 35.5.2) {id="clocking"}
 
 Both clocks in <abbr title="Gigabit Media Independent Interface">GMII</abbr> are source-synchronous.
 The transmit clock is sourced by the <abbr title="Media Access Controller">MAC</abbr> and the receive clock by the PHY.
@@ -277,7 +277,7 @@ set_input_delay -clock RX_CLK_virt \
     [get_ports {RX_DV RX_ER RXD[*]}]
 ```
 
-## Data Errors (Clause 35.2.2.5, 35.2.2.9)
+## Data Errors (Clause 35.2.2.5, 35.2.2.9) {id="errors"}
 
 As with <abbr title="Media Independent Interface">MII</abbr>, encoding errors can be indicated by the use of `RX_ER` or `TX_ER`.
 When asserted during a packet (`RX_DV`/`TX_EN` are high), this indicates that an issue with that specific byte position.
@@ -321,7 +321,7 @@ The specific value of the data bus is undefined during a data error.
 <figcaption style="text-align:center">Example Packet Error</figcaption>
 </figure>
 
-## Control Sequences (Clause 35.2.2.4, 35.2.2.8)
+## Control Sequences (Clause 35.2.2.4, 35.2.2.8) {id="control"}
 
 As with <abbr title="Media Independent Interface">MII</abbr>, the error signal (`RX_ER`/`TX_ER`) can be used to indicate the presence of control sequences when the valid signal (`RX_DV`/`TX_EN`) are held low.
 The values are broadly similar to those in MII, simply zero extended, with the addition of two new values for the special handling of half-duplex in Gigabit.
@@ -341,7 +341,7 @@ This can generally be ignored except for logging purposes but may indicate hardw
 *Carrier Extend* (`0F`) and *Carrier Extend Error* (`1F`) are used in half-duplex Gigabit operation to extend a packet to meet the minimums required by the extended *slotTime*.
 They are not normally part of full-duplex operation but may be introduced by 1000Base-X (e.g. fiber) and its derivatives (e.g. <abbr title="Serial Gigabit Media Independent Interface">SGMII</abbr>).
 
-## Tri-Mode Operation (Clause 35.3)
+## Tri-Mode Operation (Clause 35.3) {id="trimode"}
 
 Tri-Mode (10/100/1000) operation is somewhat involved under <abbr title="Gigabit Media Independent Interface">GMII</abbr>.
 As GMII is only defined for Gigabit operation, the bus is required to revert to <abbr title="Media Independent Interface">MII</abbr> when operating at reduced rate, including switching the transmit bus from `GTX_CLK` to `TX_CLK` and only sending one nibble at a time.
@@ -352,7 +352,7 @@ For power reduction and stability purposes, they should be driven to a known val
 This means that a tri-mode PHY has 25 pins (the addition of `TX_CLK`) instead of the standard GMII set of 24.
 And both sets of constraints (MII and GMII) should be present for the transmit pins.
 
-## Link Configuration
+## Link Configuration {id="link-config"}
 
 The fundamental properties when configuring the interface, be it manually or through autonegotiation, are the following:
 
@@ -380,7 +380,7 @@ As both sides of the link are source-synchronous and largely identical in their 
 The only complication would be possible truncation of the preamble in a PHY-to-PHY crossover.
 There are no expected complications in a MAC-to-MAC crossover.
 
-## Energy Efficient Ethernet (Clause 35.4, 78)
+## Energy Efficient Ethernet (Clause 35.4, 78) {id="eee"}
 
 As with 100Base-TX, the transmitters run continuously in Gigabit Ethernet, even when the link is idle.
 Energy Efficient Ethernet (<abbr>EEE</abbr>) is a mechanism by which the transmitter can be disabled during periods of extended inactivity, reducing power consumption.
@@ -471,7 +471,7 @@ As with the PHY, the MAC is allowed to halt `GTX_CLK` after clocking at least ni
 
 Failure to meet these timing requirements may result in data loss as the peer may not have been able to complete synchronization.
 
-## Half-Duplex (Clause 4.2.3.2, 35.2.2)
+## Half-Duplex (Clause 4.2.3.2, 35.2.2) {id="duplex"}
 
 The specification for 1000Base-T includes half-duplex operation (Clause 41).
 To my knowledge, Gigabit hubs were never commercially available and, as a result, many pieces of Gigabit hardware do not include support for half-duplex operation.
@@ -488,7 +488,7 @@ To avoid simply wasting this time, after the normal 96&nbsp;bits (12&nbsp;bytes)
 While half-duplex Gigabit may be a historical curiosity, *Carrier Extend* does make an appearance in 1000Base-X (e.g. fiber and <abbr title="Serial Gigabit Media Independent Interface">SGMII</abbr>).
 Even in full-duplex operation, a couple cycles may appear at the end of each frame due to the nature of the encoding.
 
-## Ten Bit Interface (Clause 35.3, 36.3)
+## Ten Bit Interface (Clause 35.3, 36.3) {id="tbi"}
 
 1000Base-X (and its derivatives) encodes the packet stream using 8b10b encoding, where every byte (8b) is encoded with ten bits (10b).
 The specifics of this encoding will be covered in the article on 1000Base-X; however, <abbr title="Gigabit Media Independent Interface">GMII</abbr> includes a provision to carry the <abbr title="Physical Coding Sublayer">PCS</abbr> encoding directly.

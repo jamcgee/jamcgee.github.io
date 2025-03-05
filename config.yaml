@@ -53,6 +53,7 @@ markup:
     parser:
       attribute:
         block: true
+        title: true
     renderer:
       unsafe: true
     renderHooks:
