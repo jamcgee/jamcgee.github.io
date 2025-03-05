@@ -466,7 +466,71 @@ On others, some form of configuration is required.
 This is normally handled through the Clause 45 register sets MMD3 and MMD7.
 
 When the peer signals it is entering Low Power Idle (<abbr>LPI</abbr>), the local PHY will report this to the MAC by signalling *Assert LPI*, holding `RX_DV` low, `RX_ER` high, and `0001` on `RXD`.
-Once the PHY has indicated this condition for at least nine clock cycles, it may halt `RX_CLK` until the peer leaves <abbr>LPI</abbr>.
+Once the PHY has indicated this condition for at least nine clock cycles, and *clock stop* has been enabled in the management interface, it may halt `RX_CLK` until the peer leaves <abbr>LPI</abbr>.
+Upon leaving LPI, the PHY will hold *Assert LPI* for at least one cycle before transitioning to normal idle.
+
+<figure>
+<svg viewBox="0 0 400 150" style="display:block;margin:auto;max-width:500px;">
+  <title>LPI Receive Timing</title>
+  <!-- Labels -->
+  <g dominant-baseline="middle" font-size="15">
+    <text y="45">RX_CLK</text>
+    <text y="75">RX_DV</text>
+    <text y="105">RXD[3:0]</text>
+    <text y="135">RX_ER</text>
+  </g>
+  <!-- Waveforms -->
+  <g fill="none" stroke="black">
+    <path d="M70,53 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20  h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h112.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5"/>
+    <path d="M70,84 h280 v-20 h40"/>
+    <path d="M70,144 h40 v-20 h160 v20 h120"/>
+  </g>
+  <g fill="#8F88" stroke="#4F4">
+    <path d="M110,104 l5,-10 h150 l5,10 l-5,10 h-150 l-5,-10"/>
+    <path d="M390,114 h-35 l-5,-10 l5,-10 h35"/>
+  </g>
+  <g fill="#F888" stroke="#F88">
+    <path d="M70,94 h35 l5,10 l-5,10 h-35"/>
+    <path d="M270,104 l5,-10 h70 l5,10 l-5,10 h-70 l-5,-10"/>
+  </g>
+  <!-- Divisions -->
+  <g stroke="black" stroke-dasharray="3,3">
+    <line x1="110" y1="5" x2="110" y2="150"/>
+    <line x1="270" y1="5" x2="270" y2="150"/>
+    <line x1="350" y1="5" x2="350" y2="150"/>
+  </g>
+  <!-- Spans -->
+  <g stroke="black">
+    <line x1="70" y1="20" x2="105" y2="20"/>
+    <line x1="115" y1="20" x2="265" y2="20"/>
+    <line x1="275" y1="20" x2="345" y2="20"/>
+    <line x1="355" y1="20" x2="390" y2="20"/>
+  </g>
+  <g fill="black" stroke="none">
+    <polyline points="105,17.5 105,22.5 110,20"/>
+    <polyline points="115,17.5 115,22.5 110,20"/>
+    <polyline points="265,17.5 265,22.5 270,20"/>
+    <polyline points="275,17.5 275,22.5 270,20"/>
+    <polyline points="345,17.5 345,22.5 350,20"/>
+    <polyline points="355,17.5 355,22.5 350,20"/>
+  </g>
+  <!-- Labels -->
+  <g font-size="12" text-anchor="middle">
+    <text x="90" y="17.5">IDLE</text>
+    <text x="190" y="17.5">LPI</text>
+    <text x="310" y="17.5">WAKE</text>
+    <text x="370" y="17.5">RX</text>
+  </g>
+  <!-- Content -->
+  <g dominant-baseline="middle" text-anchor="middle" font-size="12">
+    <text x="90" y="105">X</text>
+    <text x="190" y="105">0001</text>
+    <text x="310" y="105">X</text>
+    <text x="370" y="105">...</text>
+  </g>
+</svg>
+<figcaption style="text-align:center"><abbr title="Low Power Idle">LPI</abbr> Receive Timing</figcaption>
+</figure>
 
 When the local <abbr title="Media Access Controller">MAC</abbr> is idle, it may request the PHY enter <abbr>LPI</abbr> in a similar manner:
 It pulls `TX_EN` low, `TX_ER` high, and loads `0001` onto `TXD`.
@@ -478,33 +542,38 @@ For the PHYs covered by Clause 22 <abbr>MII</abbr>, these times are:
 - For 10Base-T1L, this is 270&nbsp;&mu;s (675 clock cycles).
 - For 100Base-TX, this is 30&nbsp;&mu;s (750 clock cycles).
 
+Unlike the receive data path, clock stoppage on transmit is not a standard part of the Clause 22 specification.
+It may be supported by some PHYs.
+
 <figure>
-<svg viewBox="0 0 400 120" style="display:block;margin:auto;max-width:500px;">
+<svg viewBox="0 0 400 150" style="display:block;margin:auto;max-width:500px;">
   <title>LPI Transmit Timing</title>
   <!-- Labels -->
   <g dominant-baseline="middle" font-size="15">
-    <text x="0" y="45">TX_EN</text>
-    <text x="0" y="75">TXD[3:0]</text>
-    <text x="0" y="105">TX_ER</text>
+    <text y="45">TX_CLK</text>
+    <text y="75">TX_EN</text>
+    <text y="105">TXD[3:0]</text>
+    <text y="135">TX_ER</text>
   </g>
   <!-- Waveforms -->
   <g fill="none" stroke="black">
-    <path d="M70,54 h280 v-20 h40"/>
-    <path d="M70,114 h40 v-20 h160 v20 h120"/>
+    <path d="M70,53 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20  h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20  h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20  h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5 v20 h2.5 v-20 h2.5"/>
+    <path d="M70,84 h280 v-20 h40"/>
+    <path d="M70,144 h40 v-20 h160 v20 h120"/>
   </g>
   <g fill="#8F88" stroke="#4F4">
-    <path d="M110,74 l5,-10 h150 l5,10 l-5,10 h-150 l-5,-10"/>
-    <path d="M390,84 h-35 l-5,-10 l5,-10 h35"/>
+    <path d="M110,104 l5,-10 h150 l5,10 l-5,10 h-150 l-5,-10"/>
+    <path d="M390,114 h-35 l-5,-10 l5,-10 h35"/>
   </g>
   <g fill="#F888" stroke="#F88">
-    <path d="M70,64 h35 l5,10 l-5,10 h-35"/>
-    <path d="M270,74 l5,-10 h70 l5,10 l-5,10 h-70 l-5,-10"/>
+    <path d="M70,94 h35 l5,10 l-5,10 h-35"/>
+    <path d="M270,104 l5,-10 h70 l5,10 l-5,10 h-70 l-5,-10"/>
   </g>
   <!-- Divisions -->
   <g stroke="black" stroke-dasharray="3,3">
-    <line x1="110" y1="5" x2="110" y2="120"/>
-    <line x1="270" y1="5" x2="270" y2="120"/>
-    <line x1="350" y1="5" x2="350" y2="120"/>
+    <line x1="110" y1="5" x2="110" y2="150"/>
+    <line x1="270" y1="5" x2="270" y2="150"/>
+    <line x1="350" y1="5" x2="350" y2="150"/>
   </g>
   <!-- Spans -->
   <g stroke="black">
@@ -530,10 +599,10 @@ For the PHYs covered by Clause 22 <abbr>MII</abbr>, these times are:
   </g>
   <!-- Content -->
   <g dominant-baseline="middle" text-anchor="middle" font-size="12">
-    <text x="90" y="75">X</text>
-    <text x="190" y="75">0001</text>
-    <text x="310" y="75">X</text>
-    <text x="370" y="75">...</text>
+    <text x="90" y="105">X</text>
+    <text x="190" y="105">0001</text>
+    <text x="310" y="105">X</text>
+    <text x="370" y="105">...</text>
   </g>
 </svg>
 <figcaption style="text-align:center"><abbr title="Low Power Idle">LPI</abbr> Transmit Timing</figcaption>
