@@ -2,7 +2,7 @@
 date: 2025-03-08T17:30:00-0800
 title: "Ethernet: Reduced Gigabit Media Independent Interface (RGMII)"
 series: ethernet
-series_weight: 350
+series_weight: 325
 slug: ethernet-rgmii
 tags:
   - embedded
