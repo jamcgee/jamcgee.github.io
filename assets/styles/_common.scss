@@ -7,8 +7,12 @@ body {
   color: #000;
   font-family: Cambria, Georgia, Times, serif;
   font-size: 18px;
-  line-height: 1.5em;
+  line-height: 150%;
   margin: 0;
+}
+
+h1 {
+  line-height: 120%;
 }
 
 nav, header, main, footer {
