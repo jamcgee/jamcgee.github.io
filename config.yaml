@@ -46,7 +46,6 @@ taxonomies:
 # Rendering
 disableKinds:
   - "404"  # Managed by the error collection
-enableGitInfo: true
 enableRobotsTXT: true
 markup:
   goldmark:
