@@ -1,62 +1,97 @@
 {
   description = "Jonathan McGee's Personal Website";
 
-  inputs.nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-  inputs.flake-utils.url = "github:numtide/flake-utils";
+  # Keep updated with HUGO_VERSION in .github/workflows/hugo.yml
+  inputs.nixpkgs.url = "nixpkgs";
 
   outputs =
+    { self, nixpkgs }@inputs:
+    let
+      # Import nixpkgs
+      inherit (nixpkgs) lib;
+      system = "x86_64-linux";
+      pkgs = nixpkgs.legacyPackages.${system};
+      # Configure source formatting
+      formatter = pkgs.nixfmt-rfc-style;
+    in
+    with pkgs;
     {
-      self,
-      flake-utils,
-      nixpkgs,
-    }:
-    flake-utils.lib.eachDefaultSystem (
-      system:
-      let
-        pkgs = import nixpkgs { inherit system; };
-        inherit (pkgs)
-          lib
-          runCommand
-          stdenv
-          writeShellScriptBin
-          ;
-        formatter = pkgs.nixfmt-rfc-style;
-      in
-      {
-        inherit formatter;
+      # Expose inputs for diagnostic use
+      inherit inputs;
 
-        apps.format = {
+      # Expose formatter for diagnostic use
+      formatter.${system} = formatter;
+
+      # Helper macros
+      apps.${system} = {
+        # Run formatter over all Nix scripts
+        format = {
           type = "app";
-          program = lib.getExe (
-            writeShellScriptBin "etherealwake-format" ''
-              find . -name '*.nix' -print0 | xargs -0 ${lib.getExe formatter}
-            ''
-          );
           meta.description = "Reformat source files";
-        };
-
-        apps.server = {
-          type = "app";
-          program = lib.getExe (
-            writeShellScriptBin "etherealwake-server" ''
-              exec ${lib.getExe pkgs.hugo} server -DEF "$@"
+          program = toString (
+            writeShellScript "format" ''
+              find . -name '*.nix' -print0 | xargs -0 ${lib.getExe formatter} --
             ''
           );
-          meta.description = "Start development server";
         };
 
-        checks.format-check = runCommand "format-check" { } ''
-          find ${self} -name '*.nix' -print0 | xargs -0 ${lib.getExe formatter} --verify
-          touch $out
-        '';
+        # Run hugo in server mode
+        server = {
+          type = "app";
+          meta.description = "Start development server";
+          program = toString (
+            writeShellScript "server" ''
+              exec ${lib.getExe hugo} server -DEF "$@"
+            ''
+          );
+        };
+      };
 
-        packages.default = stdenv.mkDerivation {
-          name = "etherealwake-website";
+      # Validity Checks
+      checks.${system} = {
+        format = runCommandLocal "format-check" { } ''
+          find ${self} -name '*.nix' -print0 | xargs -0 ${lib.getExe formatter} --verify --
+          echo ${self} > $out
+        '';
+      };
+
+      # Exposed Packages
+      packages.${system} = rec {
+        default = website;
+
+        # Export hugo so it's easy to see which version nixpkgs is providing
+        inherit hugo;
+
+        # The actual website
+        website = stdenvNoCC.mkDerivation {
+          name = "website";
           src = self;
+
+          # By default, source files will have a modified date of the epoch,
+          # which is what Hugo will use when generating the indices.  While we
+          # can't get access to the git history as a flake, we can at least
+          # bring the source files to a more reasonable date.
+          patchPhase = ''
+            runHook prePatch
+            find -print0 | xargs -0 touch -d @${toString self.lastModified} --
+            runHook postPatch
+          '';
+
           buildPhase = ''
-            ${lib.getExe pkgs.hugo} build --destination $out --minify
+            runHook preBuild
+            ${lib.getExe hugo} build --minify
+            runHook postBuild
+          '';
+
+          installPhase = ''
+            runHook preInstall
+            mv public $out
+            runHook postInstall
           '';
         };
-      }
-    );
+
+        # Compressed version of the website
+        compressed = compressDrvWeb default { };
+      };
+    };
 }

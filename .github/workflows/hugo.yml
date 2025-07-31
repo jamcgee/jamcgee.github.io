@@ -6,7 +6,6 @@ permissions:
   contents: read
   id-token: write
   pages: write
-# bash --noprofile --norc -eo pipefail {0}
 defaults:
   run:
     shell: bash
@@ -15,7 +14,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      HUGO_VERSION: 0.141.0
+      # Keep updated with nixpkgs version in flake.nix
+      HUGO_VERSION: 0.148.2
     steps:
       - name: Install Hugo CLI
         run: |
