@@ -74,7 +74,7 @@ This derivation of the half-duplex signals from the receive and transmit enables
     <use href="#arrow" x="-200" y="-80" transform="rotate(180)"/>
     <text x="110" y="75">TX_EN</text>
     <use href="#arrow" x="-200" y="-100" transform="rotate(180)"/>
-    <text x="110" y="95">TXD[3:0]</text>
+    <text x="110" y="95">TXD[1:0]</text>
     <!-- Shared -->
     <g>
       <line stroke="black" x1="100" y1="120" x2="200" y2="120"/>
@@ -281,7 +281,7 @@ set_input_delay -clock REF_CLK_sys \
     -min [expr {$rmii_min + $refclk_phy_min - $refclk_mac_max + $rmii_hold}] \
     [get_ports {CRS_DV RXD[*]}]
 set_input_delay -clock REF_CLK_sys \
-    -max [expr {$rmii_max + $refclk_phy_max - $refclk_mac_min - $rmii_setup + $rmii_period}] \
+    -max [expr {$rmii_max + $refclk_phy_max - $refclk_mac_min - $rmii_setup + $refclk_period}] \
     [get_ports {CRS_DV RXD[*]}]
 
 # Output Constraints
